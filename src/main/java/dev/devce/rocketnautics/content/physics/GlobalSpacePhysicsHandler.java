@@ -24,7 +24,7 @@ import org.joml.Quaterniond;
 public class GlobalSpacePhysicsHandler {
 
     private static Float gravityOverride = null;
-    private static double calibrationMultiplier = 0.99895; 
+    private static double calibrationMultiplier = 0.99895;
 
     public static void setGravityOverride(float value) {
         gravityOverride = value;
@@ -33,7 +33,7 @@ public class GlobalSpacePhysicsHandler {
     public static void resetGravityOverride() {
         gravityOverride = null;
     }
-    
+
     public static void setCalibration(double value) {
         calibrationMultiplier = value;
     }
@@ -42,8 +42,9 @@ public class GlobalSpacePhysicsHandler {
         SableEventPlatform.INSTANCE.onPhysicsTick((physicsSystem, timeStep) -> {
             ServerLevel serverLevel = physicsSystem.getLevel();
             SubLevelContainer container = SubLevelContainer.getContainer(serverLevel);
-            
-            if (container == null) return;
+
+            if (container == null)
+                return;
 
             for (SubLevel subLevel : container.getAllSubLevels()) {
                 if (subLevel instanceof ServerSubLevel serverSubLevel) {
@@ -56,48 +57,50 @@ public class GlobalSpacePhysicsHandler {
         });
     }
 
-    private static void applyGlobalZeroG(ServerSubLevel subLevel, RigidBodyHandle handle, ServerLevel level, double timeStep) {
+    private static void applyGlobalZeroG(ServerSubLevel subLevel, RigidBodyHandle handle, ServerLevel level,
+            double timeStep) {
         Vector3d worldPos = subLevel.logicalPose().position();
-        if (worldPos == null) return;
-        
+        if (worldPos == null)
+            return;
+
         double y = worldPos.y();
         double factor;
 
         if (gravityOverride != null) {
             factor = 1.0 - gravityOverride;
         } else {
-            if (y <= 1000.0) return;
+            if (y <= 1000.0)
+                return;
             factor = Math.clamp((y - 1000.0) / 4000.0, 0.0, 1.0);
         }
 
-        if (factor <= 0.0) return;
+        if (factor <= 0.0)
+            return;
 
         double mass = subLevel.getMassTracker().getMass();
         Vector3d gravityVector = DimensionPhysicsData.getGravity(level);
-        
+
         Vector3d globalAntiGravityImpulse = new Vector3d(gravityVector)
                 .mul(-1.0 * mass * factor * timeStep * calibrationMultiplier);
-        
+
         Quaterniond orientation = subLevel.logicalPose().orientation();
         Vector3d localImpulse = orientation.transformInverse(globalAntiGravityImpulse, new Vector3d());
 
         handle.applyLinearImpulse(localImpulse);
     }
 
-    private static final ResourceLocation SPACE_GRAVITY_ID = 
-            ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "space_gravity");
-            
-    private static final AttributeModifier SPACE_GRAVITY_MODIFIER = 
-            new AttributeModifier(
-                    SPACE_GRAVITY_ID,
-                    -0.98,
-                    AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
-            );
+    private static final ResourceLocation SPACE_GRAVITY_ID = ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID,
+            "space_gravity");
+
+    private static final AttributeModifier SPACE_GRAVITY_MODIFIER = new AttributeModifier(
+            SPACE_GRAVITY_ID,
+            -0.98,
+            AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Pre event) {
         Entity entity = event.getEntity();
-        
+
         boolean shouldFloat;
         if (gravityOverride != null) {
             shouldFloat = gravityOverride < 0.1f;
@@ -105,7 +108,8 @@ public class GlobalSpacePhysicsHandler {
             shouldFloat = entity.getY() > 1000;
         }
 
-        if (!shouldFloat) return;
+        if (!shouldFloat)
+            return;
 
         if (entity instanceof LivingEntity living) {
             var gravityAttr = living.getAttribute(Attributes.GRAVITY);
@@ -124,7 +128,7 @@ public class GlobalSpacePhysicsHandler {
         Entity entity = event.getEntity();
         if (entity instanceof LivingEntity living) {
             boolean shouldFloat;
-            
+
             if (gravityOverride != null) {
                 shouldFloat = gravityOverride < 0.1f;
             } else {
