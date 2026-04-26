@@ -1,8 +1,8 @@
-# Contributing to Create: Angels & Afterburners
+# Contributing to Create: Rocketnautics
 
 First off, thanks for taking the time to contribute! 🎉
 
-The following is a set of guidelines for contributing to **Create: Angels & Afterburners**.
+The following is a set of guidelines for contributing to **Create: Rocketnautics**.
 
 ## How Can I Contribute?
 
