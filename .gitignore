@@ -1,0 +1,39 @@
+# Gradle
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Minecraft / Forge / NeoForge
+run/
+run/*
+!run/config/
+src/generated/
+*.log
+
+# Scratch / Temp files
+*.class
+*.bbmodel
+*.json
+!src/main/resources/**/*.json
+!src/test/resources/**/*.json
+!*.md
+!build.gradle
+!settings.gradle
+!gradle.properties

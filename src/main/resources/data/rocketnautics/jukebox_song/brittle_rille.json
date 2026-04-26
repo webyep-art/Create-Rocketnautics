@@ -1,0 +1,8 @@
+{
+  "comparator_output": 15,
+  "description": {
+    "translate": "item.rocketnautics.music_disc_space.desc"
+  },
+  "length_in_seconds": 312.0,
+  "sound_event": "rocketnautics:music.brittle_rille"
+}

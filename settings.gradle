@@ -1,0 +1,23 @@
+pluginManagement {
+    repositories {
+        maven {
+            url 'https://maven.parchmentmc.org'
+        }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'rocketnautics'
+
+dependencyResolutionManagement {
+    repositories {
+        maven {
+            url uri('local_maven')
+        }
+        mavenCentral()
+        maven {
+            url 'https://maven.parchmentmc.org'
+        }
+    }
+}

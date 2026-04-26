@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.devce.rocketnautics.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "LevelRendererMixin",
+    "ClientLevelMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

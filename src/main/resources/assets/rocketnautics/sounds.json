@@ -1,0 +1,21 @@
+{
+  "rocket_thrust": {
+    "category": "block",
+    "subtitle": "subtitles.rocketnautics.rocket_thrust",
+    "sounds": [
+      {
+        "name": "rocketnautics:rocket_thrust",
+        "stream": true
+      }
+    ]
+  },
+  "music.brittle_rille": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "rocketnautics:music/brittle_rille",
+        "stream": true
+      }
+    ]
+  }
+}

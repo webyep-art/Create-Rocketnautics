@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "rocketnautics:block/separator", "x": 270 },
+    "facing=south": { "model": "rocketnautics:block/separator", "x": 90 },
+    "facing=east": { "model": "rocketnautics:block/separator", "x": 90, "y": 270 },
+    "facing=west": { "model": "rocketnautics:block/separator", "x": 90, "y": 90 },
+    "facing=up": { "model": "rocketnautics:block/separator" },
+    "facing=down": { "model": "rocketnautics:block/separator", "x": 180 }
+  }
+}
