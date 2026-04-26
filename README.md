@@ -1,10 +1,10 @@
-# Create: Angels & Afterburners (RocketNautics) 🚀
+# Create: Rocketnautics 🚀
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NeoForge](https://img.shields.io/badge/NeoForge-21.1+-orange.svg)](https://neoforged.net/)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-blue.svg)](https://www.minecraft.net/)
 
-**Create: Angels & Afterburners** (internal name *RocketNautics*) is an industrial-aerospace addon for the **Create** mod. It allows players to build realistic, physics-based rockets, launch them into space, and control them with precision.
+**Create: Rocketnautics** is an industrial-aerospace addon for the **Create** mod. It allows players to build realistic, physics-based rockets, launch them into space, and control them with precision.
 
 Unlike many space mods where rockets are just scripted "elevators", this mod utilizes the **Sable / Valkyrien Skies 2** physics engine, turning ships into real physical objects. Thrust, center of mass, orbital mechanics, and stage separation - it's all here, similar to *Kerbal Space Program*!
 

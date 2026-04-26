@@ -8,7 +8,7 @@ config="rocketnautics.mixins.json"
 [[mods]]
 modId="rocketnautics"
 version="1.3.1"
-displayName="Create: Angels & Afterburners"
+displayName="Create: Rocketnautics"
 displayURL="https://github.com"
 authors="devce"
 description='''
