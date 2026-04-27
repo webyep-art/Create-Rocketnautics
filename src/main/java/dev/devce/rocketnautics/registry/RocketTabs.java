@@ -33,7 +33,7 @@ public class RocketTabs {
                                 "webyep",
                                 0,
                                 java.util.List.of(
-                                    net.minecraft.server.network.Filterable.passThrough(net.minecraft.network.chat.Component.literal("Authors: webyep, SSnowly\nArtist: LordAret")),
+                                    net.minecraft.server.network.Filterable.passThrough(net.minecraft.network.chat.Component.literal("Maintainer: webyep\nArtist: LordAret\nContributor: SSnowly")),
                                     net.minecraft.server.network.Filterable.passThrough(net.minecraft.network.chat.Component.literal("Inspiration:\n- Create Propulsion\n- Kerbal Space Program")),
                                     net.minecraft.server.network.Filterable.passThrough(net.minecraft.network.chat.Component.literal("Testers:\n- GlemFeddy\n- ABOBA\n- Kernos")),
                                     net.minecraft.server.network.Filterable.passThrough(net.minecraft.network.chat.Component.literal("Ideas:\n- Solid Fuel: Harbinger of Confusion\n- Fuel Pump System: 6j")),
