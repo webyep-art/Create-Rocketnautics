@@ -65,7 +65,7 @@ public class SkyHandler {
         poseStack.mulPose(invRot);
         
         float renderDist = 20.0f;
-        float parallaxFactor = 0.05f; 
+        float parallaxFactor = (float) (renderDist / Math.max(100.0, camY)); 
         double camX = camera.getPosition().x;
         double camZ = camera.getPosition().z;
         float relX = (float) (-camX * parallaxFactor);

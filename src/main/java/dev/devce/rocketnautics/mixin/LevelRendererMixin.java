@@ -8,7 +8,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(LevelRenderer.class)
-public class LevelRendererMixin {
+public abstract class LevelRendererMixin {
+    @org.spongepowered.asm.mixin.Shadow
+    protected abstract void renderSnowAndRain(net.minecraft.client.renderer.LightTexture pLightTexture, float pPartialTick, double pCamX, double pCamY, double pCamZ);
+
 
     @Redirect(method = "renderSky", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;getStarBrightness(F)F"))
     private float rocketnautics$boostStarBrightness(net.minecraft.client.multiplayer.ClientLevel instance, float partialTick) {
@@ -69,5 +72,11 @@ public class LevelRendererMixin {
             if (y > 2500.0) return;
         }
         instance.renderClouds(pPoseStack, pProjectionMatrix, pCloudProjectionMatrix, pPartialTick, pCamX, pCamY, pCamZ);
+    }
+
+    @Redirect(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;renderSnowAndRain(Lnet/minecraft/client/renderer/LightTexture;FDDD)V"))
+    private void rocketnautics$disableWeatherAtAltitude(LevelRenderer instance, net.minecraft.client.renderer.LightTexture pLightTexture, float pPartialTick, double pCamX, double pCamY, double pCamZ) {
+        if (pCamY > 400.0) return;
+        this.renderSnowAndRain(pLightTexture, pPartialTick, pCamX, pCamY, pCamZ);
     }
 }

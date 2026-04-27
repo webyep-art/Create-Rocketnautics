@@ -53,6 +53,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
     public int ignitionTicks = 0;
     public boolean currentlyBurning = false;
     public float fuelThrottle = 0.0f;
+    public int currentFuelUsage = 0;
 
     public int getWarmupTime() {
         return 40;
@@ -306,10 +307,12 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
             actuallyDrained += drainFromAdjacent(needed);
         }
 
+        int oldUsage = this.currentFuelUsage;
         this.fuelThrottle = actuallyDrained / (float) maxConsumption;
         this.currentlyBurning = actuallyDrained > 0;
+        this.currentFuelUsage = actuallyDrained;
         
-        if (wasBurning != currentlyBurning || Math.abs(oldThrottle - fuelThrottle) > 0.1f) {
+        if (wasBurning != currentlyBurning || Math.abs(oldThrottle - fuelThrottle) > 0.1f || oldUsage != currentFuelUsage) {
             sendData();
             setChanged();
         }
@@ -333,6 +336,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         tag.putBoolean("Burning", currentlyBurning);
         tag.putInt("IgnitionTicks", ignitionTicks);
         tag.putFloat("FuelThrottle", fuelThrottle);
+        tag.putInt("FuelUsage", currentFuelUsage);
         tag.put("FuelTank", fuelTank.writeToNBT(registries, new CompoundTag()));
     }
 
@@ -342,6 +346,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         currentlyBurning = tag.getBoolean("Burning");
         ignitionTicks = tag.getInt("IgnitionTicks");
         fuelThrottle = tag.getFloat("FuelThrottle");
+        currentFuelUsage = tag.getInt("FuelUsage");
         if (tag.contains("FuelTank")) {
             fuelTank.readFromNBT(registries, tag.getCompound("FuelTank"));
         }
@@ -365,6 +370,11 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         if (fuelTank.getFluidAmount() > 0) {
             tooltip.add(Component.literal("  ").append(Component.translatable("rocketnautics.goggles.fuel")).append(": ")
                     .append(Component.literal(fuelTank.getFluidAmount() + " mB").withStyle(net.minecraft.ChatFormatting.AQUA)));
+        }
+
+        if (isActive()) {
+            tooltip.add(Component.literal("  ").append(Component.translatable("rocketnautics.goggles.fuel_usage")).append(": ")
+                    .append(Component.literal(currentFuelUsage + " mB/t").withStyle(net.minecraft.ChatFormatting.RED)));
         }
         
         return true;

@@ -20,5 +20,6 @@
   "rocketnautics.goggles.spent": "Выгорел",
   "rocketnautics.goggles.thrust": "Тяга",
   "rocketnautics.goggles.fuel": "Топливо",
-  "rocketnautics.goggles.burn_time": "Время горения"
+  "rocketnautics.goggles.burn_time": "Время горения",
+  "rocketnautics.goggles.fuel_usage": "Подача топлива"
 }
