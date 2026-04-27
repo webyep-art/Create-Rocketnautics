@@ -50,7 +50,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
                 this, 
                 new CenteredSideValueBoxTransform((state, direction) -> direction != state.getValue(RocketThrusterBlock.FACING))
         );
-        thrustPower.between(1, 35);
+        thrustPower.between(1, 500);
         thrustPower.withFormatter(v -> (v * 10) + " N");
         thrustPower.setValue(5);
         

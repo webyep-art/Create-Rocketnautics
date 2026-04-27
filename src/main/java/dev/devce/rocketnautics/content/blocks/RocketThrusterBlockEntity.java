@@ -73,7 +73,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
                 this, 
                 new CenteredSideValueBoxTransform((state, direction) -> direction != state.getValue(RocketThrusterBlock.FACING))
         );
-        minThrust.between(0, 35);
+        minThrust.between(0, 500);
         minThrust.withFormatter(v -> (v * 10) + " N");
         minThrust.setValue(0);
         
@@ -82,7 +82,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
                 this, 
                 new CenteredSideValueBoxTransform((state, direction) -> direction != state.getValue(RocketThrusterBlock.FACING))
         );
-        maxThrust.between(0, 35);
+        maxThrust.between(0, 500);
         maxThrust.withFormatter(v -> (v * 10) + " N");
         maxThrust.setValue(10);
         
