@@ -51,6 +51,7 @@ public class GlobalSpacePhysicsHandler {
                     RigidBodyHandle handle = physicsSystem.getPhysicsHandle(serverSubLevel);
                     if (handle != null) {
                         applyGlobalZeroG(serverSubLevel, handle, serverLevel, timeStep);
+                        handleReentryHeat(serverSubLevel, handle, serverLevel, timeStep);
                     }
                 }
             }
@@ -87,6 +88,38 @@ public class GlobalSpacePhysicsHandler {
         Vector3d localImpulse = orientation.transformInverse(globalAntiGravityImpulse, new Vector3d());
 
         handle.applyLinearImpulse(localImpulse);
+    }
+
+    private static void handleReentryHeat(ServerSubLevel subLevel, RigidBodyHandle handle, ServerLevel level, double timeStep) {
+        Vector3d worldPos = subLevel.logicalPose().position();
+        if (worldPos == null) return;
+
+        double y = worldPos.y();
+        // Heat happens between Y=500 and Y=1100 (ionosphere and upper atmosphere)
+        if (y > 1100 || y < 400) return;
+
+        Vector3d velocity = handle.getLinearVelocity();
+        double speed = -velocity.y(); // Descent speed
+
+        if (speed > 1.5) { // Threshold for heating (30 m/s)
+            float intensity = (float) Math.clamp((speed - 1.5) / 3.0, 0.0, 1.0);
+            
+            // Apply air resistance (friction) - optional, but realistic
+            Vector3d friction = new Vector3d(0, speed * intensity * 0.1, 0);
+            handle.applyLinearImpulse(friction.mul(subLevel.getMassTracker().getMass() * timeStep));
+
+            // Apply damage if too hot
+            if (intensity > 0.5 && level.getGameTime() % 20 == 0) {
+                subLevel.getEntities().forEach(entity -> {
+                    if (entity instanceof LivingEntity living) {
+                        living.hurt(level.damageSources().onFire(), intensity * 5.0f);
+                    }
+                });
+            }
+            
+            // Sync to client for particles
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayersInLevel(level, new ReentryHeatPayload(subLevel.getId(), intensity));
+        }
     }
 
     private static final ResourceLocation SPACE_GRAVITY_ID = ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID,
@@ -136,9 +169,27 @@ public class GlobalSpacePhysicsHandler {
             }
 
             if (!shouldFloat) {
-                var gravityAttr = living.getAttribute(Attributes.GRAVITY);
-                if (gravityAttr != null && gravityAttr.hasModifier(SPACE_GRAVITY_ID)) {
-                    gravityAttr.removeModifier(SPACE_GRAVITY_ID);
+            var gravityAttr = living.getAttribute(Attributes.GRAVITY);
+            if (gravityAttr != null && gravityAttr.hasModifier(SPACE_GRAVITY_ID)) {
+                gravityAttr.removeModifier(SPACE_GRAVITY_ID);
+            }
+
+            // Re-entry heat for falling entities
+            if (entity.getY() < 1000 && entity.getDeltaMovement().y() < -1.5) {
+                double speed = -entity.getDeltaMovement().y();
+                float intensity = (float) Math.clamp((speed - 1.5) / 2.0, 0.0, 1.0);
+                
+                if (intensity > 0.1) {
+                    entity.setRemainingFireTicks(40);
+                    if (entity.level().getGameTime() % 10 == 0) {
+                        entity.hurt(entity.level().damageSources().onFire(), intensity * 2.0f);
+                    }
+                    if (entity.level().isClientSide) {
+                        for (int i = 0; i < 5; i++) {
+                            entity.level().addParticle(net.minecraft.core.particles.ParticleTypes.FLAME, 
+                                entity.getX(), entity.getY(), entity.getZ(), 0, 0.1, 0);
+                        }
+                    }
                 }
             }
         }

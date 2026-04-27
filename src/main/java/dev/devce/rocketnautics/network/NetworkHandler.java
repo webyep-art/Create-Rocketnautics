@@ -35,6 +35,12 @@ public class NetworkHandler {
             PlanetMapPayload.CODEC,
             (payload, context) -> context.enqueueWork(() -> handleMapData(payload.mapData()))
         );
+
+        registrar.playToClient(
+            ReentryHeatPayload.TYPE,
+            ReentryHeatPayload.CODEC,
+            (payload, context) -> context.enqueueWork(() -> handleHeatData(payload.subLevelId(), payload.intensity()))
+        );
     }
 
     private static void handleMapRequest(net.minecraft.world.entity.player.Player rawPlayer) {
@@ -88,5 +94,10 @@ public class NetworkHandler {
     @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
     private static void handleMapData(byte[] data) {
         SkyHandler.updatePlanetTexture(data);
+    }
+
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private static void handleHeatData(java.util.UUID subLevelId, float intensity) {
+        dev.devce.rocketnautics.client.HeatClientHandler.updateHeat(subLevelId, intensity);
     }
 }
