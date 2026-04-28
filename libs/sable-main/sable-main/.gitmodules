@@ -1,3 +1,0 @@
-[submodule "common/src/main/csharp/LibSableBepu/bepuphysics2"]
-	path = common/src/main/csharp/LibSableBepu/bepuphysics2
-	url = https://github.com/bepu/bepuphysics2.git
