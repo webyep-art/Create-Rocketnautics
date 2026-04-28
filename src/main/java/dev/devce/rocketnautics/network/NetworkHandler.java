@@ -41,11 +41,33 @@ public class NetworkHandler {
             ReentryHeatPayload.CODEC,
             (payload, context) -> context.enqueueWork(() -> handleHeatData(payload.x(), payload.y(), payload.z(), payload.intensity()))
         );
+
+        registrar.playToClient(
+            SeamlessTransitionPayload.TYPE,
+            SeamlessTransitionPayload.CODEC,
+            (payload, context) -> context.enqueueWork(() -> handleSeamlessTransition(payload.active()))
+        );
+
+        registrar.playToClient(
+            DebugLogPayload.TYPE,
+            DebugLogPayload.CODEC,
+            (payload, context) -> context.enqueueWork(() -> dev.devce.rocketnautics.RocketNauticsClient.addLog(payload.message(), payload.color()))
+        );
+    }
+
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private static void handleSeamlessTransition(boolean active) {
+        if (active) {
+            dev.devce.rocketnautics.RocketNauticsClient.startSeamlessTransition();
+        } else {
+            dev.devce.rocketnautics.RocketNauticsClient.endSeamlessTransition();
+        }
     }
 
     private static void handleMapRequest(net.minecraft.world.entity.player.Player rawPlayer) {
         if (!(rawPlayer instanceof ServerPlayer player)) return;
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = player.getServer().getLevel(net.minecraft.world.level.Level.OVERWORLD);
+        if (level == null) return;
         
         // Run generation async to avoid server lag
         CompletableFuture.runAsync(() -> {
