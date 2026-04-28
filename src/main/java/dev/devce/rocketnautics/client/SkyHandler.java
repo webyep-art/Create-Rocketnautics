@@ -1,19 +1,3 @@
-/*
- * This file is part of Cosmonautics.
- * Cosmonautics is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Cosmonautics is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Cosmonautics.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package dev.devce.rocketnautics.client;
 
 import com.mojang.blaze3d.platform.GlStateManager;
@@ -21,6 +5,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import dev.devce.rocketnautics.RocketNautics;
+import dev.devce.rocketnautics.SkyDataHandler;
 import dev.devce.rocketnautics.network.PlanetMapRequestPayload;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -39,26 +24,13 @@ import org.joml.Quaternionf;
 
 @EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class SkyHandler {
-    
-    private static final double OVERWORLD_SPACE_Y = 20000.0;
-
-    private static double getEffectiveY() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null) return 0;
-        double y = mc.gameRenderer.getMainCamera().getPosition().y;
-        ResourceLocation dim = mc.level.dimension().location();
-        if (dim.getNamespace().equals(RocketNautics.MODID) && dim.getPath().equals("space")) {
-            return OVERWORLD_SPACE_Y + y;
-        }
-        return y;
-    }
 
     @SubscribeEvent
     public static void onComputeFogColor(ViewportEvent.ComputeFogColor event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
-        double y = getEffectiveY();
+        double y = mc.gameRenderer.getMainCamera().getPosition().y;
         if (y > 1000.0) {
             float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
             
@@ -74,8 +46,9 @@ public class SkyHandler {
         
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-        
-        double camY = getEffectiveY();
+
+        Camera camera = mc.gameRenderer.getMainCamera();
+        double camY = camera.getPosition().y;
         if (camY < 1000.0) return;
 
         float visibility = (float) Mth.clamp((camY - 1000.0) / 500.0, 0.0, 1.0);
@@ -83,8 +56,6 @@ public class SkyHandler {
 
         PoseStack poseStack = event.getPoseStack();
         poseStack.pushPose();
-        
-        Camera camera = mc.gameRenderer.getMainCamera();
 
         Matrix4f matrix = poseStack.last().pose();
         matrix.identity();
@@ -92,36 +63,48 @@ public class SkyHandler {
         Quaternionf invRot = new Quaternionf(camera.rotation());
         invRot.conjugate();
         poseStack.mulPose(invRot);
-        
+
         float renderDist = 20.0f;
         float parallaxFactor = (float) (renderDist / Math.max(100.0, camY)); 
         double camX = camera.getPosition().x;
         double camZ = camera.getPosition().z;
-        float relX = (float) (-camX * parallaxFactor);
-        float relY = -renderDist;
-        float relZ = (float) (-camZ * parallaxFactor);
-        
-        float size = (float) (500000.0f * (renderDist / Math.max(100.0, camY)));
 
-        // OpenGL Magic: Temporary Infinite Projection Matrix to bypass far clipping
-        // without changing the object's size or distance.
-        Matrix4f oldProj = RenderSystem.getProjectionMatrix();
-        Matrix4f infiniteProj = new Matrix4f(oldProj);
-        // m22 = -(f+n)/(f-n) -> -1.0 as f -> infinity
-        // m32 = -2fn/(f-n)   -> -2.0*n as f -> infinity (n = 0.05 in MC)
-        infiniteProj.m22(-1.0f);
-        infiniteProj.m32(-0.1f);
-        RenderSystem.setProjectionMatrix(infiniteProj, RenderSystem.getVertexSorting());
-        
-        ensurePlanetTexture();
-        
+        ensurePlanetTexObj();
+        ensureCloudTexture();
+        ensureHaloTexture();
+        updatePlanetTex(camX, camY, camZ);
+        // move towards our most recently received texture
+        if (texFade > 0) {
+            texFade = Math.max(0, texFade - event.getPartialTick().getRealtimeDeltaTicks() / 20);
+        }
+        renderPlanet(PLANET_TEXTURE_OBJ_LAST, camX, camY, camZ, renderDist, parallaxFactor, matrix, texFade * visibility);
+        renderPlanet(PLANET_TEXTURE_OBJ, camX, camY, camZ, renderDist, parallaxFactor, matrix, (1 - texFade) * visibility);
+        poseStack.popPose();
+    }
+
+    private static void renderPlanet(PlanetRenderInfo planet, double camX, double camY, double camZ, float renderDist, float parallaxFactor, Matrix4f matrix, float visibility) {
+        if (visibility <= 0) return;
+        float relX = (float) ((planet.getCenterX() - camX) * parallaxFactor);
+        float relY = -renderDist;
+        float relZ = (float) ((planet.getCenterZ() - camZ) * parallaxFactor);
+
+        float prettyness = computePrettyness(planet, camY);
+        // shift toward zero
+        relX = Mth.lerp(prettyness, relX, 0);
+        relZ = Mth.lerp(prettyness, relZ, 0);
+        // move towards optimal size ratio
+        double trueSize = SkyDataHandler.toTrueSize(planet.getPowerSize());
+        double optimalSize = camY * (2 << SkyDataHandler.SCALE_FACTOR);
+        double result = Math.min(prettyness > 0 ? optimalSize : trueSize, SkyDataHandler.toTrueSize(SkyDataHandler.MAX_POWER_SIZE));
+        float size = (float) (result * (renderDist / Math.max(100.0, camY)));
+
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.depthMask(false);
         RenderSystem.disableDepthTest();
         RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
-        if (PLANET_TEXTURE_ID != null) {
-            RenderSystem.setShaderTexture(0, PLANET_TEXTURE_ID);
+        if (planet.getTexID() != null) {
+            RenderSystem.setShaderTexture(0, planet.getTexID());
         } else {
             RenderSystem.setShaderTexture(0, ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "textures/environment/planet_map.png"));
         }
@@ -129,27 +112,26 @@ public class SkyHandler {
 
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder bufferbuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        
+
         float r = 1.0f, g = 1.0f, b = 1.0f;
-        
+
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
-        
+
         bufferbuilder.addVertex(matrix, relX - size, relY, relZ - size).setColor(r, g, b, visibility).setUv(0.0f, 0.0f);
         bufferbuilder.addVertex(matrix, relX - size, relY, relZ + size).setColor(r, g, b, visibility).setUv(0.0f, 1.0f);
         bufferbuilder.addVertex(matrix, relX + size, relY, relZ + size).setColor(r, g, b, visibility).setUv(1.0f, 1.0f);
         bufferbuilder.addVertex(matrix, relX + size, relY, relZ - size).setColor(r, g, b, visibility).setUv(1.0f, 0.0f);
 
         BufferUploader.drawWithShader(bufferbuilder.buildOrThrow());
-        
-        ensureCloudTexture();
+
         if (CLOUD_TEXTURE_ID != null) {
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.setShaderTexture(0, CLOUD_TEXTURE_ID);
-            
-            float timeOffset = (System.currentTimeMillis() % 2000000L) / 100000.0f;
-            
+            long factor = 1000L * SkyDataHandler.toTrueSize(planet.getPowerSize() / 2);
+            float timeOffset = (System.currentTimeMillis() % (20L * factor)) / (float) factor;
+
             BufferBuilder cloudBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             cloudBuilder.addVertex(matrix, relX - size, relY, relZ - size).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 0.0f);
             cloudBuilder.addVertex(matrix, relX - size, relY, relZ + size).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 1.0f);
@@ -158,12 +140,11 @@ public class SkyHandler {
             BufferUploader.drawWithShader(cloudBuilder.buildOrThrow());
         }
 
-        ensureHaloTexture();
         if (HALO_TEXTURE_ID != null) {
             RenderSystem.enableBlend();
             RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
             RenderSystem.setShaderTexture(0, HALO_TEXTURE_ID);
-            
+
             float haloSize = size * 1.3f;
             BufferBuilder haloBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             haloBuilder.addVertex(matrix, relX - haloSize, relY, relZ - haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f, 0.0f);
@@ -171,16 +152,14 @@ public class SkyHandler {
             haloBuilder.addVertex(matrix, relX + haloSize, relY, relZ + haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f, 1.0f);
             haloBuilder.addVertex(matrix, relX + haloSize, relY, relZ - haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f, 0.0f);
             BufferUploader.drawWithShader(haloBuilder.buildOrThrow());
-            
+
             RenderSystem.defaultBlendFunc();
         }
 
-        RenderSystem.setProjectionMatrix(oldProj, RenderSystem.getVertexSorting());
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
-        poseStack.popPose();
     }
 
     @SubscribeEvent
@@ -188,7 +167,7 @@ public class SkyHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         
-        double y = getEffectiveY();
+        double y = mc.gameRenderer.getMainCamera().getPosition().y;
         if (y > 1000.0) {
             float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
             
@@ -201,48 +180,113 @@ public class SkyHandler {
         }
     }
 
-    private static ResourceLocation PLANET_TEXTURE_ID = null;
-    private static DynamicTexture PLANET_TEXTURE_OBJ = null;
-    private static boolean mapRequested = false;
+    private static PlanetRenderInfo PLANET_TEXTURE_OBJ_LAST = null;
+    private static PlanetRenderInfo PLANET_TEXTURE_OBJ = null;
+    private static float texFade = 0;
+    private static boolean awaitUpdate = false;
 
-    private static void ensurePlanetTexture() {
-        if (PLANET_TEXTURE_ID != null) return;
-        Minecraft mc = Minecraft.getInstance();
-        
-        int size = 1024;
-        NativeImage image = new NativeImage(size, size, false);
-        
-        for (int x = 0; x < size; x++) {
-            for (int y = 0; y < size; y++) {
-                int color = (255 << 24) | (80 << 16) | (40 << 8) | 10;
-                image.setPixelRGBA(x, y, color);
-            }
-        }
-        
-        PLANET_TEXTURE_OBJ = new DynamicTexture(image);
-        PLANET_TEXTURE_ID = mc.getTextureManager().register("rocketnautics_planet", PLANET_TEXTURE_OBJ);
-        PLANET_TEXTURE_OBJ.setFilter(true, false);
-
-        
-        if (!mapRequested) {
-            PacketDistributor.sendToServer(new PlanetMapRequestPayload());
-            mapRequested = true;
+    /**
+     *
+     * @return the level of interpolation to "prettyness" based on the render scale clamp.
+     * 0f means that the planet should be rendered exactly as configured by the static fields.
+     * 1f means that the planet should be centered on (0, 0) and resized so that the length from center to edge is
+     * {@link SkyDataHandler#SCALE_FACTOR} powers of two larger than the player's current height.
+     * Note - size should still not exceed maximum size set in {@link SkyDataHandler}
+     */
+    private static float computePrettyness(PlanetRenderInfo planet, double camY) {
+        double continuousSize = SkyDataHandler.targetSizeForHeightContinuous(camY);
+        if (continuousSize <= getMaximumScale() || continuousSize <= planet.getPowerSize()) {
+            return 0;
+        } else if (continuousSize >= SkyDataHandler.MAX_POWER_SIZE) {
+            // ensure we are completely centered at (0, 0) once our target size is large enough.
+            // if clamping never kicks in, the final set of squares is centered at (0, 0) as well.
+            return 1;
+        } else {
+            return (float) (1 - 1 / (1 + continuousSize - planet.getPowerSize()));
         }
     }
 
-    public static void updatePlanetTexture(byte[] data) {
+    private static int getMaximumScale() {
+        // TODO config to clamp the maximum powerSize
+        // 15 is the recommended clamp
+        return 100;
+    }
+
+    private static void updatePlanetTex(double camX, double camY, double camZ) {
+        if (awaitUpdate) return;
+        // check if we've moved far enough to need to refresh our data
+        boolean clamped = SkyDataHandler.targetSizeForHeightContinuous(camY) > getMaximumScale();
+        double currentSize = clamped ? camY * (2 << SkyDataHandler.SCALE_FACTOR) : SkyDataHandler.toTrueSize(PLANET_TEXTURE_OBJ.getPowerSize());
+        boolean violateX = Math.abs(camX - PLANET_TEXTURE_OBJ.getCenterX()) > currentSize * 3/5;
+        boolean violateZ = Math.abs(camZ - PLANET_TEXTURE_OBJ.getCenterZ()) > currentSize * 3/5;
+        boolean violateScale = PLANET_TEXTURE_OBJ.getPowerSize() != Math.min(SkyDataHandler.targetSizeForHeight(camY), getMaximumScale());
+        if (violateX || violateZ || violateScale) {
+            awaitUpdate = true;
+            PacketDistributor.sendToServer(new PlanetMapRequestPayload(SkyDataHandler.targetSizeForHeight(camY)));
+        }
+    }
+
+    private static void ensurePlanetTexObj() {
+        if (PLANET_TEXTURE_OBJ == null) {
+            Minecraft mc = Minecraft.getInstance();
+
+            int size = 1024;
+            NativeImage image = new NativeImage(size, size, false);
+
+            for (int x = 0; x < size; x++) {
+                for (int y = 0; y < size; y++) {
+                    int color = (255 << 24) | (80 << 16) | (40 << 8) | 10;
+                    image.setPixelRGBA(x, y, color);
+                }
+            }
+
+            DynamicTexture tex = new DynamicTexture(image);
+            ResourceLocation id = mc.getTextureManager().register("rocketnautics_planet", tex);
+            tex.setFilter(true, false);
+            PLANET_TEXTURE_OBJ = new PlanetRenderInfo(id, tex);
+        }
+        if (PLANET_TEXTURE_OBJ_LAST == null) {
+            Minecraft mc = Minecraft.getInstance();
+
+            int size = 1024;
+            NativeImage image = new NativeImage(size, size, false);
+
+            for (int x = 0; x < size; x++) {
+                for (int y = 0; y < size; y++) {
+                    int color = (255 << 24) | (80 << 16) | (40 << 8) | 10;
+                    image.setPixelRGBA(x, y, color);
+                }
+            }
+
+            DynamicTexture tex = new DynamicTexture(image);
+            ResourceLocation id = mc.getTextureManager().register("rocketnautics_planet", tex);
+            tex.setFilter(true, false);
+            PLANET_TEXTURE_OBJ_LAST = new PlanetRenderInfo(id, tex);
+        }
+    }
+
+    public static void updatePlanetTexture(int powerSize, int centerX, int centerZ, byte[] mapDataPosXPosZ, byte[] mapDataPosXNegZ, byte[] mapDataNegXPosZ, byte[] mapDataNegXNegZ) {
+        PlanetRenderInfo updating = PLANET_TEXTURE_OBJ_LAST;
+        PLANET_TEXTURE_OBJ_LAST = PLANET_TEXTURE_OBJ;
+        PLANET_TEXTURE_OBJ = updating;
+        texFade = 1;
+
+        PLANET_TEXTURE_OBJ.setPowerSize(powerSize);
+        PLANET_TEXTURE_OBJ.setCenterX(centerX);
+        PLANET_TEXTURE_OBJ.setCenterZ(centerZ);
         Minecraft mc = Minecraft.getInstance();
         mc.execute(() -> {
             if (PLANET_TEXTURE_OBJ == null) return;
             
             int texSize = 1024;
             int dataSize = 256;
+            int fullDataSize = 2 * dataSize;
             NativeImage image = new NativeImage(texSize, texSize, false);
             
             for (int x = 0; x < texSize; x++) {
                 for (int y = 0; y < texSize; y++) {
-                    double u = (x / (double)texSize) * dataSize;
-                    double v = (y / (double)texSize) * dataSize;
+                    double u = (x / (double)texSize) * fullDataSize;
+                    double v = (y / (double)texSize) * fullDataSize;
                     
                     double nx = x * 0.05;
                     double ny = y * 0.05;
@@ -253,11 +297,27 @@ public class SkyHandler {
                     int sampleY = (int) Math.round(v + warpY);
                     
                     if (sampleX < 0) sampleX = 0;
-                    if (sampleX >= dataSize) sampleX = dataSize - 1;
+                    if (sampleX >= fullDataSize) sampleX = fullDataSize - 1;
                     if (sampleY < 0) sampleY = 0;
-                    if (sampleY >= dataSize) sampleY = dataSize - 1;
-                    
-                    byte colorIdx = data[sampleX + sampleY * dataSize];
+                    if (sampleY >= fullDataSize) sampleY = fullDataSize - 1;
+
+                    byte colorIdx;
+                    if (sampleX >= dataSize) {
+                        sampleX -= dataSize;
+                        if (sampleY >= dataSize) {
+                            sampleY -= dataSize;
+                            colorIdx = mapDataPosXPosZ[sampleX + sampleY * dataSize];
+                        } else {
+                            colorIdx = mapDataPosXNegZ[sampleX + sampleY * dataSize];
+                        }
+                    } else {
+                        if (sampleY >= dataSize) {
+                            sampleY -= dataSize;
+                            colorIdx = mapDataNegXPosZ[sampleX + sampleY * dataSize];
+                        } else {
+                            colorIdx = mapDataNegXNegZ[sampleX + sampleY * dataSize];
+                        }
+                    }
                     int r = 30, g = 120, b = 40;
                     switch (colorIdx) {
                         case 0: r = 10; g = 40; b = 120; break;
@@ -278,9 +338,10 @@ public class SkyHandler {
                 }
             }
             
-            PLANET_TEXTURE_OBJ.setPixels(image);
-            PLANET_TEXTURE_OBJ.upload();
-            PLANET_TEXTURE_OBJ.setFilter(false, false);
+            PLANET_TEXTURE_OBJ.getTexture().setPixels(image);
+            PLANET_TEXTURE_OBJ.getTexture().upload();
+            PLANET_TEXTURE_OBJ.getTexture().setFilter(false, false);
+            awaitUpdate = false;
         });
     }        
 

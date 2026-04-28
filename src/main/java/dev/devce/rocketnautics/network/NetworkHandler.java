@@ -1,6 +1,7 @@
 package dev.devce.rocketnautics.network;
 
 import dev.devce.rocketnautics.RocketNautics;
+import dev.devce.rocketnautics.SkyDataHandler;
 import dev.devce.rocketnautics.client.SkyHandler;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,13 +28,13 @@ public class NetworkHandler {
         registrar.playToServer(
             PlanetMapRequestPayload.TYPE,
             PlanetMapRequestPayload.CODEC,
-            (payload, context) -> context.enqueueWork(() -> handleMapRequest(context.player()))
+            (payload, context) -> context.enqueueWork(() -> handleMapRequest(context.player(), payload.powerSize()))
         );
 
         registrar.playToClient(
             PlanetMapPayload.TYPE,
             PlanetMapPayload.CODEC,
-            (payload, context) -> context.enqueueWork(() -> handleMapData(payload.mapData()))
+            (payload, context) -> context.enqueueWork(() -> handleMapData(payload.powerSize(), payload.centerX(), payload.centerZ(), payload.mapDataPosXPosZ(), payload.mapDataPosXNegZ(), payload.mapDataNegXPosZ(), payload.mapDataNegXNegZ()))
         );
 
         registrar.playToClient(
@@ -64,58 +65,25 @@ public class NetworkHandler {
         }
     }
 
-    private static void handleMapRequest(net.minecraft.world.entity.player.Player rawPlayer) {
+    private static void handleMapRequest(net.minecraft.world.entity.player.Player rawPlayer, int powerSize) {
         if (!(rawPlayer instanceof ServerPlayer player)) return;
         ServerLevel level = player.getServer().getLevel(net.minecraft.world.level.Level.OVERWORLD);
         if (level == null) return;
         
         // Run generation async to avoid server lag
         CompletableFuture.runAsync(() -> {
-            try {
-                BiomeSource source = level.getChunkSource().getGenerator().getBiomeSource();
-                Climate.Sampler sampler = level.getChunkSource().randomState().sampler();
-
-                byte[] mapData = new byte[65536]; // 256x256
-                int step = 128; // 128 blocks per pixel. Total area = 32768x32768 blocks
-                int startX = (int) player.getX() - (256 * step) / 2;
-                int startZ = (int) player.getZ() - (256 * step) / 2;
-
-                for (int x = 0; x < 256; x++) {
-                    for (int z = 0; z < 256; z++) {
-                        int worldX = startX + x * step;
-                        int worldZ = startZ + z * step;
-                        
-                        Holder<Biome> biome = source.getNoiseBiome(worldX >> 2, 64 >> 2, worldZ >> 2, sampler);
-                        byte colorIdx = 4; // Default plains/grass
-                        
-                        if (biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_DEEP_OCEAN)) colorIdx = 0;
-                        else if (biome.is(BiomeTags.IS_RIVER)) colorIdx = 1;
-                        else if (biome.is(BiomeTags.IS_BEACH)) colorIdx = 2;
-                        else if (biome.is(BiomeTags.HAS_DESERT_PYRAMID)) colorIdx = 3;
-                        else if (biome.is(BiomeTags.IS_FOREST)) colorIdx = 5;
-                        else if (biome.is(BiomeTags.IS_JUNGLE)) colorIdx = 6;
-                        else if (biome.is(BiomeTags.IS_TAIGA)) colorIdx = 7;
-                        else if (biome.is(BiomeTags.HAS_VILLAGE_SNOWY)) colorIdx = 8;
-                        else if (biome.is(BiomeTags.IS_BADLANDS)) colorIdx = 9;
-                        else if (biome.is(BiomeTags.IS_MOUNTAIN)) colorIdx = 10;
-                        
-                        mapData[x + z * 256] = colorIdx;
-                    }
-                }
-                
-                // Send back on main thread
-                level.getServer().execute(() -> {
-                    PacketDistributor.sendToPlayer(player, new PlanetMapPayload(mapData));
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            SkyDataHandler handler = SkyDataHandler.getHandlerForLevel(level);
+            PlanetMapPayload payload = handler.getRenderDataAtScaleAndPosition(powerSize, player.getBlockX(), player.getBlockZ());
+            // Send back on main thread
+            level.getServer().execute(() -> {
+                PacketDistributor.sendToPlayer(player, payload);
+            });
         });
     }
 
     @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
-    private static void handleMapData(byte[] data) {
-        SkyHandler.updatePlanetTexture(data);
+    private static void handleMapData(int powerSize, int centerX, int centerZ, byte[] mapDataPosXPosZ, byte[] mapDataPosXNegZ, byte[] mapDataNegXPosZ, byte[] mapDataNegXNegZ) {
+        SkyHandler.updatePlanetTexture(powerSize, centerX, centerZ, mapDataPosXPosZ, mapDataPosXNegZ, mapDataNegXPosZ, mapDataNegXNegZ);
     }
 
     @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
