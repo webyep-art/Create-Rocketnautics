@@ -9,7 +9,7 @@
   "gui.rocketnautics.min_thrust": "最小推力",
   "gui.rocketnautics.max_thrust": "最大推力 ",
   "rocketnautics.tooltip.hold_shift": "按住 [Shift] 可查看概要",
-  "block.rocketnautics.rocket_thruster.tooltip.shift": "在 VAB 后面的垃圾桶里发现的玩意儿。\n理论上能提供推力，但实际上只会把岩浆化作一阵噪音。",
+  "block.rocketnautics.rocket_thruster.tooltip.shift": "在 VAB 后面的垃圾桶里发现的玩意儿。\n理论上能提供推力，但实际上只会把熔岩化作一阵噪音。",
   "rocketnautics.tooltip.rocket_thruster.extra": "需以熔岩为燃料，由泵的转速控制运行。\n从数据来看，基本必炸",
   "block.rocketnautics.vector_thruster.tooltip.shift": "工程师们发现，只要摆动一下引擎，火箭就能换个方向飞。\n简直是革命性突破。",
   "rocketnautics.tooltip.vector_thruster.extra": "可摆动。倾斜角度由侧面红石信号控制。\n剧烈摆动可能导致头晕",
