@@ -28,16 +28,24 @@ public class RocketBlocks {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(RocketNautics.MODID);
 
     public static final DeferredBlock<Block> ROCKET_THRUSTER = registerBlock("rocket_thruster",
-            () -> new RocketThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+            () -> new RocketThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)
+                    .lightLevel(state -> state.getValue(RocketThrusterBlock.LIT) ? 15 : 0)
+                    .noOcclusion()));
 
     public static final DeferredBlock<Block> VECTOR_THRUSTER = registerBlock("vector_thruster",
-            () -> new VectorThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+            () -> new VectorThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)
+                    .lightLevel(state -> state.getValue(RocketThrusterBlock.LIT) ? 15 : 0)
+                    .noOcclusion()));
 
     public static final DeferredBlock<Block> BOOSTER_THRUSTER = registerBlock("booster_thruster",
-            () -> new BoosterThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+            () -> new BoosterThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)
+                    .lightLevel(state -> state.getValue(RocketThrusterBlock.LIT) ? 15 : 0)
+                    .noOcclusion()));
 
     public static final DeferredBlock<Block> RCS_THRUSTER = registerBlock("rcs_thruster",
-            () -> new RCSThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+            () -> new RCSThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)
+                    .lightLevel(state -> state.hasProperty(RocketThrusterBlock.LIT) && state.getValue(RocketThrusterBlock.LIT) ? 10 : 0)
+                    .noOcclusion()));
 
     public static final DeferredBlock<Block> SEPARATOR = registerBlock("separator",
             () -> new SeparatorBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));

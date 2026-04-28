@@ -1,0 +1,3 @@
+ - Allow for the entire UDP pipeline to be disabled
+ - Adjust compatibility with Create's Mechanical Harvester
+ - Tweak assembly handling

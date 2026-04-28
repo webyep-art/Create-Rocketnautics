@@ -14,7 +14,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         this.xd = xSpeed;
         this.yd = ySpeed;
         this.zd = zSpeed;
-        this.setAlpha(0.4F + this.random.nextFloat() * 0.3F);
+        this.setAlpha(1.0F);
         this.lifetime = 20 + this.random.nextInt(10);
         this.baseScale = 0.4F + this.random.nextFloat() * 0.6F; // 2x bigger than previous tiny state
         this.quadSize = this.baseScale;
@@ -74,8 +74,8 @@ public class RocketExhaustParticle extends TextureSheetParticle {
             this.gCol = g;
             this.bCol = b;
             
-            // Fade out alpha over time
-            this.alpha = (1.0f - ageFactor) * this.maxAlpha;
+            // No fade out for opaque particles
+            this.alpha = this.maxAlpha;
 
             this.move(this.xd, this.yd, this.zd);
             
@@ -95,7 +95,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
     private float coolingB = 0.1f;
     
     private boolean shrinking = false;
-    private float maxAlpha = 0.7f;
+    private float maxAlpha = 1.0f;
     private float baseScale = 1.0f;
 
     @Override
@@ -137,7 +137,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
 
     @Override
     public @NotNull ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
+        return ParticleRenderType.PARTICLE_SHEET_OPAQUE;
     }
 
     public static class FlameProvider implements ParticleProvider<SimpleParticleType> {

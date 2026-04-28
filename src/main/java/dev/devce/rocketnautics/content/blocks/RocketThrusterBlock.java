@@ -17,10 +17,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class RocketThrusterBlock extends DirectionalBlock implements EntityBlock {
     public static final com.mojang.serialization.MapCodec<RocketThrusterBlock> CODEC = simpleCodec(RocketThrusterBlock::new);
+    public static final BooleanProperty LIT = BlockStateProperties.LIT;
 
     public RocketThrusterBlock(Properties properties) {
         super(properties);
-        registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.UP));
+        registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.UP).setValue(LIT, false));
     }
 
     @Override
@@ -30,13 +31,14 @@ public class RocketThrusterBlock extends DirectionalBlock implements EntityBlock
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, LIT);
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return this.defaultBlockState()
-                .setValue(FACING, context.getNearestLookingDirection().getOpposite());
+                .setValue(FACING, context.getNearestLookingDirection().getOpposite())
+                .setValue(LIT, false);
     }
 
     @Override
@@ -47,7 +49,7 @@ public class RocketThrusterBlock extends DirectionalBlock implements EntityBlock
     @Nullable
     @Override
     public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(Level level, BlockState state, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
-        return type == RocketBlockEntities.ROCKET_THRUSTER.get() ? (level1, pos, state1, blockEntity) -> RocketThrusterBlockEntity.tick(level1, pos, state1, (RocketThrusterBlockEntity) blockEntity) : null;
+        return type == RocketBlockEntities.ROCKET_THRUSTER.get() ? (level1, pos, state1, blockEntity) -> AbstractThrusterBlockEntity.tick(level1, pos, state1, (AbstractThrusterBlockEntity) blockEntity) : null;
     }
 
     @Nullable

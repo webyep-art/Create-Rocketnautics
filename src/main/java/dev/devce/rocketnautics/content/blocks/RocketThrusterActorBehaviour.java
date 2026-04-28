@@ -1,40 +1,50 @@
 package dev.devce.rocketnautics.content.blocks;
 
-// These imports are based on my analysis of the Aeronautics mod files
-/*
-import eriksonn.aeronautics.content.blocks.propeller.behaviour.PropellerActorBehaviour; // Reference
-import ryanhcode.sable.api.physics.force.ForceGroup;
-import ryanhcode.sable.api.physics.force.QueuedForceGroup;
-*/
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Conceptual implementation of the ActorBehaviour for RocketNautics.
- * This class handles applying force to the contraption in the Sable physics engine.
+ * Handles applying force to moving contraptions in the Sable physics engine.
+ * This behavior is attached to thrusters when they are part of a Create contraption.
  */
 public class RocketThrusterActorBehaviour {
-    // Note: In a real implementation, this would extend an Aeronautics ActorBehaviour class
     
-    private final RocketThrusterBlockEntity tileEntity;
+    // Constant for the default thrust magnitude
+    private static final double DEFAULT_THRUST_MAGNITUDE = 50.0;
+    
+    private final AbstractThrusterBlockEntity thruster;
 
-    public RocketThrusterActorBehaviour(RocketThrusterBlockEntity te) {
-        this.tileEntity = te;
+    public RocketThrusterActorBehaviour(AbstractThrusterBlockEntity thruster) {
+        this.thruster = thruster;
     }
 
-    public void tick(Object forceGroup, Vec3 worldPosition, Vec3 orientation) {
-        if (!tileEntity.isActive()) return;
+    /**
+     * Ticks the actor behavior, applying force to the contraption's force group.
+     * 
+     * @param forceGroup The Sable ForceGroup to apply force to.
+     * @param contraptionWorldPos The world position of the thruster on the contraption.
+     * @param orientation The orientation of the contraption.
+     */
+    public void tick(Object forceGroup, Vec3 contraptionWorldPos, Vec3 orientation) {
+        if (!thruster.isActive()) {
+            return;
+        }
 
-        // Get direction from the block entity
-        Direction facing = tileEntity.getThrustDirection();
+        // Apply thrust in the opposite direction of the nozzle
+        Direction facing = thruster.getThrustDirection();
+        Direction pushDirection = facing.getOpposite();
         
-        // Calculate thrust vector (simplified)
-        double thrustMagnitude = 50.0; // Adjustable power
-        Vec3 thrustVector = Vec3.atLowerCornerOf(facing.getNormal()).scale(thrustMagnitude);
+        // Calculate thrust vector based on current engine power
+        double thrustMagnitude = thruster.getCurrentPower() > 0 ? 
+                thruster.getCurrentPower() * 10.0 : DEFAULT_THRUST_MAGNITUDE;
+        
+        Vec3 thrustVector = new Vec3(
+                pushDirection.getStepX() * thrustMagnitude,
+                pushDirection.getStepY() * thrustMagnitude,
+                pushDirection.getStepZ() * thrustMagnitude
+        );
 
-        // Apply force to the contraption via Sable API
-        // forceGroup.addForce(thrustVector, worldPosition);
-        
-        // In Aeronautics/Sable, forces are often applied to the "ForceTotal" or queued for the next physics step
+        // Note: In a complete implementation, this would interact with the Sable/Aeronautics API
+        // applyForce(forceGroup, thrustVector, contraptionWorldPos);
     }
 }

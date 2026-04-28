@@ -1,0 +1,212 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id "checkstyle"
+}
+
+base {
+    archivesName = "${mod_id}-${project.name}-${minecraft_version}"
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(java_version)
+    withSourcesJar()
+//    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+    // https://docs.gradle.org/current/userguide/declaring_repositories.html#declaring_content_exclusively_found_in_one_repository
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Sponge'
+                url = 'https://repo.spongepowered.org/repository/maven-public'
+            }
+        }
+        filter { includeGroupAndSubgroups('org.spongepowered') }
+    }
+    exclusiveContent {
+        forRepositories(
+                maven {
+                    name = 'ParchmentMC'
+                    url = 'https://maven.parchmentmc.org/'
+                },
+                maven {
+                    name = "NeoForge"
+                    url = 'https://maven.neoforged.net/releases'
+                }
+        )
+        filter { includeGroup('org.parchmentmc.data') }
+    }
+    maven {
+        name = 'BlameJared'
+        url = 'https://maven.blamejared.com'
+    }
+
+    maven { url = "https://maven.ithundxr.dev/hidden" } // Registrate
+    maven { url = "https://maven.ithundxr.dev/snapshots" } // Registrate
+    maven { url = "https://maven.createmod.net" } // Ponder
+
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter {
+            includeGroup "maven.modrinth"
+        }
+    }
+
+    exclusiveContent {
+        forRepository {
+            maven {
+                url = "https://cursemaven.com"
+            }
+        }
+        filter {
+            includeGroup "curse.maven"
+        }
+    }
+
+    maven { url = "https://maven.tterrag.com" } // Flywheel
+
+    maven {
+        url = "https://maven.squiddev.cc"
+        content {
+            includeGroup("cc.tweaked")
+        }
+    }
+    maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" }
+
+    maven {
+        name = "Mortuusars Github Maven"
+        url = "https://raw.githubusercontent.com/mortuusars/resources/main/maven/"
+    }
+    maven {
+        url = "https://maven.ryanhcode.dev/releases"
+    }
+}
+
+dependencies {
+    compileOnly "maven.modrinth:lithium:mc1.21.1-0.15.3-neoforge"
+    compileOnly "maven.modrinth:sodium:$sodium_version"
+    compileOnly "maven.modrinth:iris:$iris_version"
+    compileOnly "maven.modrinth:distanthorizons:$distant_horizons_version"
+    compileOnly("cc.tweaked:cc-tweaked-$minecraft_version-forge:$cc_tweaked_version")
+    compileOnly("io.github.mortuusars.exposure:exposure-${minecraft_version}-neoforge:${exposure_version}") { transitive = false }
+    compileOnly("maven.modrinth:jade:${project.jade_version}+neoforge") { transitive = false }
+    compileOnly("maven.modrinth:jade-addons-forge:${project.jade_addons_version}+neoforge") { transitive = false }
+    compileOnly("maven.modrinth:moonlight:${project.moonlight_version}-neoforge")
+    compileOnly("curse.maven:vista-1368607:$vista_version")
+}
+
+// Declare capabilities on the outgoing configurations.
+// Read more about capabilities here: https://docs.gradle.org/current/userguide/component_capabilities.html#sec:declaring-additional-capabilities-for-a-local-component
+['apiElements', 'runtimeElements', 'sourcesElements'/*, 'javadocElements'*/].each { variant ->
+    configurations."$variant".outgoing {
+        capability("$group:${base.archivesName.get()}:$version")
+        capability("$group:$mod_id-${project.name}-${minecraft_version}:$version")
+        capability("$group:$mod_id:$version")
+    }
+    publishing.publications.configureEach {
+        suppressPomMetadataWarningsFor(variant)
+    }
+}
+
+sourcesJar {
+    from(rootProject.file('LICENSE.md')) {
+        rename { "${it}" }
+    }
+}
+
+jar {
+    from(rootProject.file('LICENSE.md')) {
+        rename { "${it}" }
+    }
+
+    manifest {
+        attributes([
+                'Specification-Title'   : mod_name,
+                'Specification-Vendor'  : mod_author,
+                'Specification-Version' : project.jar.archiveVersion,
+                'Implementation-Title'  : project.name,
+                'Implementation-Version': project.jar.archiveVersion,
+                'Implementation-Vendor' : mod_author,
+                'Built-On-Minecraft'    : minecraft_version
+        ])
+    }
+}
+
+String createModVersionRange() {
+    def createNeoforgeVersion = create_version.split("-")[0]
+    def parts = createNeoforgeVersion.split("\\.").collect {it.toInteger() }
+    def newMinor = parts[1] + 1
+    def upperBounds = "${parts[0]}.$newMinor.0"
+    
+    return "[$createNeoforgeVersion,$upperBounds)"
+}
+
+processResources {
+    var expandProps = [
+            'version'                      : version,
+            'group'                        : project.group, //Else we target the task's group.
+            'minecraft_version'            : minecraft_version,
+            'minecraft_version_range'      : minecraft_version_range,
+            'create_version_range'         : createModVersionRange(),
+            'fabric_version'               : fabric_version,
+            'fabric_loader_version'        : fabric_loader_version,
+            'mod_name'                     : mod_name,
+            'mod_author'                   : mod_author,
+            'mod_id'                       : mod_id,
+            'license'                      : license,
+            'issues'                       : issues,
+            'description'                  : project.description,
+            'neoforge_version'             : neoforge_version,
+            'neoforge_loader_version_range': neoforge_loader_version_range,
+            'credits'                      : credits,
+            'java_version'                 : java_version,
+            'veil_version'                 : veil_version,
+            'sable_companion_version'      : sable_companion_version
+    ]
+
+    filesMatching(['pack.mcmeta', 'fabric.mod.json', 'META-INF/mods.toml', 'META-INF/neoforge.mods.toml', '*.mixins.json']) {
+        expand expandProps
+    }
+    inputs.properties(expandProps)
+}
+
+
+checkstyleMain {
+    configFile = rootProject.file('config/checkstyle/checkstyle.xml')
+    configProperties = [ 'checkstyle.cache.file': "${buildDir}/checkstyle.cache" ]
+    ignoreFailures = true
+    showViolations = true
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = base.archivesName.get()
+            from components.java
+        }
+    }
+
+    repositories {
+        mavenLocal()
+        maven {
+            url = System.getenv('local_maven_url')
+
+            credentials {
+                username = System.getenv('local_maven_user')
+                password = System.getenv('local_maven_token')
+            }
+
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
+    }
+}

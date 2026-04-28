@@ -10,4 +10,24 @@ public interface IThruster {
     BlockPos getBlockPos();
     Level getLevel();
     ScrollValueBehaviour getThrustPower();
+    
+    /**
+     * @return The current thrust power in Newtons (after scaling).
+     */
+    int getCurrentPower();
+    
+    /**
+     * @return Estimated total mass of available fuel in kilograms.
+     */
+    double getAvailableFuelMass();
+
+    /**
+     * @return Current fuel consumption in kilograms per tick.
+     */
+    double getFuelConsumptionPerTick();
+
+    /**
+     * @return Specific impulse (effective exhaust velocity) in m/s.
+     */
+    double getSpecificImpulse();
 }

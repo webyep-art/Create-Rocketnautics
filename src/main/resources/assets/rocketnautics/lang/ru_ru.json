@@ -19,7 +19,10 @@
   "rocketnautics.goggles.inactive": "Неактивен",
   "rocketnautics.goggles.spent": "Выгорел",
   "rocketnautics.goggles.thrust": "Тяга",
+  "rocketnautics.goggles.isp": "Удельный импульс (Isp)",
+  "rocketnautics.goggles.fuel_mass": "Масса доступного топлива",
   "rocketnautics.goggles.fuel": "Топливо",
   "rocketnautics.goggles.burn_time": "Время горения",
-  "rocketnautics.goggles.fuel_usage": "Подача топлива"
+  "rocketnautics.goggles.fuel_usage": "Подача топлива",
+  "rocketnautics.goggles.delta_v": "Оценка Delta-V"
 }

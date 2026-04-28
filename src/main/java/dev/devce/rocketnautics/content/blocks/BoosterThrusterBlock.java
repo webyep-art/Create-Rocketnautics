@@ -11,19 +11,20 @@ public class BoosterThrusterBlock extends RocketThrusterBlock {
 
     public BoosterThrusterBlock(Properties properties) {
         super(properties);
-        registerDefaultState(this.stateDefinition.any().setValue(FACING, net.minecraft.core.Direction.UP).setValue(POWERED, false));
+        registerDefaultState(this.stateDefinition.any().setValue(FACING, net.minecraft.core.Direction.UP).setValue(POWERED, false).setValue(LIT, false));
     }
 
     @Override
     protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
-        builder.add(FACING, POWERED);
+        builder.add(FACING, POWERED, LIT);
     }
 
     @Override
     public BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext context) {
         return this.defaultBlockState()
                 .setValue(FACING, context.getNearestLookingDirection().getOpposite())
-                .setValue(POWERED, context.getLevel().hasNeighborSignal(context.getClickedPos()));
+                .setValue(POWERED, context.getLevel().hasNeighborSignal(context.getClickedPos()))
+                .setValue(LIT, false);
     }
 
     @Override
@@ -39,7 +40,7 @@ public class BoosterThrusterBlock extends RocketThrusterBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(net.minecraft.world.level.Level level, BlockState state, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
-        return type == RocketBlockEntities.BOOSTER_THRUSTER.get() ? (level1, pos, state1, blockEntity) -> BoosterThrusterBlockEntity.tick(level1, pos, state1, (BoosterThrusterBlockEntity) blockEntity) : null;
+        return type == RocketBlockEntities.BOOSTER_THRUSTER.get() ? (level1, pos, state1, blockEntity) -> AbstractThrusterBlockEntity.tick(level1, pos, state1, (AbstractThrusterBlockEntity) blockEntity) : null;
     }
 
     @Nullable

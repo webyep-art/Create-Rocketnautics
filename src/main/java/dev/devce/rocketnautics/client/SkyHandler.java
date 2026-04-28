@@ -30,8 +30,10 @@ public class SkyHandler {
         if (mc.level == null || mc.player == null) return;
 
         double y = mc.gameRenderer.getMainCamera().getPosition().y;
-        if (y > 1000.0) {
-            float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
+        boolean isSpace = mc.level.dimension().location().getPath().equals("space");
+        
+        if (isSpace || y > 1000.0) {
+            float factor = isSpace ? 1.0f : (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
             
             event.setRed(Mth.lerp(factor, event.getRed(), 0.0f));
             event.setGreen(Mth.lerp(factor, event.getGreen(), 0.0f));
@@ -39,17 +41,27 @@ public class SkyHandler {
         }
     }
 
+    private static net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> lastDim = null;
+
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY) return;
         
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
+
+        if (lastDim != mc.level.dimension()) {
+            lastDim = mc.level.dimension();
+            mapRequested = false;
+        }
         
         double camY = mc.gameRenderer.getMainCamera().getPosition().y;
-        if (camY < 1000.0) return;
+        boolean isSpace = mc.level.dimension().location().getPath().equals("space");
+        
+        if (!isSpace && camY < 1000.0) return;
 
-        float visibility = (float) Mth.clamp((camY - 1000.0) / 500.0, 0.0, 1.0);
+        double effectiveCamY = isSpace ? 20000.0 : camY;
+        float visibility = isSpace ? 1.0f : (float) Mth.clamp((camY - 1000.0) / 500.0, 0.0, 1.0);
         if (visibility <= 0) return;
 
         PoseStack poseStack = event.getPoseStack();
@@ -64,15 +76,15 @@ public class SkyHandler {
         invRot.conjugate();
         poseStack.mulPose(invRot);
         
-        float renderDist = 20.0f;
-        float parallaxFactor = (float) (renderDist / Math.max(100.0, camY)); 
+        float renderDist = 10.0f;
+        float parallaxFactor = (float) (renderDist / Math.max(100.0, effectiveCamY)); 
         double camX = camera.getPosition().x;
         double camZ = camera.getPosition().z;
         float relX = (float) (-camX * parallaxFactor);
         float relY = -renderDist;
         float relZ = (float) (-camZ * parallaxFactor);
         
-        float size = (float) (500000.0f * (renderDist / Math.max(100.0, camY)));
+        float size = (float) (40000.0f * (renderDist / Math.max(100.0, effectiveCamY)));
         
         ensurePlanetTexture();
         
@@ -149,8 +161,10 @@ public class SkyHandler {
         if (mc.level == null || mc.player == null) return;
         
         double y = mc.gameRenderer.getMainCamera().getPosition().y;
-        if (y > 1000.0) {
-            float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
+        boolean isSpace = mc.level.dimension().location().getPath().equals("space");
+        
+        if (isSpace || y > 1000.0) {
+            float factor = isSpace ? 1.0f : (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
             
             float start = event.getNearPlaneDistance();
             float end = event.getFarPlaneDistance();
@@ -281,21 +295,23 @@ public class SkyHandler {
 
     private static ResourceLocation HALO_TEXTURE_ID = null;
     private static boolean haloV5 = false;
+    private static DynamicTexture HALO_TEXTURE_OBJ = null;
 
     private static void ensureHaloTexture() {
         if (HALO_TEXTURE_ID != null && haloV5) return;
         Minecraft mc = Minecraft.getInstance();
-        int size = 256;
+        int size = 32; // Пикселизация
         NativeImage image = new NativeImage(size, size, false);
         for (int x = 0; x < size; x++) {
             for (int y = 0; y < size; y++) {
                 double dx = (x - size / 2.0) / (size / 2.0);
                 double dy = (y - size / 2.0) / (size / 2.0);
                 
+                // Используем квадратную дистанцию вместо круговой
                 double dist = Math.max(Math.abs(dx), Math.abs(dy));
                 
                 int r = 0, g = 0, b = 0, a = 0;
-                double planetRadius = 1.0 / 1.3;
+                double planetRadius = 0.85; 
                 
                 if (dist <= planetRadius) {
                     double normalizedDist = dist / planetRadius; 
@@ -307,10 +323,10 @@ public class SkyHandler {
                     b += (int) (opticalDepth * 0);   
                     
                     r = Math.min(255, r); g = Math.min(255, g); b = Math.min(255, b);
-                    a = 80 + (int) (opticalDepth * 175);
+                    a = 255; 
                 } else if (dist <= 1.0) {
                     double gradient = (dist - planetRadius) / (1.0 - planetRadius);
-                    double fade = Math.pow(1.0 - gradient, 1.0);
+                    double fade = Math.pow(1.0 - gradient, 2.0);
                     
                     r = (int) (140 * fade);
                     g = (int) (220 * fade);
@@ -323,8 +339,9 @@ public class SkyHandler {
                 image.setPixelRGBA(x, y, color);
             }
         }
-        DynamicTexture dynamicTexture = new DynamicTexture(image);
-        HALO_TEXTURE_ID = mc.getTextureManager().register("rocketnautics_halo_v5", dynamicTexture);
+        HALO_TEXTURE_OBJ = new DynamicTexture(image);
+        HALO_TEXTURE_ID = mc.getTextureManager().register("rocketnautics_halo_v5", HALO_TEXTURE_OBJ);
+        HALO_TEXTURE_OBJ.setFilter(false, false); // Без сглаживания
         haloV5 = true;
     }
 }

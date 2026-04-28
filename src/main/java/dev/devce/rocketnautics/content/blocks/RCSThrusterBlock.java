@@ -23,7 +23,7 @@ public class RCSThrusterBlock extends DirectionalBlock implements EntityBlock {
 
     public RCSThrusterBlock(Properties properties) {
         super(properties);
-        registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.UP));
+        registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.UP).setValue(RocketThrusterBlock.LIT, false));
     }
 
     @Override
@@ -33,19 +33,20 @@ public class RCSThrusterBlock extends DirectionalBlock implements EntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, RocketThrusterBlock.LIT);
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return this.defaultBlockState()
-                .setValue(FACING, context.getNearestLookingDirection().getOpposite());
+                .setValue(FACING, context.getNearestLookingDirection().getOpposite())
+                .setValue(RocketThrusterBlock.LIT, false);
     }
 
     @Nullable
     @Override
     public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(Level level, BlockState state, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
-        return type == RocketBlockEntities.RCS_THRUSTER.get() ? (level1, pos, state1, blockEntity) -> RCSThrusterBlockEntity.tick(level1, pos, state1, (RCSThrusterBlockEntity) blockEntity) : null;
+        return type == RocketBlockEntities.RCS_THRUSTER.get() ? (level1, pos, state1, blockEntity) -> AbstractThrusterBlockEntity.tick(level1, pos, state1, (AbstractThrusterBlockEntity) blockEntity) : null;
     }
 
     protected static final VoxelShape UP_SHAPE = Block.box(6, 0, 6, 10, 12, 10);

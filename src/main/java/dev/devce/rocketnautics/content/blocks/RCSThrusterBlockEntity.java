@@ -4,18 +4,23 @@ import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
 import dev.devce.rocketnautics.registry.RocketBlockEntities;
 import dev.devce.rocketnautics.registry.RocketParticles;
-import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3d;
 
 import java.util.List;
 
-public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
+/**
+ * Reaction Control System (RCS) Thruster.
+ * Provides low thrust for orientation and fine movement.
+ * Activated by redstone signal.
+ */
+public class RCSThrusterBlockEntity extends AbstractThrusterBlockEntity {
+
+    private static final double RCS_THRUST_MAGNITUDE = 100.0;
+    private static final int RCS_MAX_IGNITION_TICKS = 10;
 
     public RCSThrusterBlockEntity(BlockPos pos, BlockState state) {
         super(RocketBlockEntities.RCS_THRUSTER.get(), pos, state);
@@ -23,6 +28,7 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
 
     @Override
     public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
+        // RCS doesn't have scroll behaviours currently
     }
 
     @Override
@@ -43,71 +49,80 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
     }
 
     @Override
-    public void sable$physicsTick(ServerSubLevel serverSubLevel, RigidBodyHandle handle, double deltaTime) {
-        if (!isActive()) return;
-
-        Direction facing = getThrustDirection();
-        Direction pushDirection = facing.getOpposite();
-        
-        double currentThrust = 100.0;
-        
-        Vector3d thrustVector = new Vector3d(
-                pushDirection.getStepX() * currentThrust,
-                pushDirection.getStepY() * currentThrust,
-                pushDirection.getStepZ() * currentThrust
-        );
-
-        Vector3d blockCenter = new Vector3d(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5);
-        handle.applyImpulseAtPoint(blockCenter, thrustVector.mul(deltaTime));
-    }
-
-    @Override
     public int getWarmupTime() {
         return 0;
     }
 
+    @Override
+    protected void updateActiveState() {
+        if (level == null || level.isClientSide) return;
 
-    public static void tick(Level level, BlockPos pos, BlockState state, RCSThrusterBlockEntity blockEntity) {
-        boolean active = blockEntity.isActive();
-        if (!level.isClientSide) {
-            if (active != blockEntity.currentlyBurning) {
-                blockEntity.currentlyBurning = active;
-                blockEntity.sendData();
-            }
-        }
-
-        blockEntity.tick();
-        
-        if (level.isClientSide()) {
-            if (active) {
-                Direction nozzle = blockEntity.getThrustDirection();
-                Vector3d pDir = new Vector3d(nozzle.getStepX(), nozzle.getStepY(), nozzle.getStepZ());
-                
-                double x = pos.getX() + 0.5 + pDir.x() * 0.55;
-                double y = pos.getY() + 0.5 + pDir.y() * 0.55;
-                double z = pos.getZ() + 0.5 + pDir.z() * 0.55;
-
-                RandomSource random = level.getRandom();
-                
-                for (int i = 0; i < 2; i++) {
-                    double speedX = pDir.x() * (0.3 + random.nextDouble() * 0.2) + (random.nextDouble() - 0.5) * 0.05;
-                    double speedY = pDir.y() * (0.3 + random.nextDouble() * 0.2) + (random.nextDouble() - 0.5) * 0.05;
-                    double speedZ = pDir.z() * (0.3 + random.nextDouble() * 0.2) + (random.nextDouble() - 0.5) * 0.05;
-                    
-                    level.addParticle(RocketParticles.RCS_GAS.get(), x, y, z, speedX, speedY, speedZ);
-                }
-            }
-        }
-        
-        if (active) {
-            if (blockEntity.ignitionTicks < 10) blockEntity.ignitionTicks++;
-        } else {
-            if (blockEntity.ignitionTicks > 0) blockEntity.ignitionTicks--;
+        boolean active = isActive();
+        if (active != currentlyBurning) {
+            currentlyBurning = active;
+            sendData();
         }
     }
 
     @Override
-    public void remove() {
-        super.remove();
+    protected void updateIgnition(boolean active) {
+        if (active) {
+            if (ignitionTicks < RCS_MAX_IGNITION_TICKS) ignitionTicks++;
+        } else {
+            if (ignitionTicks > 0) ignitionTicks--;
+        }
+    }
+
+    @Override
+    protected void spawnThrustParticles() {
+        Direction nozzle = getThrustDirection();
+        Vector3d pDir = new Vector3d(nozzle.getStepX(), nozzle.getStepY(), nozzle.getStepZ());
+        
+        double x = worldPosition.getX() + 0.5 + pDir.x() * 0.55;
+        double y = worldPosition.getY() + 0.5 + pDir.y() * 0.55;
+        double z = worldPosition.getZ() + 0.5 + pDir.z() * 0.55;
+
+        RandomSource random = level.getRandom();
+        
+        for (int i = 0; i < 2; i++) {
+            double speedX = pDir.x() * (0.3 + random.nextDouble() * 0.2) + (random.nextDouble() - 0.5) * 0.05;
+            double speedY = pDir.y() * (0.3 + random.nextDouble() * 0.2) + (random.nextDouble() - 0.5) * 0.05;
+            double speedZ = pDir.z() * (0.3 + random.nextDouble() * 0.2) + (random.nextDouble() - 0.5) * 0.05;
+            
+            level.addParticle(RocketParticles.RCS_GAS.get(), x, y, z, speedX, speedY, speedZ);
+        }
+    }
+
+    @Override
+    protected Vector3d getPhysicsThrustVector(Direction pushDirection, double ignored) {
+        // RCS has a fixed thrust magnitude
+        return new Vector3d(
+                pushDirection.getStepX() * RCS_THRUST_MAGNITUDE,
+                pushDirection.getStepY() * RCS_THRUST_MAGNITUDE,
+                pushDirection.getStepZ() * RCS_THRUST_MAGNITUDE
+        );
+    }
+
+    @Override
+    protected void applyThrusterEffects(net.minecraft.world.level.Level level, BlockPos pos) {
+        // RCS is too weak to cause damage or block melting
+    }
+
+    @Override
+    public double getAvailableFuelMass() {
+        // Assume RCS uses some internal gas supply or atmosphere
+        // For dV calculation, let's say it has a small virtual tank
+        return isActive() ? 10.0 : 0.0;
+    }
+
+    @Override
+    public double getFuelConsumptionPerTick() {
+        return isActive() ? 0.1 : 0;
+    }
+
+    @Override
+    public double getSpecificImpulse() {
+        // Cold gas thrusters ~700 m/s
+        return 700.0;
     }
 }

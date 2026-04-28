@@ -1,0 +1,51 @@
+name: Build Rust Natives
+on:
+  push:
+    paths:
+      - 'common/src/main/rust/**'
+      - '.github/workflows/build-rust.yml'
+  workflow_dispatch:
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/common/build/cargo
+          key: ${{ runner.os }}-node-${{ hashFiles('common/src/main/rust/**/Cargo.lock') }}
+
+      - name: Run Gradle Task
+        run: ./gradlew common:buildImages common:buildRustNatives
+
+      - name: Take ownership of the workspace
+        run: sudo chown -R $USER:$USER .
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m "Automated build rust natives" || echo "No changes to commit"
+          git push

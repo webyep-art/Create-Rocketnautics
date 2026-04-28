@@ -11,8 +11,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3d;
 
+/**
+ * Gimbaled rocket engine.
+ * Can tilt its thrust vector based on side signals.
+ */
 public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
-    private static final Direction[] DIRECTIONS = Direction.values();
+
+    private static final float GIMBAL_SENSITIVITY = 0.02f;
+    private static final float GIMBAL_LERP_FACTOR = 0.2f;
 
     private float gimbalX = 0;
     private float gimbalY = 0;
@@ -49,12 +55,12 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
         float gY = 0;
         float gZ = 0;
         
-        for (Direction dir : DIRECTIONS) {
+        for (Direction dir : Direction.values()) {
             if (dir.getAxis() != nozzle.getAxis()) {
                 int signal = level.getSignal(worldPosition.relative(dir), dir);
-                gX += dir.getStepX() * signal * 0.02f;
-                gY += dir.getStepY() * signal * 0.02f;
-                gZ += dir.getStepZ() * signal * 0.02f;
+                gX += dir.getStepX() * signal * GIMBAL_SENSITIVITY;
+                gY += dir.getStepY() * signal * GIMBAL_SENSITIVITY;
+                gZ += dir.getStepZ() * signal * GIMBAL_SENSITIVITY;
             }
         }
         
@@ -68,12 +74,16 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
 
     public static void tick(Level level, BlockPos pos, BlockState state, VectorThrusterBlockEntity blockEntity) {
         if (level.isClientSide) {
-            blockEntity.renderGimbalX += (blockEntity.gimbalX - blockEntity.renderGimbalX) * 0.2f;
-            blockEntity.renderGimbalY += (blockEntity.gimbalY - blockEntity.renderGimbalY) * 0.2f;
-            blockEntity.renderGimbalZ += (blockEntity.gimbalZ - blockEntity.renderGimbalZ) * 0.2f;
+            blockEntity.updateRenderGimbals();
         }
         
         RocketThrusterBlockEntity.tick(level, pos, state, blockEntity);
+    }
+
+    private void updateRenderGimbals() {
+        renderGimbalX += (gimbalX - renderGimbalX) * GIMBAL_LERP_FACTOR;
+        renderGimbalY += (gimbalY - renderGimbalY) * GIMBAL_LERP_FACTOR;
+        renderGimbalZ += (gimbalZ - renderGimbalZ) * GIMBAL_LERP_FACTOR;
     }
 
     @Override
@@ -82,7 +92,7 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
 
         Direction facing = getThrustDirection();
         Direction pushDirection = facing.getOpposite();
-        double currentThrust = getCurrentPower() * 10.0;
+        double currentThrust = getCurrentPower() * THRUST_FORCE_MULTIPLIER;
         
         Vector3d thrustVector = new Vector3d(
                 pushDirection.getStepX() + gimbalX,

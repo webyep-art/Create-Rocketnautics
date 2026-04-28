@@ -1,0 +1,69 @@
+plugins {
+    id "me.modmuss50.mod-publish-plugin" version "1.1.0" // https://github.com/modmuss50/mod-publish-plugin
+    id "fabric-loom"
+    id "multiloader-loader"
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings loom.layered {
+        officialMojangMappings()
+        parchment("org.parchmentmc.data:parchment-${parchment_minecraft}:${parchment_version}@zip")
+    }
+
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    modImplementation fabricApi.module("fabric-command-api-v2", project.fabric_version)
+    modImplementation fabricApi.module("fabric-lifecycle-events-v1", project.fabric_version)
+    modImplementation fabricApi.module("fabric-resource-loader-v0", project.fabric_version)
+    modImplementation fabricApi.module("fabric-convention-tags-v2", project.fabric_version)
+
+    include(implementation("org.apache.maven:maven-artifact:3.8.5"))
+
+    include(modApi("dev.ryanhcode.sable-companion:sable-companion-fabric-$minecraft_version:$sable_companion_version"))
+
+    modCompileOnly "maven.modrinth:sodium:$rootProject.sodium_version"
+    modCompileOnly "maven.modrinth:distanthorizons:$rootProject.distant_horizons_version"
+    modCompileOnly "maven.modrinth:sodium-extras:fabric-${minecraft_version}-$sodiumextras_version"
+
+    include(modApi("foundry.veil:veil-fabric-${project.minecraft_version}:${project.veil_version}"))
+
+    include(modApi("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:${forgeconfigapiport_version}")) //source: https://github.com/Fuzss/forgeconfigapiport-fabric
+    include(implementation('org.tukaani:xz:1.10'))
+}
+
+loom {
+    def aw = project(":common").file("src/main/resources/${mod_id}.accesswidener")
+    if (aw.exists()) {
+        accessWidenerPath.set(aw)
+    }
+    runs {
+        def client = client {
+            client()
+            setConfigName("Fabric Client")
+            ideConfigGenerated(true)
+            runDir("runs/client")
+        }
+        def server = server {
+            server()
+            setConfigName("Fabric Server")
+            ideConfigGenerated(true)
+            runDir("runs/server")
+        }
+
+        clientMixinExport {
+            inherit(client)
+            setConfigName(configName + " | Mixin Export")
+            vmArg("-Dmixin.debug.export=true")
+        }
+        serverMixinExport {
+            inherit(server)
+            setConfigName(configName + " | Mixin Export")
+            vmArg("-Dmixin.debug.export=true")
+        }
+    }
+}
+
+repositories {
+    mavenLocal()
+    maven { url = "https://maven.quiltmc.org/repository/release" }
+}

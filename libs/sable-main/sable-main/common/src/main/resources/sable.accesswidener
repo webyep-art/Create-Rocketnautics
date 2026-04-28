@@ -1,0 +1,118 @@
+accessWidener v2 named
+
+accessible class net/minecraft/client/multiplayer/ClientChunkCache$Storage
+
+accessible field net/minecraft/server/level/ChunkHolder fullChunkFuture Ljava/util/concurrent/CompletableFuture;
+accessible field net/minecraft/server/level/ChunkHolder tickingChunkFuture Ljava/util/concurrent/CompletableFuture;
+accessible field net/minecraft/server/level/ChunkHolder entityTickingChunkFuture Ljava/util/concurrent/CompletableFuture;
+
+accessible class net/minecraft/server/level/ServerChunkCache$ChunkAndHolder
+accessible method net/minecraft/server/level/ServerChunkCache$ChunkAndHolder <init> (Lnet/minecraft/world/level/chunk/LevelChunk;Lnet/minecraft/server/level/ChunkHolder;)V
+
+accessible field net/minecraft/server/network/ServerCommonPacketListenerImpl connection Lnet/minecraft/network/Connection;
+
+accessible field net/minecraft/server/level/ChunkMap updatingChunkMap Lit/unimi/dsi/fastutil/longs/Long2ObjectLinkedOpenHashMap;
+accessible field net/minecraft/server/level/ChunkMap visibleChunkMap Lit/unimi/dsi/fastutil/longs/Long2ObjectLinkedOpenHashMap;
+
+accessible field net/minecraft/server/level/ChunkLevel ENTITY_TICKING_LEVEL I
+accessible field net/minecraft/server/level/ChunkLevel BLOCK_TICKING_LEVEL I
+accessible method net/minecraft/server/network/PlayerChunkSender sendChunk (Lnet/minecraft/server/network/ServerGamePacketListenerImpl;Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/chunk/LevelChunk;)V
+
+accessible field net/minecraft/world/level/ClipContext block Lnet/minecraft/world/level/ClipContext$Block;
+accessible field net/minecraft/world/level/ClipContext fluid Lnet/minecraft/world/level/ClipContext$Fluid;
+accessible field net/minecraft/world/level/ClipContext collisionContext Lnet/minecraft/world/phys/shapes/CollisionContext;
+
+accessible method net/minecraft/server/level/ChunkMap onFullChunkStatusChange (Lnet/minecraft/world/level/ChunkPos;Lnet/minecraft/server/level/FullChunkStatus;)V
+
+accessible field net/minecraft/client/particle/Particle xo D
+accessible field net/minecraft/client/particle/Particle yo D
+accessible field net/minecraft/client/particle/Particle zo D
+accessible field net/minecraft/client/particle/Particle x D
+accessible field net/minecraft/client/particle/Particle y D
+accessible field net/minecraft/client/particle/Particle z D
+
+
+accessible field net/minecraft/world/level/lighting/LevelLightEngine blockEngine Lnet/minecraft/world/level/lighting/LightEngine;
+accessible field net/minecraft/world/level/lighting/LevelLightEngine skyEngine Lnet/minecraft/world/level/lighting/LightEngine;
+accessible method net/minecraft/server/level/ThreadedLevelLightEngine runUpdate ()V
+
+extendable method net/minecraft/server/level/GenerationChunkHolder rescheduleChunkTask (Lnet/minecraft/server/level/ChunkMap;Lnet/minecraft/world/level/chunk/status/ChunkStatus;)V
+
+accessible method net/minecraft/server/level/ThreadedLevelLightEngine updateChunkStatus (Lnet/minecraft/world/level/ChunkPos;)V
+
+accessible field net/minecraft/client/renderer/block/BlockRenderDispatcher modelRenderer Lnet/minecraft/client/renderer/block/ModelBlockRenderer;
+accessible class net/minecraft/client/renderer/block/ModelBlockRenderer$AmbientOcclusionFace
+accessible field net/minecraft/client/renderer/RenderStateShard name Ljava/lang/String;
+
+# Assembly
+accessible method net/minecraft/world/entity/decoration/HangingEntity calculateSupportBox ()Lnet/minecraft/world/phys/AABB;
+
+# Directional Shading
+accessible field net/minecraft/client/renderer/block/ModelBlockRenderer CACHE Ljava/lang/ThreadLocal;
+accessible class net/minecraft/client/renderer/block/ModelBlockRenderer$Cache
+
+# UDP Networking
+accessible field net/minecraft/network/Connection channel Lio/netty/channel/Channel;
+
+# Serialization
+accessible field net/minecraft/world/level/storage/DimensionDataStorage dataFolder Ljava/io/File;
+accessible method net/minecraft/server/level/ChunkMap getChunks ()Ljava/lang/Iterable;
+accessible method net/minecraft/server/level/ChunkMap scheduleUnload (JLnet/minecraft/server/level/ChunkHolder;)V
+accessible field net/minecraft/server/level/ChunkMap toDrop Lit/unimi/dsi/fastutil/longs/LongSet;
+accessible field net/minecraft/server/level/ChunkMap modified Z
+accessible field net/minecraft/server/level/ChunkMap unloadQueue Ljava/util/Queue;
+accessible method net/minecraft/server/level/ChunkMap saveChunkIfNeeded (Lnet/minecraft/server/level/ChunkHolder;)Z
+accessible field net/minecraft/server/level/ChunkMap chunkSaveCooldowns Lit/unimi/dsi/fastutil/longs/Long2LongMap;
+
+# Shadows
+accessible field net/minecraft/client/renderer/ShaderInstance samplerLocations Ljava/util/List;
+
+# Particles
+accessible field net/minecraft/client/particle/Particle xd D
+accessible field net/minecraft/client/particle/Particle yd D
+accessible field net/minecraft/client/particle/Particle zd D
+
+# Attributes
+accessible field net/minecraft/world/entity/ai/attributes/AttributeSupplier instances Ljava/util/Map;
+mutable field net/minecraft/world/entity/ai/attributes/AttributeSupplier instances Ljava/util/Map;
+
+# Entity Storage
+accessible field net/minecraft/server/level/ServerLevel entityManager Lnet/minecraft/world/level/entity/PersistentEntitySectionManager;
+accessible field net/minecraft/world/level/entity/PersistentEntitySectionManager sectionStorage Lnet/minecraft/world/level/entity/EntitySectionStorage;
+
+# Lithum Compat
+accessible class net/minecraft/server/level/ServerChunkCache$MainThreadExecutor
+
+# Entity Kicking
+accessible field net/minecraft/world/entity/Entity levelCallback Lnet/minecraft/world/level/entity/EntityInLevelCallback;
+
+# Distance Manager
+accessible class net/minecraft/server/level/ChunkMap$DistanceManager
+
+# Gizmo
+accessible method net/minecraft/client/renderer/GameRenderer getFov (Lnet/minecraft/client/Camera;FZ)D
+
+# Sub-Level rendering
+accessible method net/minecraft/client/renderer/chunk/SectionRenderDispatcher$RenderSection updateGlobalBlockEntities (Ljava/util/Collection;)V
+accessible method net/minecraft/client/renderer/chunk/SectionRenderDispatcher$RenderSection setCompiled (Lnet/minecraft/client/renderer/chunk/SectionRenderDispatcher$CompiledSection;)V
+accessible field net/minecraft/client/renderer/LevelRenderer cullingFrustum Lnet/minecraft/client/renderer/culling/Frustum;
+accessible field net/minecraft/client/renderer/chunk/SectionRenderDispatcher bufferPool Lnet/minecraft/client/renderer/SectionBufferBuilderPool;
+mutable field net/minecraft/client/renderer/chunk/SectionRenderDispatcher bufferPool Lnet/minecraft/client/renderer/SectionBufferBuilderPool;
+
+# Entity Getting
+accessible method net/minecraft/world/level/Level getEntities ()Lnet/minecraft/world/level/entity/LevelEntityGetter;
+
+# Respawning
+accessible class net/minecraft/server/level/ServerPlayer$RespawnPosAngle
+accessible method net/minecraft/server/level/ServerPlayer$RespawnPosAngle <init> (Lnet/minecraft/world/phys/Vec3;F)V
+accessible method net/minecraft/server/level/ServerPlayer findRespawnAndUseSpawnBlock (Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;FZZ)Ljava/util/Optional;
+
+# Entity Riding
+accessible method net/minecraft/world/entity/LivingEntity dismountVehicle (Lnet/minecraft/world/entity/Entity;)V
+accessible field net/minecraft/world/entity/Entity removalReason Lnet/minecraft/world/entity/Entity$RemovalReason;
+
+extendable method net/minecraft/world/entity/Entity getEyePosition (F)Lnet/minecraft/world/phys/Vec3;
+extendable method net/minecraft/world/entity/Entity setRemoved (Lnet/minecraft/world/entity/Entity$RemovalReason;)V
+
+#Abstract hurting projectile accel
+accessible field net/minecraft/world/entity/projectile/AbstractHurtingProjectile accelerationPower D

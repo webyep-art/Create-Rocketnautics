@@ -30,8 +30,7 @@ public class ThrusterSoundInstance extends AbstractTickableSoundInstance {
             return;
         }
 
-        com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour behaviour = blockEntity.getThrustPower();
-        int power = (behaviour != null) ? behaviour.getValue() : 1;
+        int power = blockEntity.getCurrentPower();
         float targetVolume = 0.2f + (power / 10.0f);
         float targetPitch = 0.5f + (power / 20.0f);
 

@@ -1,0 +1,259 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+import org.tukaani.xz.LZMA2Options
+import org.tukaani.xz.XZOutputStream
+
+import java.nio.file.Files
+
+buildscript {
+    dependencies {
+        classpath 'org.tukaani:xz:1.10'
+    }
+}
+
+plugins {
+    id 'multiloader-common'
+    id 'net.neoforged.moddev'
+}
+
+def mac(arch) {
+    [triple: "${arch}-apple-darwin", arch: arch, os: "macos", ext: "dylib", lib: true]
+}
+
+def linux(arch) {
+    [triple: "${arch}-unknown-linux-gnu", arch: arch, os: "linux", ext: "so", lib: true]
+}
+
+def freebsd(arch) {
+    [triple: "${arch}-unknown-freebsd", arch: arch, os: "freebsd", ext: ".so", lib: true]
+}
+
+def windows(arch) {
+    [triple: "${arch}-pc-windows-msvc", arch: arch, os: "windows", ext: "dll", lib: false]
+}
+
+def supportedTargets = [
+        mac("x86_64"),
+        mac("aarch64"),
+        linux("x86_64"),
+        linux("aarch64"),
+        windows("x86_64"),
+        windows("aarch64"),
+        freebsd("x86_64"),
+        // freebsd("aarch64"),
+]
+def pinnedRustVersion = 'nightly-2026-01-29'
+def rustRootDir = file("src/main/rust")
+def rustProjectDir = file("$rustRootDir/rapier")
+def nativesDir = file("src/main/resources/natives/sable_rapier")
+def cargoCacheDir = project.layout.buildDirectory.file("cargo").get().asFile
+def docker = Os.isFamily(Os.FAMILY_MAC) ? "/usr/local/bin/docker" : "docker"
+def xWinImage = 'sable-build-xwin'
+def zigbuildImage = 'sable-build-zigbuild'
+
+def baseDockerCommand = [
+        docker,
+        'run',
+        '--rm',
+        '-v',
+        "$rustRootDir:/io",
+        '-v',
+        "$cargoCacheDir/git:/usr/local/cargo/git",
+        '-v',
+        "$cargoCacheDir/registry:/usr/local/cargo/registry",
+        '-w',
+        '/io/rapier',
+]
+project.ext.zigbuildCargo = [baseDockerCommand, zigbuildImage, 'cargo'].flatten()
+project.ext.xWinCargo = [baseDockerCommand, xWinImage, 'cargo'].flatten()
+
+tasks.register('createContainersDirectory') {
+    doLast {
+        if (!cargoCacheDir.exists()) {
+            cargoCacheDir.mkdirs()
+        }
+    }
+}
+
+
+tasks.register('buildZigbuildImage', Exec) {
+    group = 'rust'
+    workingDir rustRootDir
+    commandLine docker, 'build', '-t', zigbuildImage, 'container/zigbuild', '--build-arg', "RUST_VERSION=${pinnedRustVersion}"
+    dependsOn createContainersDirectory
+}
+tasks.register('buildXWinImage', Exec) {
+    group = 'rust'
+    workingDir rustRootDir
+    commandLine docker, 'build', '-t', xWinImage, 'container/xwin', '--build-arg', "RUST_VERSION=${pinnedRustVersion}"
+    dependsOn createContainersDirectory
+}
+
+tasks.register('buildImages') {
+    group = 'rust'
+    dependsOn buildZigbuildImage, buildXWinImage
+}
+
+tasks.register('cleanRust', Exec) {
+    group = 'rust'
+    workingDir rustProjectDir
+    commandLine project.ext.zigbuildCargo
+    // only need to use zigbuild cargo since both containers share the same target folder
+    args 'clean'
+    dependsOn createContainersDirectory
+}
+
+def compileRustTaskName = { target ->
+    "compileRust-${target.os}-${target.arch}"
+}
+
+def commandLineForTarget(target) {
+    if (target.triple.contains('msvc')) {
+        [project.ext.xWinCargo, 'xwin', 'build', '--target', target.triple].flatten()
+        // support meme platforms, this does nothing by default because the target is disabled
+    } else if (target.triple == 'aarch64-unknown-freebsd') {
+        [project.ext.zigbuildCargo, 'zigbuild', '-Z', 'build-std', '--target', target.triple].flatten()
+    } else {
+        [project.ext.zigbuildCargo, 'zigbuild', '--target', target.triple].flatten()
+    }
+}
+
+def nativesNameForTarget(target) {
+    "sable_rapier_${target.arch}_${target.os}.${target.ext}"
+}
+
+supportedTargets.forEach { target ->
+    tasks.register(compileRustTaskName(target), Exec) {
+        group = 'rust'
+        workingDir rustProjectDir
+        description = "Cross-compiles natives for the ${target.triple} target"
+        commandLine = commandLineForTarget(target)
+        commandLine.add('--release')
+    }
+}
+
+tasks.register("compileRustDev", Exec) {
+    group = 'rust'
+    workingDir rustProjectDir
+    description = "Compiles debug natives"
+    commandLine = [project.ext.zigbuildCargo, 'zigbuild'].flatten()
+}
+
+tasks.register('buildRustNatives') {
+    group = 'build'
+    description = 'Compiles all Rust natives and moves them to resources.'
+
+    dependsOn = supportedTargets.stream().map(compileRustTaskName).collect()
+    finalizedBy copyRustNatives
+}
+
+tasks.register('buildRustNativesDev') {
+    group = 'build'
+    description = 'Compiles all Rust natives and moves them to resources.'
+
+    dependsOn compileRustDev
+    finalizedBy copyRustNativesDev
+}
+
+tasks.register('copyRustNatives', Copy) {
+    group = 'rust'
+    into nativesDir
+    mustRunAfter(buildRustNatives)
+
+    supportedTargets.forEach { target ->
+        from(file("$rustRootDir/target/${target.triple}/release/${if (target.lib) { "lib" } else { "" }}sable_rapier.${target.ext}")) {
+            rename { nativesNameForTarget(target) }
+        }
+    }
+    finalizedBy packRustNatives
+}
+
+tasks.register('copyRustNativesDev', Copy) {
+    group = 'rust'
+    into nativesDir
+    mustRunAfter(buildRustNatives)
+
+    supportedTargets.forEach { target ->
+        var library = file("$rustRootDir/target/debug/${if (target.lib) { "lib" } else { "" }}sable_rapier.${target.ext}")
+        if (!library.exists()) return
+
+        from(library) {
+            rename { nativesNameForTarget(target) }
+        }
+    }
+    finalizedBy packRustNatives
+}
+tasks.register('packRustNatives', Tar) {
+    group = 'rust'
+    archiveFile.set file("${nativesDir}/sable_rapier_binaries.tar.xz")
+    into nativesDir
+
+    mustRunAfter copyRustNatives, copyRustNativesDev
+    supportedTargets.forEach { target ->
+        var f = nativesNameForTarget(target)
+        // No, you can't use rename here in case you were wondering.
+        from(file("${nativesDir}/${f}")) { eachFile { setPath f } }
+    }
+    doLast {
+        byte[] bytes = Files.readAllBytes(getArchiveFile().get().asFile.toPath())
+        try (var f = new FileOutputStream(getArchiveFile().get().asFile)) {
+            try (var x = new XZOutputStream(f, new LZMA2Options(LZMA2Options.PRESET_MAX))) {
+                x.write(bytes)
+            }
+        }
+        supportedTargets.forEach { t ->
+            delete(file("${nativesDir}/${nativesNameForTarget(t)}"))
+        }
+    }
+}
+
+neoForge {
+    neoFormVersion = neo_form_version
+    // Automatically enable AccessTransformers if the file exists
+    def at = file('src/main/resources/META-INF/accesstransformer.cfg')
+    if (at.exists()) {
+        accessTransformers.from(at.absolutePath)
+    }
+    parchment {
+        minecraftVersion = parchment_minecraft
+        mappingsVersion = parchment_version
+    }
+}
+
+configurations {
+    commonJava {
+        canBeResolved = false
+        canBeConsumed = true
+    }
+    commonResources {
+        canBeResolved = false
+        canBeConsumed = true
+    }
+}
+
+artifacts {
+    commonJava sourceSets.main.java.sourceDirectories.singleFile
+    commonResources sourceSets.main.resources.sourceDirectories.singleFile
+}
+
+dependencies {
+    compileOnly "net.fabricmc:sponge-mixin:0.15.2+mixin.0.8.7"
+
+    // fabric and neoforge both bundle mixinextras, so it is safe to use it in common
+    compileOnly "io.github.llamalad7:mixinextras-common:0.5.3"
+    annotationProcessor "io.github.llamalad7:mixinextras-common:0.5.3"
+
+    implementation "org.apache.maven:maven-artifact:3.8.5"
+
+    api "dev.ryanhcode.sable-companion:sable-companion-common-$minecraft_version:$sable_companion_version"
+
+    implementation("foundry.veil:veil-common-${project.minecraft_version}:${project.veil_version}") {
+        exclude group: "maven.modrinth"
+    }
+
+    compileOnly("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:${forgeconfigapiport_version}") {
+        transitive = false
+    }
+
+    implementation "fuzs.forgeconfigapiport:forgeconfigapiport-common-neoforgeapi:${forgeconfigapiport_version}"
+    //source: https://github.com/Fuzss/forgeconfigapiport
+}

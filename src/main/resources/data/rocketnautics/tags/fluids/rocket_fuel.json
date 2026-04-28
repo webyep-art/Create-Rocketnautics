@@ -1,0 +1,19 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:lava",
+    "#c:kerosene",
+    "#c:fuel",
+    { "id": "tfmg:kerosene", "required": false },
+    { "id": "tfmg:flowing_kerosene", "required": false },
+    { "id": "tfmg:liquid_fuel", "required": false },
+    { "id": "tfmg:flowing_liquid_fuel", "required": false },
+    { "id": "tfmg:diesel", "required": false },
+    { "id": "tfmg:flowing_diesel", "required": false },
+    { "id": "tfmg:gasoline", "required": false },
+    { "id": "tfmg:flowing_gasoline", "required": false },
+    { "id": "tfmg:fuel_oil", "required": false },
+    { "id": "create_industry:kerosene", "required": false },
+    { "id": "ad_astra:fuel", "required": false }
+  ]
+}
