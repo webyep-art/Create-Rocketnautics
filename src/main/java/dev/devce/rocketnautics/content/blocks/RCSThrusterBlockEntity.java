@@ -46,10 +46,21 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
     public void sable$physicsTick(ServerSubLevel serverSubLevel, RigidBodyHandle handle, double deltaTime) {
         if (!isActive()) return;
 
+        double currentThrust = 100.0;
+        double y = serverSubLevel.logicalPose().position().y;
+        
+        // Altitude gradient: 100 at 5k+, 7 at 2k-, linear in between
+        if (y < 5000) {
+            if (y <= 2000) {
+                currentThrust = 7.0;
+            } else {
+                double factor = (y - 2000.0) / 3000.0;
+                currentThrust = 7.0 + (93.0 * factor);
+            }
+        }
+
         Direction facing = getThrustDirection();
         Direction pushDirection = facing.getOpposite();
-        
-        double currentThrust = 100.0;
         
         Vector3d thrustVector = new Vector3d(
                 pushDirection.getStepX() * currentThrust,

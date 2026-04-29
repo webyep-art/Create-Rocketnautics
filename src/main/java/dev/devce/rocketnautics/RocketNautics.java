@@ -25,6 +25,15 @@ public class RocketNautics {
     public RocketNautics(IEventBus modEventBus) {
         LOGGER.info("Initializing RocketNautics!");
 
+        // Расширяем лимиты высоты Sable для наших орбит (делаем это как можно раньше)
+        try {
+            dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MIN.set(-1000000.0);
+            dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MAX.set(1000000.0);
+            LOGGER.info("Successfully expanded Sable altitude limits for RocketNautics.");
+        } catch (Exception e) {
+            LOGGER.error("Failed to override SableConfig: {}", e.getMessage());
+        }
+
         RocketBlocks.register(modEventBus);
         RocketBlockEntities.register(modEventBus);
         RocketParticles.register(modEventBus);
@@ -34,24 +43,28 @@ public class RocketNautics {
         modEventBus.addListener(this::setup);
         NeoForge.EVENT_BUS.register(this);
         GlobalSpacePhysicsHandler.init();
+        dev.devce.rocketnautics.content.physics.AsteroidSpawner.init();
+        dev.devce.rocketnautics.content.physics.SpaceTransitionHandler.init();
     }
 
     private void setup(final FMLCommonSetupEvent event) {
         LOGGER.info("RocketNautics Setup");
-        
-        // Расширяем лимиты высоты Sable для наших орбит
-        try {
-            dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MIN.set(-1000000.0);
-            dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MAX.set(1000000.0);
-            LOGGER.info("Successfully expanded Sable altitude limits for RocketNautics.");
-        } catch (Exception e) {
-            LOGGER.error("Failed to override SableConfig: {}", e.getMessage());
-        }
+        event.enqueueWork(() -> {
+            // Расширяем лимиты высоты Sable (используем enqueueWork для надежности)
+            try {
+                dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MIN.set(-1000000.0);
+                dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MAX.set(1000000.0);
+                LOGGER.info("Successfully expanded Sable altitude limits via enqueueWork.");
+            } catch (Exception e) {
+                LOGGER.error("Failed to set SableConfig in enqueueWork: {}", e.getMessage());
+            }
+        });
     }
 
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         GravityCommand.register(event.getDispatcher());
         ShipCopyPasteCommand.register(event.getDispatcher());
+        dev.devce.rocketnautics.content.commands.AsteroidCommand.register(event.getDispatcher());
     }
 }

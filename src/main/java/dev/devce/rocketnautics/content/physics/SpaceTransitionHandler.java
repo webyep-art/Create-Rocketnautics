@@ -23,12 +23,15 @@ import dev.devce.rocketnautics.network.SeamlessTransitionPayload;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
+import dev.ryanhcode.sable.platform.SableEventPlatform;
 import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.mixinterface.entity.entities_stick_sublevels.EntityStickExtension;
 import dev.ryanhcode.sable.mixinterface.entity.entity_sublevel_collision.EntityMovementExtension;
 import net.minecraft.core.BlockPos;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -104,12 +107,130 @@ public class SpaceTransitionHandler {
 
     private static final Path SHIPS_DIR = FMLPaths.CONFIGDIR.get().resolve("rocketnautics_ships");
     
-    private static final Map<UUID, Integer> PENDING_REBUILDS = new HashMap<>();
-    private static final Map<UUID, TeleportTask> PENDING_TELEPORTS = new HashMap<>();
-    private static final Map<UUID, SeatingTask> PENDING_SEATING = new HashMap<>();
+    private static final Map<UUID, Integer> PENDING_REBUILDS = new ConcurrentHashMap<>();
+    private static final Map<UUID, TeleportTask> PENDING_TELEPORTS = new ConcurrentHashMap<>();
+    private static final Map<UUID, SeatingTask> PENDING_SEATING = new ConcurrentHashMap<>();
+    private static final Map<UUID, AutonomousTask> PENDING_AUTONOMOUS = new ConcurrentHashMap<>();
 
     private record TeleportTask(ResourceKey<Level> targetDim, double targetY) {}
     private record SeatingTask(UUID shipUUID, double relPlotX, double relPlotY, double relPlotZ, String vehicleType, int ticksLeft, boolean blockClicked) {}
+    private record AutonomousTask(ResourceKey<Level> targetDim, double x, double y, double z, Vector3d velocity, String name, int ticksLeft) {
+        public AutonomousTask withTicksDecrement() {
+            return new AutonomousTask(targetDim, x, y, z, velocity, name, ticksLeft - 1);
+        }
+    }
+
+    public static void init() {
+        SableEventPlatform.INSTANCE.onPhysicsTick((physicsSystem, timeStep) -> {
+            ServerLevel level = physicsSystem.getLevel();
+            
+            // 1. Process Outgoing Transitions (from this level)
+            ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
+            if (container != null) {
+                // Use a copy of IDs to avoid concurrent modification during removal
+                List<UUID> shipIds = container.getAllSubLevels().stream().map(SubLevel::getUniqueId).toList();
+                for (UUID id : shipIds) {
+                    SubLevel sl = container.getSubLevel(id);
+                    if (!(sl instanceof ServerSubLevel ship) || ship.isRemoved()) continue;
+                    if (PENDING_AUTONOMOUS.containsKey(id)) continue;
+
+                    // Skip ships with players
+                    boolean hasPlayer = false;
+                    for (ServerPlayer player : level.players()) {
+                        if (Sable.HELPER.getContaining(level, player.blockPosition()) == ship) {
+                            hasPlayer = true;
+                            break;
+                        }
+                    }
+                    if (hasPlayer) continue;
+
+                    double y = ship.logicalPose().position().y;
+                    boolean toOverworld = (level.dimension() == SPACE_DIM && y <= SPACE_EXIT_Y);
+                    boolean toSpace = (level.dimension() == Level.OVERWORLD && y >= OVERWORLD_SPACE_Y);
+
+                    if (toOverworld || toSpace) {
+                        ResourceKey<Level> targetDim = toOverworld ? Level.OVERWORLD : SPACE_DIM;
+                        double targetY = toOverworld ? (OVERWORLD_SPACE_Y - 100.0) : 50.0;
+                        
+                        Vector3d pos = ship.logicalPose().position();
+                        Vector3d velocity = new Vector3d(0);
+                        var handle = physicsSystem.getPhysicsHandle(ship);
+                        if (handle != null) velocity.set(handle.getLinearVelocity());
+
+                        try {
+                            CompoundTag tag = ship.getPlot().save();
+                            String shipName = ship.getName();
+                            if (shipName == null) shipName = "Unidentified Object";
+                            
+                            tag.putString("ShipName", shipName);
+                            saveShipMetadata(ship, ship.logicalPose(), tag);
+
+                            File file = new File(SHIPS_DIR.toFile(), "auto_" + id + ".nbt");
+                            if (!SHIPS_DIR.toFile().exists()) SHIPS_DIR.toFile().mkdirs();
+                            NbtIo.writeCompressed(tag, file.toPath());
+
+                            PENDING_AUTONOMOUS.put(id, new AutonomousTask(targetDim, pos.x, targetY, pos.z, velocity, shipName, 10));
+                            ship.markRemoved();
+                            RocketNautics.LOGGER.info("Autonomous jump: {} to {}", id, targetDim.location());
+                        } catch (IOException e) {
+                            RocketNautics.LOGGER.error("Failed autonomous jump", e);
+                        }
+                    }
+                }
+            }
+
+            // 2. Process Incoming Transitions (to this level)
+            var iterator = PENDING_AUTONOMOUS.entrySet().iterator();
+            while (iterator.hasNext()) {
+                var entry = iterator.next();
+                AutonomousTask task = entry.getValue();
+                
+                if (task.targetDim == level.dimension()) {
+                    if (task.ticksLeft > 0) {
+                        PENDING_AUTONOMOUS.put(entry.getKey(), task.withTicksDecrement());
+                    } else {
+                        // Rebuild
+                        UUID originalUUID = entry.getKey();
+                        File file = new File(SHIPS_DIR.toFile(), "auto_" + originalUUID + ".nbt");
+                        if (file.exists()) {
+                            try {
+                                CompoundTag tag = NbtIo.readCompressed(file.toPath(), NbtAccounter.unlimitedHeap());
+                                
+                                CompoundTag poseTag = tag.getCompound(KEY_OLD_POSE);
+                                Quaterniond rot = new Quaterniond(
+                                    poseTag.getDouble(KEY_POSE_QX), poseTag.getDouble(KEY_POSE_QY), 
+                                    poseTag.getDouble(KEY_POSE_QZ), poseTag.getDouble(KEY_POSE_QW)
+                                );
+                                Pose3d pose = new Pose3d(new Vector3d(task.x, task.y, task.z), rot, new Vector3d(0), new Vector3d(1));
+
+                                ServerSubLevelContainer containerInTarget = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
+                                ServerSubLevel newShip = (ServerSubLevel) containerInTarget.allocateNewSubLevel(pose);
+                                newShip.setName(task.name);
+                                newShip.getPlot().load(tag);
+                                newShip.getPlot().updateBoundingBox();
+                                newShip.updateBoundingBox();
+
+                                // Apply velocity
+                                var handle = physicsSystem.getPhysicsHandle(newShip);
+                                if (handle != null) {
+                                    double mass = newShip.getMassTracker().getMass();
+                                    if (mass > 0) {
+                                        handle.applyLinearImpulse(new org.joml.Vector3d(task.velocity).mul(mass));
+                                    }
+                                }
+
+                                file.delete();
+                                RocketNautics.LOGGER.info("Autonomous rebuild: {} in {}", originalUUID, level.dimension().location());
+                            } catch (IOException e) {
+                                RocketNautics.LOGGER.error("Failed autonomous rebuild", e);
+                            }
+                        }
+                        iterator.remove();
+                    }
+                }
+            }
+        });
+    }
 
     private static void sendDebug(ServerPlayer player, String msg, int color) {
         PacketDistributor.sendToPlayer(player, new DebugLogPayload(msg, color));

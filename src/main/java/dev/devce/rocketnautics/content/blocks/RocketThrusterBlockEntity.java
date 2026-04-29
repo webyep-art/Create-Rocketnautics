@@ -302,11 +302,6 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
             actuallyDrained = fuelTank.drain(toDrain, IFluidHandler.FluidAction.EXECUTE).getAmount();
         }
         
-        if (actuallyDrained < maxConsumption) {
-            int needed = maxConsumption - actuallyDrained;
-            actuallyDrained += drainFromAdjacent(needed);
-        }
-
         int oldUsage = this.currentFuelUsage;
         this.fuelThrottle = actuallyDrained / (float) maxConsumption;
         this.currentlyBurning = actuallyDrained > 0;
@@ -316,18 +311,6 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
             sendData();
             setChanged();
         }
-    }
-
-    private int drainFromAdjacent(int amount) {
-        Direction back = getThrustDirection().getOpposite();
-        BlockPos tankPos = worldPosition.relative(back);
-        var fluidHandler = level.getCapability(Capabilities.FluidHandler.BLOCK, tankPos, getThrustDirection());
-        
-        if (fluidHandler != null) {
-            var drained = fluidHandler.drain(new FluidStack(Fluids.LAVA, amount), IFluidHandler.FluidAction.EXECUTE);
-            return drained.getAmount();
-        }
-        return 0;
     }
 
     @Override

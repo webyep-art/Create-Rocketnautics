@@ -48,7 +48,7 @@ public class RocketNauticsClient {
 
     public static int originalRenderDistance = -1;
     public static int seamlessTransitionTicks = 0;
-    public static boolean showDebugOverlay = true;
+    public static boolean showDebugOverlay = false;
     
     private static final List<LogEntry> debugLogs = Collections.synchronizedList(new ArrayList<>());
 
@@ -146,6 +146,41 @@ public class RocketNauticsClient {
         y += LINE_HEIGHT;
         drawPanel(guiGraphics, String.format("Alt: %.2f", altitude), x, y, 0xAAAAAA);
         y += LINE_HEIGHT;
+        
+        // Asteroid Debug
+        SubLevelContainer container = SubLevelContainer.getContainer(mc.level);
+        if (container != null) {
+            int asteroidCount = 0;
+            double minDist = Double.MAX_VALUE;
+            Vector3d playerPos = new Vector3d(mc.player.getX(), mc.player.getY(), mc.player.getZ());
+            
+            for (SubLevel sl : container.getAllSubLevels()) {
+                if (sl == ship) continue; // Ignore current ship
+                
+                // Check if it's an asteroid by name
+                boolean isAsteroid = false;
+                try {
+                    String name = sl.getName();
+                    if (name != null && name.contains("Asteroid")) {
+                        isAsteroid = true;
+                    }
+                } catch (Throwable ignored) {}
+                
+                if (isAsteroid) {
+                    asteroidCount++;
+                    double dist = sl.logicalPose().position().distance(playerPos);
+                    if (dist < minDist) minDist = dist;
+                }
+            }
+            
+            drawPanel(guiGraphics, "Asteroids: " + asteroidCount, x, y, 0xFFCC00);
+            y += LINE_HEIGHT;
+            if (asteroidCount > 0) {
+                drawPanel(guiGraphics, String.format("Nearest: %.1fm", minDist), x, y, 0xFFCC00);
+                y += LINE_HEIGHT;
+            }
+        }
+
         drawPanel(guiGraphics, "Ticks: " + seamlessTransitionTicks, x, y, 0xFF5555);
     }
 
