@@ -1,5 +1,6 @@
 package dev.devce.rocketnautics.mixin;
 
+import dev.devce.rocketnautics.SkyDataHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.DimensionSpecialEffects;
 import net.minecraft.util.Mth;
@@ -15,15 +16,14 @@ public class DimensionSpecialEffectsMixin {
     @Inject(method = "getBrightnessDependentFogColor", at = @At("RETURN"), cancellable = true)
     private void rocketnautics$forceSpaceFogColor(Vec3 fogColor, float brightness, CallbackInfoReturnable<Vec3> cir) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
+        if (mc.player == null || mc.level == null) return;
 
-        double y = mc.player.getY();
-        if (y > 300) {
-            float factor = (float) Mth.clamp((y - 300.0) / 700.0, 0.0, 1.0);
+        double y = mc.player.getY() + SkyDataHandler.getHeightOffsetForLevel(mc.level.dimension());
+        if (y > 1000.0) {
+            float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
             Vec3 color = cir.getReturnValue();
             
-            // For testing: interpolating to RED instead of black to see if it works
-            double r = Mth.lerp(factor, color.x, 1.0); 
+            double r = Mth.lerp(factor, color.x, 0.0); 
             double g = Mth.lerp(factor, color.y, 0.0);
             double b = Mth.lerp(factor, color.z, 0.0);
             

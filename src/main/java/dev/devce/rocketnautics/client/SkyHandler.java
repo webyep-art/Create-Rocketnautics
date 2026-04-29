@@ -46,7 +46,7 @@ public class SkyHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
-        double y = mc.gameRenderer.getMainCamera().getPosition().y;
+        double y = mc.gameRenderer.getMainCamera().getPosition().y + SkyDataHandler.getHeightOffsetForLevel(mc.level.dimension());
         if (y > 1000.0) {
             float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
             
@@ -183,7 +183,7 @@ public class SkyHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         
-        double y = mc.gameRenderer.getMainCamera().getPosition().y;
+        double y = mc.gameRenderer.getMainCamera().getPosition().y + SkyDataHandler.getHeightOffsetForLevel(mc.level.dimension());
         if (y > 1000.0) {
             float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
             
