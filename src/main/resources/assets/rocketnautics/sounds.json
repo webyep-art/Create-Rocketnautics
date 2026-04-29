@@ -8,5 +8,23 @@
         "stream": true
       }
     ]
+  },
+  "music.brittle_rille": {
+    "category": "record",
+    "sounds": [
+      {
+        "name": "rocketnautics:music/brittle_rille",
+        "stream": true
+      }
+    ]
+  },
+  "music.arcadia": {
+    "category": "record",
+    "sounds": [
+      {
+        "name": "rocketnautics:music/arcadia",
+        "stream": true
+      }
+    ]
   }
 }

@@ -33,7 +33,6 @@ import org.joml.Vector3d;
 @EventBusSubscriber(modid = RocketNautics.MODID)
 public class GlobalSpacePhysicsHandler {
 
-    // Thresholds and constants
     private static final double SPACE_GRAVITY_START_Y = 2000.0;
     private static final double SPACE_GRAVITY_FULL_Y = 5000.0;
     private static final double REENTRY_HEAT_START_Y = 1000.0;
@@ -97,11 +96,9 @@ public class GlobalSpacePhysicsHandler {
         double mass = subLevel.getMassTracker().getMass();
         Vector3d gravityVector = DimensionPhysicsData.getGravity(level);
 
-        // Calculate anti-gravity force to counteract world gravity
         Vector3d antiGravityImpulse = new Vector3d(gravityVector)
                 .mul(-1.0 * mass * gravityFactor * timeStep * calibrationMultiplier);
 
-        // Transform to local space and apply
         Quaterniond orientation = subLevel.logicalPose().orientation();
         Vector3d localImpulse = orientation.transformInverse(antiGravityImpulse, new Vector3d());
         handle.applyLinearImpulse(localImpulse);
@@ -132,11 +129,9 @@ public class GlobalSpacePhysicsHandler {
         if (descentSpeed > REENTRY_SPEED_THRESHOLD) {
             float intensity = (float) Math.clamp((descentSpeed - REENTRY_SPEED_THRESHOLD) / REENTRY_SPEED_THRESHOLD, 0.0, 1.0);
             
-            // Apply air resistance friction
             Vector3d friction = new Vector3d(0, descentSpeed * intensity * REENTRY_FRICTION_COEFF, 0);
             handle.applyLinearImpulse(friction.mul(subLevel.getMassTracker().getMass() * timeStep));
 
-            // Apply heat damage
             if (intensity > 0.3 && level.getGameTime() % 20 == 0) {
                 AABB damageArea = new AABB(worldPos.x - 4, worldPos.y - 4, worldPos.z - 4, worldPos.x + 4, worldPos.y + 4, worldPos.z + 4);
                 level.getEntitiesOfClass(LivingEntity.class, damageArea).forEach(entity -> {
@@ -144,7 +139,6 @@ public class GlobalSpacePhysicsHandler {
                 });
             }
             
-            // Sync effects to nearby players
             for (ServerPlayer player : level.players()) {
                 PacketDistributor.sendToPlayer(player, new ReentryHeatPayload(worldPos.x, worldPos.y, worldPos.z, intensity));
             }
@@ -177,7 +171,6 @@ public class GlobalSpacePhysicsHandler {
 
     private static void applyEntityZeroG(Entity entity) {
         if (entity instanceof ItemEntity item) {
-            // Counteract gravity for items (0.04 is standard gravity per tick)
             item.setDeltaMovement(item.getDeltaMovement().add(0, 0.039, 0));
         }
     }

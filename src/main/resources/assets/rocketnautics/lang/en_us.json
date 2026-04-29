@@ -5,6 +5,7 @@
   "block.rocketnautics.rcs_thruster": "RCS Thruster",
   "block.rocketnautics.gyroscope": "Gyroscope (SAS)",
   "block.rocketnautics.separator": "Stage Separator",
+  "rocketnautics.simulated_section.rocketnautics": "Cosmonautics",
   "itemGroup.rocketnautics.tab": "Cosmonautics",
   "gui.rocketnautics.min_thrust": "Min Thrust (0 Signal)",
   "gui.rocketnautics.max_thrust": "Max Thrust (15 Signal)",

@@ -4,7 +4,7 @@ import dev.devce.rocketnautics.registry.RocketBlocks;
 import dev.devce.rocketnautics.registry.RocketBlockEntities;
 import dev.devce.rocketnautics.registry.RocketParticles;
 import dev.devce.rocketnautics.registry.RocketSounds;
-import dev.devce.rocketnautics.registry.RocketTabs;
+import dev.devce.rocketnautics.registry.RocketSimulatedTab;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -28,8 +28,8 @@ public class RocketNautics {
         RocketBlocks.register(modEventBus);
         RocketBlockEntities.register(modEventBus);
         RocketParticles.register(modEventBus);
-        RocketTabs.register(modEventBus);
         RocketSounds.register(modEventBus);
+        RocketSimulatedTab.init();
 
         modEventBus.addListener(this::setup);
         NeoForge.EVENT_BUS.register(this);

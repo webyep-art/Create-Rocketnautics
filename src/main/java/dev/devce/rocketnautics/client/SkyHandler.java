@@ -1,3 +1,19 @@
+/*
+ * This file is part of Cosmonautics.
+ * Cosmonautics is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Cosmonautics is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Cosmonautics.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package dev.devce.rocketnautics.client;
 
 import com.mojang.blaze3d.platform.GlStateManager;
@@ -23,13 +39,26 @@ import org.joml.Quaternionf;
 
 @EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class SkyHandler {
+    
+    private static final double OVERWORLD_SPACE_Y = 20000.0;
+
+    private static double getEffectiveY() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return 0;
+        double y = mc.gameRenderer.getMainCamera().getPosition().y;
+        ResourceLocation dim = mc.level.dimension().location();
+        if (dim.getNamespace().equals(RocketNautics.MODID) && dim.getPath().equals("space")) {
+            return OVERWORLD_SPACE_Y + y;
+        }
+        return y;
+    }
 
     @SubscribeEvent
     public static void onComputeFogColor(ViewportEvent.ComputeFogColor event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
-        double y = mc.gameRenderer.getMainCamera().getPosition().y;
+        double y = getEffectiveY();
         if (y > 1000.0) {
             float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
             
@@ -46,7 +75,7 @@ public class SkyHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         
-        double camY = mc.gameRenderer.getMainCamera().getPosition().y;
+        double camY = getEffectiveY();
         if (camY < 1000.0) return;
 
         float visibility = (float) Mth.clamp((camY - 1000.0) / 500.0, 0.0, 1.0);
@@ -73,6 +102,16 @@ public class SkyHandler {
         float relZ = (float) (-camZ * parallaxFactor);
         
         float size = (float) (500000.0f * (renderDist / Math.max(100.0, camY)));
+
+        // OpenGL Magic: Temporary Infinite Projection Matrix to bypass far clipping
+        // without changing the object's size or distance.
+        Matrix4f oldProj = RenderSystem.getProjectionMatrix();
+        Matrix4f infiniteProj = new Matrix4f(oldProj);
+        // m22 = -(f+n)/(f-n) -> -1.0 as f -> infinity
+        // m32 = -2fn/(f-n)   -> -2.0*n as f -> infinity (n = 0.05 in MC)
+        infiniteProj.m22(-1.0f);
+        infiniteProj.m32(-0.1f);
+        RenderSystem.setProjectionMatrix(infiniteProj, RenderSystem.getVertexSorting());
         
         ensurePlanetTexture();
         
@@ -136,6 +175,7 @@ public class SkyHandler {
             RenderSystem.defaultBlendFunc();
         }
 
+        RenderSystem.setProjectionMatrix(oldProj, RenderSystem.getVertexSorting());
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);
         RenderSystem.enableCull();
@@ -148,7 +188,7 @@ public class SkyHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         
-        double y = mc.gameRenderer.getMainCamera().getPosition().y;
+        double y = getEffectiveY();
         if (y > 1000.0) {
             float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
             

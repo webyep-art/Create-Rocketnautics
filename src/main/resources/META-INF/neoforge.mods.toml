@@ -1,13 +1,13 @@
 modLoader="javafml"
 loaderVersion="[2,)"
-license="MIT"
+license="GNU GPL v3"
 
 [[mixins]]
 config="rocketnautics.mixins.json"
 
 [[mods]]
 modId="rocketnautics"
-version="1.3.2"
+version="1.3.5"
 displayName="Create: Rocketnautics"
 displayURL="https://github.com"
 authors="webyep, LordAret, SSnowly"

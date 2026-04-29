@@ -1,0 +1,9 @@
+{
+  "priority": 1100,
+  "title": {
+    "text": { "translate": "rocketnautics.simulated_section.rocketnautics" },
+    "background": "#bb001e3c"
+  },
+  "sprite": "rocketnautics:banner",
+  "only_animate_on_hover": true
+}

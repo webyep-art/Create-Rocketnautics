@@ -1,10 +1,10 @@
-# Create: Rocketnautics 🚀
+# Create: Cosmonautics 🚀
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![NeoForge](https://img.shields.io/badge/NeoForge-21.1+-orange.svg)](https://neoforged.net/)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-blue.svg)](https://www.minecraft.net/)
 
-**Create: Rocketnautics** is an industrial-aerospace addon for the **Create** mod. It allows players to build realistic, physics-based rockets, launch them into space, and control them with precision.
+**Create: Cosmonautics** is an industrial-aerospace addon for the **Create** mod. It allows players to build realistic, physics-based rockets, launch them into space, and control them with precision.
 
 Unlike many space mods where rockets are just scripted "elevators", this mod utilizes the **Sable** physics engine (Create: Aeronautics), turning ships into real physical objects. Thrust, center of mass, orbital mechanics, and stage separation - it's all here, similar to *Kerbal Space Program*!
 
@@ -58,4 +58,4 @@ There are no separate "space dimensions" or loading screens. Space is reached se
 ---
 
 ## 📄 License
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU General Public License v3** - see the [LICENSE](LICENSE) file for details.

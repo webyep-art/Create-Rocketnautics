@@ -22,13 +22,11 @@ public class RocketNauticsClientCommands {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
         
         LiteralArgumentBuilder<CommandSourceStack> builder = Commands.literal("rn")
-            .then(Commands.literal("render")
-                .then(Commands.literal("info")
-                    .executes(context -> {
-                        showRenderInfo();
-                        return 1;
-                    })
-                )
+            .then(Commands.literal("debug")
+                .executes(context -> {
+                    showRenderInfo();
+                    return 1;
+                })
             );
             
         dispatcher.register(builder);
@@ -43,7 +41,8 @@ public class RocketNauticsClientCommands {
         String status = RocketNauticsClient.showDebugOverlay ? "ENABLED" : "DISABLED";
         ChatFormatting color = RocketNauticsClient.showDebugOverlay ? ChatFormatting.GREEN : ChatFormatting.RED;
         
-        mc.player.displayClientMessage(Component.literal("RocketNautics Render Debug Overlay: ")
-            .append(Component.literal(status).withStyle(color)), true);
+        mc.player.displayClientMessage(Component.literal("Cosmonautics Debug System: ")
+            .append(Component.literal(status).withStyle(color))
+            .append(Component.literal(" | Test build. Not done yet.").withStyle(ChatFormatting.GOLD)), true);
     }
 }

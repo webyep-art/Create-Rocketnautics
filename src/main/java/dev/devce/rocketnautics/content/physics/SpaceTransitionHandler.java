@@ -1,3 +1,19 @@
+/*
+ * This file is part of Cosmonautics.
+ * Cosmonautics is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Cosmonautics is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Cosmonautics.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package dev.devce.rocketnautics.content.physics;
 
 import dev.devce.rocketnautics.RocketNautics;
@@ -10,6 +26,7 @@ import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.companion.math.Pose3d;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import dev.ryanhcode.sable.mixinterface.entity.entities_stick_sublevels.EntityStickExtension;
 import dev.ryanhcode.sable.mixinterface.entity.entity_sublevel_collision.EntityMovementExtension;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -61,8 +78,8 @@ public class SpaceTransitionHandler {
     private static final double OVERWORLD_SPACE_Y = 20000.0;
     private static final double SPACE_EXIT_Y = 0.0;
     private static final double TRANSITION_SAFE_OFFSET = 50.0;
-    private static final int REBUILD_DELAY_TICKS = 20;
-    private static final int SEATING_RECOVERY_TIMEOUT = 40;
+    private static final int REBUILD_DELAY_TICKS = 3;   // 0.15s — минимум для загрузки чанков
+    private static final int SEATING_RECOVERY_TIMEOUT = 30; // 1.5s — достаточно для plot-tracking
 
     // NBT Keys
     private static final String KEY_PLAYER_REL_X = "player_rel_x";
@@ -106,25 +123,21 @@ public class SpaceTransitionHandler {
 
         ServerLevel currentLevel = (ServerLevel) player.level();
 
-        // 1. Process Teleport Tasks
         if (PENDING_TELEPORTS.containsKey(player.getUUID())) {
             executeTeleport(player, PENDING_TELEPORTS.remove(player.getUUID()));
             return;
         }
 
-        // 2. Process Seating Tasks
         if (PENDING_SEATING.containsKey(player.getUUID())) {
             processSeating(player);
             return;
         }
 
-        // 3. Process Rebuild Tasks
         if (PENDING_REBUILDS.containsKey(player.getUUID())) {
             processRebuildCounter(player, currentLevel);
             return;
         }
 
-        // 4. Detect Transition Conditions
         checkTransitionConditions(player, currentLevel);
     }
 
@@ -146,11 +159,28 @@ public class SpaceTransitionHandler {
                 rebuildShipAfterTransition(player, level, transitionFile);
             }
         } else {
-            PENDING_REBUILDS.put(player.getUUID(), ticksLeft - 1);
-            if (ticksLeft % 20 == 0) {
-                sendDebug(player, "Syncing ship state: " + (ticksLeft / 20) + "s...", 0xFFFF55);
+            if (areChunksReady(player, level)) {
+                PENDING_REBUILDS.remove(player.getUUID());
+                File transitionFile = getTransitionFile(player.getUUID());
+                if (transitionFile.exists()) {
+                    sendDebug(player, "Chunks ready early! Rebuilding...", 0x55FF55);
+                    rebuildShipAfterTransition(player, level, transitionFile);
+                }
+            } else {
+                PENDING_REBUILDS.put(player.getUUID(), ticksLeft - 1);
             }
         }
+    }
+
+    private static boolean areChunksReady(ServerPlayer player, ServerLevel level) {
+        int cx = player.chunkPosition().x;
+        int cz = player.chunkPosition().z;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                if (!level.getChunkSource().hasChunk(cx + dx, cz + dz)) return false;
+            }
+        }
+        return true;
     }
 
     private static void initiateTransition(ServerPlayer player, ServerLevel fromLevel, ResourceKey<Level> toDim, double targetY) {
@@ -177,7 +207,8 @@ public class SpaceTransitionHandler {
 
     private static void destroyShipInSourceDimension(ServerSubLevel ship) {
         ship.deleteAllEntities();
-        ship.getPlot().destroyAllBlocks();
+        // Removed destroyAllBlocks() to avoid noise during transition.
+        // markRemoved() unloads the plot chunks silently.
         ship.markRemoved();
     }
 
@@ -367,73 +398,101 @@ public class SpaceTransitionHandler {
         SeatingTask task = PENDING_SEATING.get(player.getUUID());
         if (task == null) return;
 
+        if (player.getVehicle() != null) {
+            PENDING_SEATING.remove(player.getUUID());
+            sendDebug(player, "Seating confirmed!", 0x55FF55);
+            return;
+        }
+
         if (task.ticksLeft > 0) {
-            if (searchAndSeat(player, task)) {
+            if (!task.vehicleType.isEmpty() && searchAndSeat(player, task)) {
                 PENDING_SEATING.remove(player.getUUID());
                 return;
             }
-            // Update task with decremented ticks
-            PENDING_SEATING.put(player.getUUID(), new SeatingTask(task.shipUUID, task.relPlotX, task.relPlotY, task.relPlotZ, task.vehicleType, task.ticksLeft - 1, task.blockClicked));
+            if (task.ticksLeft % 2 == 0) {
+                tryBlockSeating(player, task);
+            }
+            PENDING_SEATING.put(player.getUUID(), new SeatingTask(
+                task.shipUUID, task.relPlotX, task.relPlotY, task.relPlotZ,
+                task.vehicleType, task.ticksLeft - 1, task.blockClicked));
             return;
         }
-        
-        // Final fallback: Try block seating or magnetic boots
-        handleSeatingFallback(player, task);
-        PENDING_SEATING.remove(player.getUUID());
-    }
 
-    private static void handleSeatingFallback(ServerPlayer player, SeatingTask task) {
-        if (player.getVehicle() != null) return;
-
-        if (!task.blockClicked && tryBlockSeating(player, task)) {
-            // Give it one more try after block interaction
-            PENDING_SEATING.put(player.getUUID(), new SeatingTask(task.shipUUID, task.relPlotX, task.relPlotY, task.relPlotZ, task.vehicleType, 20, true));
-            return;
-        }
-        
+        sendDebug(player, "Seating timeout — applying magnetic boots fallback", 0xFF8800);
         applyMagneticBoots(player, task);
+        PENDING_SEATING.remove(player.getUUID());
     }
 
     private static void applyMagneticBoots(ServerPlayer player, SeatingTask task) {
         ServerLevel level = (ServerLevel) player.level();
         ServerSubLevel ship = findShipByUUID(level, task.shipUUID);
-        if (ship == null) return;
+        if (ship == null) {
+            sendDebug(player, "Magnetic boots: ship not found!", 0xFF5555);
+            return;
+        }
 
         ChunkPos minChunk = ship.getPlot().getChunkMin();
         double tx = minChunk.getMinBlockX() + task.relPlotX;
         double ty = task.relPlotY;
         double tz = minChunk.getMinBlockZ() + task.relPlotZ;
 
-        Vec3 worldPos = Sable.HELPER.projectOutOfSubLevel(level, new Vec3(tx, ty, tz));
+        // Retry block seating one last time
+        if (tryBlockSeating(player, task)) {
+            PENDING_SEATING.put(player.getUUID(), new SeatingTask(
+                task.shipUUID, task.relPlotX, task.relPlotY, task.relPlotZ,
+                task.vehicleType, 20, true));
+            return;
+        }
+
+        // Project player to seating position in world space
+        Vec3 worldPos = Sable.HELPER.projectOutOfSubLevel(level, new Vec3(tx, ty + 0.5, tz));
         player.teleportTo(worldPos.x, worldPos.y, worldPos.z);
         ((EntityMovementExtension) player).sable$setTrackingSubLevel(ship);
-        player.setPose(net.minecraft.world.entity.Pose.SITTING);
-        
-        sendDebug(player, "Magnetic Boots Activated! (Emergency Sitting)", 0xFFAA00);
+        sendDebug(player, "Magnetic Boots Activated! (Emergency Teleport)", 0xFFAA00);
     }
 
     private static boolean searchAndSeat(ServerPlayer player, SeatingTask task) {
         ServerLevel level = (ServerLevel) player.level();
         ServerSubLevel ship = findShipByUUID(level, task.shipUUID);
         if (ship == null) return false;
-        
+
         ChunkPos minChunk = ship.getPlot().getChunkMin();
         double tx = minChunk.getMinBlockX() + task.relPlotX;
         double ty = task.relPlotY;
         double tz = minChunk.getMinBlockZ() + task.relPlotZ;
 
         for (Entity e : level.getEntities().getAll()) {
-            if (e != player && BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString().equals(task.vehicleType)) {
-                SubLevel trackingShip = ((EntityMovementExtension) e).sable$getTrackingSubLevel();
-                if (trackingShip != null && trackingShip.getUniqueId().equals(task.shipUUID)) {
-                    if (e.distanceToSqr(tx, ty, tz) < 25.0) {
-                        player.startRiding(e, true);
-                        sendDebug(player, "Seating recovery successful!", 0x55FF55);
-                        return true;
-                    }
-                }
+            if (e == player) continue;
+            if (!BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString().equals(task.vehicleType)) continue;
+
+            SubLevel trackingShip = ((EntityMovementExtension) e).sable$getTrackingSubLevel();
+            if (trackingShip == null || !trackingShip.getUniqueId().equals(task.shipUUID)) continue;
+
+            if (e.distanceToSqr(tx, ty, tz) < 25.0) {
+                player.startRiding(e, true);
+                sendDebug(player, "Seating recovery: entity found and mounted!", 0x55FF55);
+                return true;
             }
         }
+
+        // Fallback: search via AABB
+        AABB plotBounds = new AABB(
+            minChunk.getMinBlockX(), -64, minChunk.getMinBlockZ(),
+            minChunk.getMaxBlockX() + 16, 320, minChunk.getMaxBlockZ() + 16
+        );
+        for (Entity e : level.getEntitiesOfClass(Entity.class, plotBounds)) {
+            if (e == player) continue;
+            if (!BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString().equals(task.vehicleType)) continue;
+            if (e.distanceToSqr(tx, ty, tz) < 25.0) {
+                if (((EntityMovementExtension) e).sable$getTrackingSubLevel() == null) {
+                    ((EntityMovementExtension) e).sable$setTrackingSubLevel(ship);
+                }
+                player.startRiding(e, true);
+                sendDebug(player, "Seating recovery: entity found via AABB!", 0x55FFAA);
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -443,30 +502,49 @@ public class SpaceTransitionHandler {
         if (ship == null) return false;
 
         ChunkPos minChunk = ship.getPlot().getChunkMin();
-        double tx = minChunk.getMinBlockX() + task.relPlotX;
-        double ty = task.relPlotY;
-        double tz = minChunk.getMinBlockZ() + task.relPlotZ;
-        BlockPos targetPos = BlockPos.containing(tx, ty, tz);
-        BlockState state = level.getBlockState(targetPos);
-        
-        sendDebug(player, "Attempting block interaction: " + state.getBlock().getName().getString(), 0xFFFF55);
-        
-        // Attempt Create Seat interaction via reflection
-        try {
-            Class<?> seatBlockClass = Class.forName("com.simibubi.create.content.contraptions.components.seats.SeatBlock");
-            if (seatBlockClass.isInstance(state.getBlock())) {
-                Method sitDown = seatBlockClass.getMethod("sitDown", Level.class, BlockPos.class, Entity.class);
-                sitDown.invoke(null, level, targetPos, player);
-                if (player.getVehicle() != null) return true;
-            }
-        } catch (Exception ignored) {}
+        double localX = task.relPlotX;
+        double localY = task.relPlotY;
+        double localZ = task.relPlotZ;
 
-        // General block use fallback
-        Vec3 worldPos = Sable.HELPER.projectOutOfSubLevel(level, new Vec3(tx, ty, tz));
-        BlockHitResult hit = new BlockHitResult(worldPos, Direction.UP, targetPos, false);
-        state.useWithoutItem(level, player, hit);
-        
-        return true;
+        double worldX = minChunk.getMinBlockX() + localX;
+        double worldY = localY;
+        double worldZ = minChunk.getMinBlockZ() + localZ;
+
+        AABB seatSearch = new AABB(worldX - 2, worldY - 1, worldZ - 2, worldX + 3, worldY + 3, worldZ + 3);
+        for (Entity e : level.getEntitiesOfClass(Entity.class, seatSearch)) {
+            if (e == player) continue;
+            String typeName = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
+            if (typeName.contains("seat")) {
+                ((EntityStickExtension) e).sable$setPlotPosition(new Vec3(localX, localY, localZ));
+                boolean mounted = player.startRiding(e, true);
+                if (mounted || player.getVehicle() == e) {
+                    sendDebug(player, "Force-mounted on existing seat: " + typeName, 0x55FF55);
+                    return true;
+                }
+            }
+        }
+
+        ResourceLocation seatId = ResourceLocation.fromNamespaceAndPath("create", "seat");
+        EntityType<?> seatType = BuiltInRegistries.ENTITY_TYPE.get(seatId);
+
+        if (seatType == null) return false;
+
+        Entity seatEntity = seatType.create(level);
+        if (seatEntity == null) return false;
+
+        seatEntity.setPos(worldX, worldY, worldZ);
+        level.addFreshEntity(seatEntity);
+
+        ((EntityStickExtension) seatEntity).sable$setPlotPosition(new Vec3(localX, localY, localZ));
+
+        boolean mounted = player.startRiding(seatEntity, true);
+        if (mounted || player.getVehicle() == seatEntity) {
+            sendDebug(player, "Force-seated on create:seat with plot tracking!", 0x55FF55);
+            return true;
+        }
+
+        seatEntity.discard();
+        return false;
     }
 
     private static ServerSubLevel findShipByUUID(ServerLevel level, UUID uuid) {

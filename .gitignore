@@ -1,5 +1,5 @@
 # Gradle
-.gradle
+.gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 
@@ -20,24 +20,30 @@ bin/
 .DS_Store
 Thumbs.db
 
-# Minecraft / Forge / NeoForge
+# Minecraft / NeoForge
 run/
-run/*
-!run/config/
 src/generated/
 *.log
+local.properties
+/buildSrc/build/
+/buildSrc/.gradle/
 
-# Scratch / Temp files
-*.class
-*.bbmodel
-*.json
-!src/main/resources/**/*.json
-!src/test/resources/**/*.json
-!*.md
-!build.gradle
-!settings.gradle
-!gradle.properties
+# Python
+__pycache__/
+*.pyc
 
-discord_release.py
-discord_config.py
+# Project specific
 tempfolderfortempfiles/
+.gigaide/
+seperatordump.json
+/bin/
+
+# Temp / Misc
+*.tmp
+*.bak
+*.swp
+*.patch
+*.diff
+
+# Keep config but ignore credentials
+# discord_config.py

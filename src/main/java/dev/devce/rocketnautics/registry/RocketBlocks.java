@@ -6,6 +6,7 @@ import dev.devce.rocketnautics.content.blocks.VectorThrusterBlock;
 import dev.devce.rocketnautics.content.blocks.BoosterThrusterBlock;
 import dev.devce.rocketnautics.content.blocks.RCSThrusterBlock;
 import dev.devce.rocketnautics.content.blocks.SeparatorBlock;
+import dev.devce.rocketnautics.content.items.CreditsBookItem;
 import dev.devce.rocketnautics.content.items.RocketItem;
 import dev.devce.rocketnautics.content.items.RocketBlockItem;
 import net.minecraft.world.item.Item;
@@ -47,6 +48,8 @@ public class RocketBlocks {
                     .jukeboxPlayable(ResourceKey.create(Registries.JUKEBOX_SONG, 
                             ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "brittle_rille")))));
 
+    public static final DeferredItem<CreditsBookItem> CREDITS_BOOK = ITEMS.register("credits_book",
+            () -> new CreditsBookItem(new Item.Properties().stacksTo(1)));
 
     private static <T extends Block> DeferredBlock<T> registerBlock(String name, Supplier<T> block) {
         DeferredBlock<T> toReturn = BLOCKS.register(name, block);
