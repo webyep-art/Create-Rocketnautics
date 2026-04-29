@@ -33,11 +33,22 @@ public class RocketTabs {
                                 "webyep",
                                 0,
                                 java.util.List.of(
-                                    net.minecraft.server.network.Filterable.passThrough(net.minecraft.network.chat.Component.literal("Maintainer: webyep\nArtist: LordAret\nContributor: SSnowly")),
-                                    net.minecraft.server.network.Filterable.passThrough(net.minecraft.network.chat.Component.literal("Inspiration:\n- Create Propulsion\n- Kerbal Space Program")),
-                                    net.minecraft.server.network.Filterable.passThrough(net.minecraft.network.chat.Component.literal("Testers:\n- GlemFeddy\n- ABOBA\n- Kernos")),
-                                    net.minecraft.server.network.Filterable.passThrough(net.minecraft.network.chat.Component.literal("Ideas:\n- Solid Fuel: Harbinger of Confusion\n- Fuel Pump System: 6j")),
-                                    net.minecraft.server.network.Filterable.passThrough(net.minecraft.network.chat.Component.literal("Assets:\n- Textures from Create Big Cannons\n- Music: Kevin Macleod (CC BY 4.0)"))
+                                    net.minecraft.server.network.Filterable.passThrough(
+                                        Component.literal("")
+                                            .append(Component.literal("   Cosmonautics\n\n").withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD))
+                                            .append(Component.literal("This book is dedicated\nto everyone who helped\nmake this project\npossible!\n\n").withStyle(net.minecraft.ChatFormatting.DARK_GRAY, net.minecraft.ChatFormatting.ITALIC))
+                                            .append(Component.literal("Thank you all!").withStyle(net.minecraft.ChatFormatting.DARK_RED))
+                                    ),
+                                    net.minecraft.server.network.Filterable.passThrough(
+                                        Component.literal("")
+                                            .append(Component.literal("      Credits\n\n").withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD))
+                                            .append(Component.literal("Maintainer: ").withStyle(net.minecraft.ChatFormatting.DARK_BLUE)).append(Component.literal("web\n"))
+                                            .append(Component.literal("Contributor: ").withStyle(net.minecraft.ChatFormatting.DARK_BLUE)).append(Component.literal("SSnowly, M_W_K\n"))
+                                            .append(Component.literal("Artist: ").withStyle(net.minecraft.ChatFormatting.DARK_BLUE)).append(Component.literal("LordAret, Mruranium\n"))
+                                            .append(Component.literal("Ideas: ").withStyle(net.minecraft.ChatFormatting.DARK_GREEN)).append(Component.literal("6j, Harbinger\n"))
+                                            .append(Component.literal("Testers: ").withStyle(net.minecraft.ChatFormatting.DARK_RED)).append(Component.literal("ABOBA, Kernos, MrFeddy\n"))
+                                            .append(Component.literal("Music: ").withStyle(net.minecraft.ChatFormatting.DARK_AQUA)).append(Component.literal("Kevin Macleod"))
+                                    )
                                 ),
                                 true
                             )

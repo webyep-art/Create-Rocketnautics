@@ -164,6 +164,7 @@ public class SpaceTransitionHandler {
 
         PacketDistributor.sendToPlayer(player, new SeamlessTransitionPayload(true));
         PENDING_TELEPORTS.put(player.getUUID(), new TeleportTask(toDim, targetY));
+        sendDebug(player, "Teleport task queued for " + toDim.location(), 0xFFFF55);
     }
 
     private static ServerSubLevel findShipUnderPlayer(ServerPlayer player, ServerLevel level) {
@@ -182,7 +183,12 @@ public class SpaceTransitionHandler {
 
     private static void executeTeleport(ServerPlayer player, TeleportTask task) {
         ServerLevel toLevel = player.getServer().getLevel(task.targetDim);
-        if (toLevel == null) return;
+        if (toLevel == null) {
+            sendDebug(player, "ERROR: Target dimension " + task.targetDim.location() + " is NULL!", 0xFF5555);
+            return;
+        }
+        
+        sendDebug(player, "Executing teleport to " + task.targetDim.location() + " at Y=" + task.targetY, 0x55FF55);
         
         DimensionTransition transition = new DimensionTransition(
             toLevel, 

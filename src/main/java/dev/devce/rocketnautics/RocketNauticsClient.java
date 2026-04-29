@@ -163,6 +163,10 @@ public class RocketNauticsClient {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         RocketPartials.init();
+        
+        event.enqueueWork(() -> {
+            net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(dev.devce.rocketnautics.registry.RocketBlocks.SEPARATOR.get(), net.minecraft.client.renderer.RenderType.cutout());
+        });
     }
 
     @SubscribeEvent
