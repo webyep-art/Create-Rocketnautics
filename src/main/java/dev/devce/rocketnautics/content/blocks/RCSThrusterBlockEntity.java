@@ -90,9 +90,9 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
                 RandomSource random = level.getRandom();
                 
                 for (int i = 0; i < 2; i++) {
-                    double speedX = pDir.x() * (0.8 + random.nextDouble() * 0.4) + (random.nextDouble() - 0.5) * 0.05;
-                    double speedY = pDir.y() * (0.8 + random.nextDouble() * 0.4) + (random.nextDouble() - 0.5) * 0.05;
-                    double speedZ = pDir.z() * (0.8 + random.nextDouble() * 0.4) + (random.nextDouble() - 0.5) * 0.05;
+                    double speedX = pDir.x() * (0.3 + random.nextDouble() * 0.2) + (random.nextDouble() - 0.5) * 0.05;
+                    double speedY = pDir.y() * (0.3 + random.nextDouble() * 0.2) + (random.nextDouble() - 0.5) * 0.05;
+                    double speedZ = pDir.z() * (0.3 + random.nextDouble() * 0.2) + (random.nextDouble() - 0.5) * 0.05;
                     
                     level.addParticle(RocketParticles.RCS_GAS.get(), x, y, z, speedX, speedY, speedZ);
                 }

@@ -37,3 +37,7 @@ src/generated/
 !build.gradle
 !settings.gradle
 !gradle.properties
+
+discord_release.py
+discord_config.py
+tempfolderfortempfiles/

@@ -207,7 +207,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         public Particle createParticle(@NotNull SimpleParticleType type, @NotNull ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
             RocketExhaustParticle particle = new RocketExhaustParticle(level, x, y, z, xSpeed, ySpeed, zSpeed, this.sprites);
             particle.setLifetime(15 + level.random.nextInt(10)); // Lives longer to fly further
-            particle.scale(0.8f + level.random.nextFloat() * 0.8f); // 2x smaller than before
+            particle.scale(0.4f + level.random.nextFloat() * 0.4f); // 2x smaller than before
             particle.friction = 0.98F; // Standard air resistance
             particle.setShrinking(true);
             particle.setMaxAlpha(1.0F); // Pure solid white at start
