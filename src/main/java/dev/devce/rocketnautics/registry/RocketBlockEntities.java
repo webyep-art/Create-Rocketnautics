@@ -1,10 +1,7 @@
 package dev.devce.rocketnautics.registry;
 
 import dev.devce.rocketnautics.RocketNautics;
-import dev.devce.rocketnautics.content.blocks.BoosterThrusterBlockEntity;
-import dev.devce.rocketnautics.content.blocks.RCSThrusterBlockEntity;
-import dev.devce.rocketnautics.content.blocks.RocketThrusterBlockEntity;
-import dev.devce.rocketnautics.content.blocks.VectorThrusterBlockEntity;
+import dev.devce.rocketnautics.content.blocks.*;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
@@ -33,6 +30,10 @@ public class RocketBlockEntities {
     public static final Supplier<BlockEntityType<RCSThrusterBlockEntity>> RCS_THRUSTER =
             BLOCK_ENTITIES.register("rcs_thruster", 
                     () -> BlockEntityType.Builder.of(RCSThrusterBlockEntity::new, RocketBlocks.RCS_THRUSTER.get()).build(null));
+
+    public static final Supplier<BlockEntityType<AstralEngineeringTableBlockEntity>> ASTRAL_ENGINEERING_TABLE_BLOCK_ENTITY =
+            BLOCK_ENTITIES.register("astral_engineering_table",
+                    () -> BlockEntityType.Builder.of(AstralEngineeringTableBlockEntity::new, RocketBlocks.ASTRAL_ENGINEERING_TABLE.get()).build(null));
 
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);

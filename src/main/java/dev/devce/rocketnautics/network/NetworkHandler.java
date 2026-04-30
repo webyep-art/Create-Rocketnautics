@@ -2,6 +2,7 @@ package dev.devce.rocketnautics.network;
 
 import dev.devce.rocketnautics.RocketNautics;
 import dev.devce.rocketnautics.client.SkyHandler;
+import dev.devce.rocketnautics.event.RopeHandler;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
@@ -28,6 +29,12 @@ public class NetworkHandler {
             PlanetMapRequestPayload.TYPE,
             PlanetMapRequestPayload.CODEC,
             (payload, context) -> context.enqueueWork(() -> handleMapRequest(context.player()))
+        );
+
+        registrar.playToServer(
+            TetherDetachPayload.TYPE,
+            TetherDetachPayload.CODEC,
+            (payload, context) -> context.enqueueWork(() -> RopeHandler.detachIfPresent(context.player()))
         );
 
         registrar.playToClient(

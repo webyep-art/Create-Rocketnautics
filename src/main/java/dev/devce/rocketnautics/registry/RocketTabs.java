@@ -24,6 +24,13 @@ public class RocketTabs {
                         output.accept(RocketBlocks.BOOSTER_THRUSTER.get());
                         output.accept(RocketBlocks.RCS_THRUSTER.get());
                         output.accept(RocketBlocks.SEPARATOR.get());
+                        output.accept(RocketBlocks.ASTRAL_ENGINEERING_TABLE.get());
+                        output.accept(RocketItems.SPACE_HELMET.get());
+                        output.accept(RocketItems.SPACE_CHESTPLATE.get());
+                        output.accept(RocketItems.SPACE_LEGGINGS.get());
+                        output.accept(RocketItems.SPACE_BOOTS.get());
+                        output.accept(RocketItems.TETHER.get());
+                        output.accept(RocketItems.JETPACK_UPGRADE.get());
                         output.accept(RocketBlocks.MUSIC_DISC_SPACE.get());
                         ItemStack credits = new ItemStack(net.minecraft.world.item.Items.WRITTEN_BOOK);
                         credits.set(net.minecraft.core.component.DataComponents.ITEM_NAME, net.minecraft.network.chat.Component.translatable("item.rocketnautics.credits_book").withStyle(net.minecraft.ChatFormatting.GOLD));

@@ -1,11 +1,7 @@
 package dev.devce.rocketnautics.registry;
 
 import dev.devce.rocketnautics.RocketNautics;
-import dev.devce.rocketnautics.content.blocks.RocketThrusterBlock;
-import dev.devce.rocketnautics.content.blocks.VectorThrusterBlock;
-import dev.devce.rocketnautics.content.blocks.BoosterThrusterBlock;
-import dev.devce.rocketnautics.content.blocks.RCSThrusterBlock;
-import dev.devce.rocketnautics.content.blocks.SeparatorBlock;
+import dev.devce.rocketnautics.content.blocks.*;
 import dev.devce.rocketnautics.content.items.RocketItem;
 import dev.devce.rocketnautics.content.items.RocketBlockItem;
 import net.minecraft.world.item.Item;
@@ -41,6 +37,9 @@ public class RocketBlocks {
 
     public static final DeferredBlock<Block> SEPARATOR = registerBlock("separator",
             () -> new SeparatorBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+
+    public static final DeferredBlock<Block> ASTRAL_ENGINEERING_TABLE = registerBlock("astral_engineering_table",
+            () -> new AstralEngineeringTable(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
 
     public static final DeferredItem<RocketItem> MUSIC_DISC_SPACE = ITEMS.register("music_disc_space",
             () -> new RocketItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)

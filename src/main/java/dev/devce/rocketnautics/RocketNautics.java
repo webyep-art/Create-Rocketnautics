@@ -1,10 +1,9 @@
 package dev.devce.rocketnautics;
 
-import dev.devce.rocketnautics.registry.RocketBlocks;
-import dev.devce.rocketnautics.registry.RocketBlockEntities;
-import dev.devce.rocketnautics.registry.RocketParticles;
-import dev.devce.rocketnautics.registry.RocketSounds;
-import dev.devce.rocketnautics.registry.RocketTabs;
+import dev.devce.rocketnautics.content.screens.ModMenuTypes;
+import dev.devce.rocketnautics.event.ClientModEvents;
+import dev.devce.rocketnautics.event.RopeHandler;
+import dev.devce.rocketnautics.registry.*;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -25,14 +24,20 @@ public class RocketNautics {
         LOGGER.info("Initializing RocketNautics!");
 
         RocketBlocks.register(modEventBus);
+        RocketItems.register(modEventBus);
+        ArmorMaterials.register(modEventBus);
         RocketBlockEntities.register(modEventBus);
         RocketParticles.register(modEventBus);
         RocketTabs.register(modEventBus);
         RocketSounds.register(modEventBus);
+        ModMenuTypes.register(modEventBus);
 
         modEventBus.addListener(this::setup);
         NeoForge.EVENT_BUS.register(this);
         GlobalSpacePhysicsHandler.init();
+        RopeHandler.init(modEventBus);
+        ClientModEvents.init(modEventBus);
+
     }
 
     private void setup(final FMLCommonSetupEvent event) {
