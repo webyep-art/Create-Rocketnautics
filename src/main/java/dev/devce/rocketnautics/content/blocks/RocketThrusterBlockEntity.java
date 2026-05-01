@@ -347,10 +347,12 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
                 this.internalFlow = net.minecraft.util.Mth.lerp(0.5f, this.internalFlow, targetFlow);
             }
         } else {
-            startupTicks = 0;
             // Phase 3: Smooth shutdown
             this.internalFlow = net.minecraft.util.Mth.lerp(0.05f, this.internalFlow, 0.00f);
-            if (this.internalFlow < 0.001f) this.internalFlow = 0;
+            if (this.internalFlow < 0.001f) {
+                this.internalFlow = 0;
+                if (burnoutDelay <= 0) startupTicks = 0; // Only reset after burnout delay ends
+            }
         }
 
         this.fuelThrottle = internalFlow;
@@ -358,10 +360,16 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         // Effective flow for logic
         float effectiveFlow = internalFlow * getMaxFuelConsumption();
 
-        if (effectiveFlow >= (getIgnitionFlow() - 0.5f) && startupTicks >= 10) {
-            this.currentlyBurning = true;
-            this.steamMode = false;
-            this.burnoutDelay = 10;
+        if (effectiveFlow >= (getIgnitionFlow() - 0.5f)) {
+            if (startupTicks >= 10 || wasBurning) {
+                this.currentlyBurning = true;
+                this.steamMode = false;
+                this.burnoutDelay = 10;
+                if (startupTicks < 10) startupTicks = 10; // Keep it primed
+            } else {
+                this.currentlyBurning = false;
+                this.steamMode = true;
+            }
         } else if (effectiveFlow >= getSteamMinFlow() || (targetFlow > 0 && startupTicks < 10)) {
             this.currentlyBurning = false;
             this.steamMode = true;
@@ -372,6 +380,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
             } else {
                 this.currentlyBurning = false;
                 this.steamMode = false;
+                startupTicks = 0; // Only reset startup if we actually burn out
             }
         }
 

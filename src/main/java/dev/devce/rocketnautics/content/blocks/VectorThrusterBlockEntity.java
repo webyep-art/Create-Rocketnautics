@@ -52,22 +52,28 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
         for (Direction dir : DIRECTIONS) {
             if (dir.getAxis() != nozzle.getAxis()) {
                 int signal = level.getSignal(worldPosition.relative(dir), dir);
-                gX += dir.getStepX() * signal * 0.02f;
-                gY += dir.getStepY() * signal * 0.02f;
-                gZ += dir.getStepZ() * signal * 0.02f;
+                // Use a slightly larger multiplier for better range
+                float strength = signal * 0.033f; // 15 * 0.033 ~= 0.5 (max tilt)
+                gX += dir.getStepX() * strength;
+                gY += dir.getStepY() * strength;
+                gZ += dir.getStepZ() * strength;
             }
         }
         
-        gimbalX = gX;
-        gimbalY = gY;
-        gimbalZ = gZ;
-        
-        setChanged();
-        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        if (Math.abs(gimbalX - gX) > 0.001f || Math.abs(gimbalY - gY) > 0.001f || Math.abs(gimbalZ - gZ) > 0.001f) {
+            gimbalX = gX;
+            gimbalY = gY;
+            gimbalZ = gZ;
+            setChanged();
+            // We use sendData() instead of full block update to save performance
+            // sendData() is called by updateActiveState in parent tick if needed
+        }
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, VectorThrusterBlockEntity blockEntity) {
-        if (level.isClientSide) {
+        if (!level.isClientSide) {
+            blockEntity.updateGimbalAngles();
+        } else {
             blockEntity.renderGimbalX += (blockEntity.gimbalX - blockEntity.renderGimbalX) * 0.2f;
             blockEntity.renderGimbalY += (blockEntity.gimbalY - blockEntity.renderGimbalY) * 0.2f;
             blockEntity.renderGimbalZ += (blockEntity.gimbalZ - blockEntity.renderGimbalZ) * 0.2f;
@@ -82,13 +88,17 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
 
         Direction facing = getThrustDirection();
         Direction pushDirection = facing.getOpposite();
-        double currentThrust = getCurrentPower() * 10.0;
         
-        Vector3d thrustVector = new Vector3d(
-                pushDirection.getStepX() + gimbalX,
-                pushDirection.getStepY() + gimbalY,
-                pushDirection.getStepZ() + gimbalZ
-        ).normalize().mul(currentThrust);
+        // Ensure we have a base vector that isn't zero
+        double vx = pushDirection.getStepX() + gimbalX;
+        double vy = pushDirection.getStepY() + gimbalY;
+        double vz = pushDirection.getStepZ() + gimbalZ;
+        
+        double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
+        if (length < 0.001) return; // Should not happen with base direction
+
+        double currentThrust = getCurrentPower() * 10.0;
+        Vector3d thrustVector = new Vector3d(vx / length, vy / length, vz / length).mul(currentThrust);
 
         Vector3d blockCenter = new Vector3d(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5);
         handle.applyImpulseAtPoint(blockCenter, thrustVector.mul(deltaTime));
