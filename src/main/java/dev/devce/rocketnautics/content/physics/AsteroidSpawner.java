@@ -64,7 +64,6 @@ public class AsteroidSpawner {
             ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
             if (container == null) return;
 
-            // Handle asteroid logic
             Iterator<UUID> it = ASTEROIDS.iterator();
             while (it.hasNext()) {
                 UUID uuid = it.next();

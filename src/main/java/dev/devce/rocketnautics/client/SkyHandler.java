@@ -56,6 +56,10 @@ public class SkyHandler {
         }
     }
 
+    public static float planetRotX = 0;
+    public static float planetRotY = 0;
+    public static float planetRotZ = 0;
+
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY) return;
@@ -63,6 +67,7 @@ public class SkyHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
+        boolean isOverworld = mc.level.dimension() == net.minecraft.world.level.Level.OVERWORLD;
         Camera camera = mc.gameRenderer.getMainCamera();
         double camY = camera.getPosition().y + SkyDataHandler.getHeightOffsetForLevel(mc.level.dimension());
         if (camY < 1000.0) return;
@@ -81,43 +86,68 @@ public class SkyHandler {
         poseStack.mulPose(invRot);
 
         int renderDist = mc.options.renderDistance().get();
-        float parallaxFactor = (float) (renderDist / Math.max(100.0, camY)); 
         double camX = camera.getPosition().x;
         double camZ = camera.getPosition().z;
 
         ensurePlanetTexObj();
         ensureCloudTexture();
         ensureHaloTexture();
-        updatePlanetTex(camX, camY, camZ);
+        
+        if (isOverworld) {
+            updatePlanetTex(camX, camY, camZ);
+        } else {
+            // Space: Request textures as if at 20km altitude in Overworld
+            updatePlanetTex(camX, 20000.0, camZ);
+        }
+        
         // move towards our most recently received texture
         if (texFade > 0) {
             texFade = Math.max(0, texFade - event.getPartialTick().getRealtimeDeltaTicks() / 20);
         }
-        renderPlanet(PLANET_TEXTURE_OBJ_LAST, camX, camY, camZ, renderDist, parallaxFactor, matrix, texFade * visibility);
-        renderPlanet(PLANET_TEXTURE_OBJ, camX, camY, camZ, renderDist, parallaxFactor, matrix, (1 - texFade) * visibility);
+        
+        renderPlanet(poseStack, PLANET_TEXTURE_OBJ_LAST, camX, camY, camZ, renderDist, visibility * texFade, isOverworld);
+        renderPlanet(poseStack, PLANET_TEXTURE_OBJ, camX, camY, camZ, renderDist, visibility * (1 - texFade), isOverworld);
+        
         poseStack.popPose();
     }
 
-    private static void renderPlanet(PlanetRenderInfo planet, double camX, double camY, double camZ, float renderDist, float parallaxFactor, Matrix4f matrix, float visibility) {
+    private static void renderPlanet(PoseStack poseStack, PlanetRenderInfo planet, double camX, double camY, double camZ, float renderDist, float visibility, boolean isOverworld) {
         if (visibility <= 0) return;
-        float relX = (float) ((planet.getCenterX() - camX) * parallaxFactor);
-        float relY = -renderDist;
-        float relZ = (float) ((planet.getCenterZ() - camZ) * parallaxFactor);
+        
+        float parallaxFactor;
+        float prettyness;
+        double result;
+        float renderDepth;
+        
+        if (isOverworld) {
+            parallaxFactor = (float) (renderDist / Math.max(100.0, camY));
+            prettyness = computePrettyness(planet, camY);
+            double trueSize = SkyDataHandler.toTrueSize(planet.getPowerSize());
+            double optimalSize = camY * (2 << SkyDataHandler.SCALE_FACTOR);
+            result = Math.min(prettyness > 0 ? optimalSize : trueSize, SkyDataHandler.toTrueSize(SkyDataHandler.MAX_POWER_SIZE));
+            renderDepth = renderDist;
+        } else {
+            parallaxFactor = (float) (renderDist / 1000.0);
+            prettyness = 0;
+            result = Math.min(SkyDataHandler.toTrueSize(planet.getPowerSize()), SkyDataHandler.toTrueSize(SkyDataHandler.MAX_POWER_SIZE));
+            renderDepth = renderDist * 0.1f;
+        }
 
-        float prettyness = computePrettyness(planet, camY);
+        float depthScale = renderDepth / renderDist;
+        float relX = (float) ((planet.getCenterX() - camX) * parallaxFactor) * depthScale;
+        float relY = -renderDepth;
+        float relZ = (float) ((planet.getCenterZ() - camZ) * parallaxFactor) * depthScale;
+
         // shift toward zero
         relX = Mth.lerp(prettyness, relX, 0);
         relZ = Mth.lerp(prettyness, relZ, 0);
-        // move towards optimal size ratio
-        double trueSize = SkyDataHandler.toTrueSize(planet.getPowerSize());
-        double optimalSize = camY * (2 << SkyDataHandler.SCALE_FACTOR);
-        double result = Math.min(prettyness > 0 ? optimalSize : trueSize, SkyDataHandler.toTrueSize(SkyDataHandler.MAX_POWER_SIZE));
-        float size = (float) (result * (renderDist / Math.max(100.0, camY)));
+        
+        float size = (float) (result * (renderDepth / Math.max(100.0, camY))); 
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        RenderSystem.depthMask(false);
-        RenderSystem.disableDepthTest();
+        RenderSystem.depthMask(true);
+        RenderSystem.enableDepthTest();
         RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
         if (planet.getTexID() != null) {
             RenderSystem.setShaderTexture(0, planet.getTexID());
@@ -127,17 +157,63 @@ public class SkyHandler {
         RenderSystem.disableCull();
 
         Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder bufferbuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        
+        poseStack.pushPose();
+        poseStack.translate(relX, relY, relZ);
+        
+        Matrix4f billboardMatrix = new Matrix4f(poseStack.last().pose()); // Matrix without planet rotation
+        
+        if (!isOverworld) {
+            // Apply cube rotation around its center
+            poseStack.translate(0, -size, 0);
+            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(planetRotX));
+            poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(planetRotY));
+            poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(planetRotZ));
+            poseStack.translate(0, size, 0);
+        }
 
+        Matrix4f matrix = poseStack.last().pose(); // Matrix with planet rotation
+        BufferBuilder bufferbuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         float r = 1.0f, g = 1.0f, b = 1.0f;
 
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
+        // TOP face (at Y=0 in local space) - CCW from above
+        bufferbuilder.addVertex(matrix, -size, 0, -size).setColor(r, g, b, visibility).setUv(0.0f, 0.0f);
+        bufferbuilder.addVertex(matrix, -size, 0, size).setColor(r, g, b, visibility).setUv(0.0f, 1.0f);
+        bufferbuilder.addVertex(matrix, size, 0, size).setColor(r, g, b, visibility).setUv(1.0f, 1.0f);
+        bufferbuilder.addVertex(matrix, size, 0, -size).setColor(r, g, b, visibility).setUv(1.0f, 0.0f);
 
-        bufferbuilder.addVertex(matrix, relX - size, relY, relZ - size).setColor(r, g, b, visibility).setUv(0.0f, 0.0f);
-        bufferbuilder.addVertex(matrix, relX - size, relY, relZ + size).setColor(r, g, b, visibility).setUv(0.0f, 1.0f);
-        bufferbuilder.addVertex(matrix, relX + size, relY, relZ + size).setColor(r, g, b, visibility).setUv(1.0f, 1.0f);
-        bufferbuilder.addVertex(matrix, relX + size, relY, relZ - size).setColor(r, g, b, visibility).setUv(1.0f, 0.0f);
+        if (!isOverworld) {
+            float bottomY = -2 * size;
+            // BOTTOM - CCW from below
+            bufferbuilder.addVertex(matrix, -size, bottomY, -size).setColor(r, g, b, visibility).setUv(0.0f, 0.0f);
+            bufferbuilder.addVertex(matrix, size, bottomY, -size).setColor(r, g, b, visibility).setUv(1.0f, 0.0f);
+            bufferbuilder.addVertex(matrix, size, bottomY, size).setColor(r, g, b, visibility).setUv(1.0f, 1.0f);
+            bufferbuilder.addVertex(matrix, -size, bottomY, size).setColor(r, g, b, visibility).setUv(0.0f, 1.0f);
+            
+            // NORTH (Z = -size) - CCW from North
+            bufferbuilder.addVertex(matrix, size, 0, -size).setColor(r, g, b, visibility).setUv(0.0f, 0.0f);
+            bufferbuilder.addVertex(matrix, -size, 0, -size).setColor(r, g, b, visibility).setUv(1.0f, 0.0f);
+            bufferbuilder.addVertex(matrix, -size, bottomY, -size).setColor(r, g, b, visibility).setUv(1.0f, 1.0f);
+            bufferbuilder.addVertex(matrix, size, bottomY, -size).setColor(r, g, b, visibility).setUv(0.0f, 1.0f);
+            
+            // SOUTH (Z = size) - CCW from South
+            bufferbuilder.addVertex(matrix, -size, 0, size).setColor(r, g, b, visibility).setUv(0.0f, 0.0f);
+            bufferbuilder.addVertex(matrix, size, 0, size).setColor(r, g, b, visibility).setUv(1.0f, 0.0f);
+            bufferbuilder.addVertex(matrix, size, bottomY, size).setColor(r, g, b, visibility).setUv(1.0f, 1.0f);
+            bufferbuilder.addVertex(matrix, -size, bottomY, size).setColor(r, g, b, visibility).setUv(0.0f, 1.0f);
+            
+            // WEST (X = -size) - CCW from West
+            bufferbuilder.addVertex(matrix, -size, 0, size).setColor(r, g, b, visibility).setUv(0.0f, 0.0f);
+            bufferbuilder.addVertex(matrix, -size, 0, -size).setColor(r, g, b, visibility).setUv(1.0f, 0.0f);
+            bufferbuilder.addVertex(matrix, -size, bottomY, -size).setColor(r, g, b, visibility).setUv(1.0f, 1.0f);
+            bufferbuilder.addVertex(matrix, -size, bottomY, size).setColor(r, g, b, visibility).setUv(0.0f, 1.0f);
+            
+            // EAST (X = size) - CCW from East
+            bufferbuilder.addVertex(matrix, size, 0, -size).setColor(r, g, b, visibility).setUv(0.0f, 0.0f);
+            bufferbuilder.addVertex(matrix, size, 0, size).setColor(r, g, b, visibility).setUv(1.0f, 0.0f);
+            bufferbuilder.addVertex(matrix, size, bottomY, size).setColor(r, g, b, visibility).setUv(1.0f, 1.0f);
+            bufferbuilder.addVertex(matrix, size, bottomY, -size).setColor(r, g, b, visibility).setUv(0.0f, 1.0f);
+        }
 
         BufferUploader.drawWithShader(bufferbuilder.buildOrThrow());
 
@@ -149,28 +225,120 @@ public class SkyHandler {
             float timeOffset = (System.currentTimeMillis() % (20L * factor)) / (float) factor;
 
             BufferBuilder cloudBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-            cloudBuilder.addVertex(matrix, relX - size, relY, relZ - size).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 0.0f);
-            cloudBuilder.addVertex(matrix, relX - size, relY, relZ + size).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 1.0f);
-            cloudBuilder.addVertex(matrix, relX + size, relY, relZ + size).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 1.0f);
-            cloudBuilder.addVertex(matrix, relX + size, relY, relZ - size).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 0.0f);
+            float cloudAlt = isOverworld ? 0.01f : size * 0.03f;
+            float topY = cloudAlt;
+            float botY = -2 * size - cloudAlt;
+            float sSize = size + cloudAlt;
+
+            cloudBuilder.addVertex(matrix, -sSize, topY, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 0.0f);
+            cloudBuilder.addVertex(matrix, -sSize, topY, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 1.0f);
+            cloudBuilder.addVertex(matrix, sSize, topY, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 1.0f);
+            cloudBuilder.addVertex(matrix, sSize, topY, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 0.0f);
+            
+            if (!isOverworld) {
+                // Raised clouds for all faces
+                cloudBuilder.addVertex(matrix, -sSize, botY, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 0.0f);
+                cloudBuilder.addVertex(matrix, sSize, botY, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 0.0f);
+                cloudBuilder.addVertex(matrix, sSize, botY, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 1.0f);
+                cloudBuilder.addVertex(matrix, -sSize, botY, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 1.0f);
+                
+                cloudBuilder.addVertex(matrix, sSize, cloudAlt, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 0.0f);
+                cloudBuilder.addVertex(matrix, -sSize, cloudAlt, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 0.0f);
+                cloudBuilder.addVertex(matrix, -sSize, botY, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 1.0f);
+                cloudBuilder.addVertex(matrix, sSize, botY, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 1.0f);
+                
+                cloudBuilder.addVertex(matrix, -sSize, cloudAlt, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 0.0f);
+                cloudBuilder.addVertex(matrix, sSize, cloudAlt, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 0.0f);
+                cloudBuilder.addVertex(matrix, sSize, botY, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 1.0f);
+                cloudBuilder.addVertex(matrix, -sSize, botY, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 1.0f);
+                
+                cloudBuilder.addVertex(matrix, -sSize, cloudAlt, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 0.0f);
+                cloudBuilder.addVertex(matrix, -sSize, cloudAlt, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 0.0f);
+                cloudBuilder.addVertex(matrix, -sSize, botY, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 1.0f);
+                cloudBuilder.addVertex(matrix, -sSize, botY, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 1.0f);
+                
+                cloudBuilder.addVertex(matrix, sSize, cloudAlt, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 0.0f);
+                cloudBuilder.addVertex(matrix, sSize, cloudAlt, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 0.0f);
+                cloudBuilder.addVertex(matrix, sSize, botY, sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f + timeOffset, 1.0f);
+                cloudBuilder.addVertex(matrix, sSize, botY, -sSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f + timeOffset, 1.0f);
+            }
             BufferUploader.drawWithShader(cloudBuilder.buildOrThrow());
         }
 
-        if (HALO_TEXTURE_ID != null) {
+        if (isOverworld) {
+            if (HALO_TEXTURE_ID != null) {
+                RenderSystem.enableBlend();
+                RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
+                RenderSystem.setShaderTexture(0, HALO_TEXTURE_ID);
+
+                float haloSize = size * 1.3f;
+                BufferBuilder haloBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                haloBuilder.addVertex(matrix, -haloSize, 0.01f, -haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f, 0.0f);
+                haloBuilder.addVertex(matrix, -haloSize, 0.01f, haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f, 1.0f);
+                haloBuilder.addVertex(matrix, haloSize, 0.01f, haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f, 1.0f);
+                haloBuilder.addVertex(matrix, haloSize, 0.01f, -haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f, 0.0f);
+                BufferUploader.drawWithShader(haloBuilder.buildOrThrow());
+                RenderSystem.defaultBlendFunc();
+            }
+        } else {
+            // Space: Ultra-smooth multi-layered atmosphere (20 layers)
             RenderSystem.enableBlend();
             RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
-            RenderSystem.setShaderTexture(0, HALO_TEXTURE_ID);
+            RenderSystem.setShader(GameRenderer::getPositionColorShader);
+            RenderSystem.disableCull();
 
-            float haloSize = size * 1.3f;
-            BufferBuilder haloBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-            haloBuilder.addVertex(matrix, relX - haloSize, relY, relZ - haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f, 0.0f);
-            haloBuilder.addVertex(matrix, relX - haloSize, relY, relZ + haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(0.0f, 1.0f);
-            haloBuilder.addVertex(matrix, relX + haloSize, relY, relZ + haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f, 1.0f);
-            haloBuilder.addVertex(matrix, relX + haloSize, relY, relZ - haloSize).setColor(1.0f, 1.0f, 1.0f, visibility).setUv(1.0f, 0.0f);
-            BufferUploader.drawWithShader(haloBuilder.buildOrThrow());
+            poseStack.pushPose();
+            poseStack.translate(0, -size, 0); // Move to planet center
+            Matrix4f centerMatrix = poseStack.last().pose();
+
+            int layers = 20;
+            float ar = 0.2f, ag = 0.5f, ab = 1.0f;
+
+            for (int i = 0; i < layers; i++) {
+                float progress = i / (float) (layers - 1);
+                // Progressive size from 1.01 to 1.4 (tighter range)
+                float aSize = size * (1.01f + (float)Math.pow(progress, 1.2f) * 0.4f);
+                // Adjusted alpha falloff for tighter layers
+                float aa = (0.15f * (float)Math.pow(1.0f - progress, 2.0f)) * visibility;
+                
+                BufferBuilder atmBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+                float s = aSize;
+
+                // Render all 6 faces using centerMatrix
+                atmBuilder.addVertex(centerMatrix, -s, s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, -s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, -s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, -s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, -s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, -s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, -s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, -s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, -s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, -s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, -s, -s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, s, -s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, -s, s).setColor(ar, ag, ab, aa);
+                atmBuilder.addVertex(centerMatrix, s, -s, -s).setColor(ar, ag, ab, aa);
+                
+                BufferUploader.drawWithShader(atmBuilder.buildOrThrow());
+            }
+            poseStack.popPose();
 
             RenderSystem.defaultBlendFunc();
+            RenderSystem.enableCull();
         }
+        
+        poseStack.popPose();
 
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);
@@ -223,7 +391,6 @@ public class SkyHandler {
     }
 
     private static int getMaximumScale() {
-        // TODO config to clamp the maximum powerSize
         // 15 is the recommended clamp
         return 100;
     }
@@ -235,10 +402,10 @@ public class SkyHandler {
         double currentSize = clamped ? camY * (2 << SkyDataHandler.SCALE_FACTOR) : SkyDataHandler.toTrueSize(PLANET_TEXTURE_OBJ.getPowerSize());
         boolean violateX = Math.abs(camX - PLANET_TEXTURE_OBJ.getCenterX()) > currentSize * 3/5;
         boolean violateZ = Math.abs(camZ - PLANET_TEXTURE_OBJ.getCenterZ()) > currentSize * 3/5;
-        boolean violateScale = PLANET_TEXTURE_OBJ.getPowerSize() != Math.min(SkyDataHandler.targetSizeForHeight(camY), getMaximumScale());
+        boolean violateScale = PLANET_TEXTURE_OBJ.getPowerSize() != 15;
         if (violateX || violateZ || violateScale) {
             awaitUpdate = true;
-            PacketDistributor.sendToServer(new PlanetMapRequestPayload(SkyDataHandler.targetSizeForHeight(camY)));
+            PacketDistributor.sendToServer(new PlanetMapRequestPayload(15));
         }
     }
 

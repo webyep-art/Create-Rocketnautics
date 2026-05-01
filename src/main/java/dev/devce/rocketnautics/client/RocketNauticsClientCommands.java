@@ -27,6 +27,44 @@ public class RocketNauticsClientCommands {
                     showRenderInfo();
                     return 1;
                 })
+            )
+            .then(Commands.literal("planet")
+                .then(Commands.literal("x")
+                    .then(Commands.argument("value", com.mojang.brigadier.arguments.FloatArgumentType.floatArg())
+                        .executes(context -> {
+                            SkyHandler.planetRotX = com.mojang.brigadier.arguments.FloatArgumentType.getFloat(context, "value");
+                            context.getSource().sendSuccess(() -> Component.literal("Planet X rotation set to: " + SkyHandler.planetRotX), false);
+                            return 1;
+                        })
+                    )
+                )
+                .then(Commands.literal("y")
+                    .then(Commands.argument("value", com.mojang.brigadier.arguments.FloatArgumentType.floatArg())
+                        .executes(context -> {
+                            SkyHandler.planetRotY = com.mojang.brigadier.arguments.FloatArgumentType.getFloat(context, "value");
+                            context.getSource().sendSuccess(() -> Component.literal("Planet Y rotation set to: " + SkyHandler.planetRotY), false);
+                            return 1;
+                        })
+                    )
+                )
+                .then(Commands.literal("z")
+                    .then(Commands.argument("value", com.mojang.brigadier.arguments.FloatArgumentType.floatArg())
+                        .executes(context -> {
+                            SkyHandler.planetRotZ = com.mojang.brigadier.arguments.FloatArgumentType.getFloat(context, "value");
+                            context.getSource().sendSuccess(() -> Component.literal("Planet Z rotation set to: " + SkyHandler.planetRotZ), false);
+                            return 1;
+                        })
+                    )
+                )
+                .then(Commands.literal("reset")
+                    .executes(context -> {
+                        SkyHandler.planetRotX = 0;
+                        SkyHandler.planetRotY = 0;
+                        SkyHandler.planetRotZ = 0;
+                        context.getSource().sendSuccess(() -> Component.literal("Planet rotation reset to zero"), false);
+                        return 1;
+                    })
+                )
             );
             
         dispatcher.register(builder);

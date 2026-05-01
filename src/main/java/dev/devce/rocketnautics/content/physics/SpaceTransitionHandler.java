@@ -328,8 +328,7 @@ public class SpaceTransitionHandler {
 
     private static void destroyShipInSourceDimension(ServerSubLevel ship) {
         ship.deleteAllEntities();
-        // Removed destroyAllBlocks() to avoid noise during transition.
-        // markRemoved() unloads the plot chunks silently.
+
         ship.markRemoved();
     }
 
@@ -402,7 +401,6 @@ public class SpaceTransitionHandler {
                 vehicleTag.putDouble(KEY_PLOT_REL_Z, relZ);
                 entityList.add(vehicleTag);
                 
-                // Redundant check for safety
                 tag.putDouble("vehicle_plot_rel_x", relX);
                 tag.putDouble("vehicle_plot_rel_y", relY);
                 tag.putDouble("vehicle_plot_rel_z", relZ);
