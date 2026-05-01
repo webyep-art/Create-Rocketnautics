@@ -3,7 +3,7 @@
   "block.rocketnautics.vector_thruster": "矢量火箭发动机",
   "block.rocketnautics.booster_thruster": "固体火箭发动机",
   "block.rocketnautics.rcs_thruster": "姿控发动机",
-  "block.rocketnautics.gyroscope": "陀螺仪（SAS）",
+  "block.rocketnautics.gyroscope": "增稳系统（SAS）",
   "block.rocketnautics.separator": "分离器",
   "rocketnautics.simulated_section.rocketnautics": "宇航学",
   "itemGroup.rocketnautics.tab": "宇航学",
