@@ -1,5 +1,6 @@
 package dev.devce.rocketnautics;
 
+import dev.devce.rocketnautics.content.mobs.Starved;
 import dev.devce.rocketnautics.content.screens.ModMenuTypes;
 import dev.devce.rocketnautics.event.ClientModEvents;
 import dev.devce.rocketnautics.event.RopeHandler;
@@ -25,6 +26,7 @@ public class RocketNautics {
 
         RocketBlocks.register(modEventBus);
         RocketItems.register(modEventBus);
+        RocketEntities.register(modEventBus);
         ArmorMaterials.register(modEventBus);
         RocketBlockEntities.register(modEventBus);
         RocketParticles.register(modEventBus);

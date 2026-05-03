@@ -12,7 +12,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 public class AstralEngineeringTableScreen extends AbstractContainerScreen<AstralEngineeringTableMenu> {
     private static final ResourceLocation GUI_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID,"textures/gui/astral_engineering_table/growth_chamber_gui.png");
+            ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID,"textures/gui/astral_engineering_table/astral_engineering_table_gui.png");
 
     public AstralEngineeringTableScreen(AstralEngineeringTableMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
