@@ -7,7 +7,7 @@ config="rocketnautics.mixins.json"
 
 [[mods]]
 modId="rocketnautics"
-version="1.3.6-patch1"
+version="1.3.7"
 displayName="Create: Cosmonautics"
 displayURL="https://github.com"
 authors="webyep, LordAret, SSnowly, M_W_K"
