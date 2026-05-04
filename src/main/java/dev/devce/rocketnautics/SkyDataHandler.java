@@ -73,6 +73,19 @@ public class SkyDataHandler {
         return HANDLERS.computeIfAbsent(level, SkyDataHandler::new);
     }
 
+    public byte[] getRenderDataForDeepSpace(int powerSizeClamp) {
+        // we can render the root at this point
+        DataSquare square = root;
+        while (powerSizeClamp < square.powerSize) {
+            if (square instanceof RecursiveDataSquare r) {
+                square = r.getChildAtTruePosition(0, 0);
+            } else {
+                break;
+            }
+        }
+        return square.getRenderData();
+    }
+
     public PlanetMapPayload getRenderDataAtScaleAndPosition(int powerSize, int trueX, int trueZ) {
         // get the square we are on
         DataSquare square = getSquareAtPosition(powerSize, trueX, trueZ);

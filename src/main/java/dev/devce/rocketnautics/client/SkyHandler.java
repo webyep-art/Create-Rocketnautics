@@ -22,6 +22,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import dev.devce.rocketnautics.RocketNautics;
 import dev.devce.rocketnautics.SkyDataHandler;
+import dev.devce.rocketnautics.content.orbit.DeepSpaceData;
 import dev.devce.rocketnautics.network.PlanetMapRequestPayload;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -61,7 +62,7 @@ public class SkyHandler {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY) return;
         
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || mc.player == null) return;
+        if (mc.level == null || mc.player == null || DeepSpaceData.isDeepSpace()) return;
 
         Camera camera = mc.gameRenderer.getMainCamera();
         double camY = camera.getPosition().y + SkyDataHandler.getHeightOffsetForLevel(mc.level.dimension());

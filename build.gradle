@@ -83,6 +83,17 @@ dependencies {
     implementation("dev.ryanhcode.offroad:offroad-neoforge-${minecraft_version}:${offroad_version}") { transitive = false }
     implementation("dev.simulated_team.simulated:simulated-neoforge-${minecraft_version}:${simulated_version}") { transitive = false }
     implementation("dev.eriksonn.aeronautics:aeronautics-neoforge-${minecraft_version}:${aeronautics_version}") { transitive = false }
+
+    // orekit
+
+    jarJar(implementation('org.orekit:orekit')) {
+        version {
+            strictly '[13.1.4,)'
+            prefer '13.1.4'
+        }
+    }
+    additionalRuntimeClasspath 'org.orekit:orekit:13.1.4'
+
 }
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
