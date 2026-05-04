@@ -12,7 +12,6 @@ public abstract class LevelRendererMixin {
     @org.spongepowered.asm.mixin.Shadow
     protected abstract void renderSnowAndRain(net.minecraft.client.renderer.LightTexture pLightTexture, float pPartialTick, double pCamX, double pCamY, double pCamZ);
 
-
     @Redirect(method = "renderSky", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;getStarBrightness(F)F"))
     private float rocketnautics$boostStarBrightness(net.minecraft.client.multiplayer.ClientLevel instance, float partialTick) {
         float original = instance.getStarBrightness(partialTick);
@@ -22,7 +21,7 @@ public abstract class LevelRendererMixin {
         double y = mc.player.getY();
         if (y > 1000.0) {
             float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
-            // Stars become fully bright as we go higher
+            
             return Mth.lerp(factor, original, 1.0f);
         }
         return original;
@@ -62,13 +61,13 @@ public abstract class LevelRendererMixin {
         return color;
     }
 
-    // New: Fade out clouds as we go to space
+    
     @Redirect(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;renderClouds(Lcom/mojang/blaze3d/vertex/PoseStack;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;FDDD)V"))
     private void rocketnautics$fadeOutClouds(LevelRenderer instance, com.mojang.blaze3d.vertex.PoseStack pPoseStack, org.joml.Matrix4f pProjectionMatrix, org.joml.Matrix4f pCloudProjectionMatrix, float pPartialTick, double pCamX, double pCamY, double pCamZ) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             double y = mc.player.getY();
-            // Completely gone at 2500
+            
             if (y > 2500.0) return;
         }
         instance.renderClouds(pPoseStack, pProjectionMatrix, pCloudProjectionMatrix, pPartialTick, pCamX, pCamY, pCamZ);

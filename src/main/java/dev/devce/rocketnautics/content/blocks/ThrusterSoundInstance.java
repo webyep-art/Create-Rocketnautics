@@ -35,11 +35,11 @@ public class ThrusterSoundInstance extends AbstractTickableSoundInstance {
         float targetVolume = 0.2f + (power / 10.0f);
         float targetPitch = 0.5f + (power / 20.0f);
 
-        // Smoothly transition volume and pitch
+        
         this.volume = Mth.lerp(0.1f, this.volume, targetVolume);
         this.pitch = Mth.lerp(0.1f, this.pitch, targetPitch);
         
-        // Follow the block (in case it's on a moving contraption, though this is static world pos for now)
+        
         this.x = blockEntity.getBlockPos().getX() + 0.5f;
         this.y = blockEntity.getBlockPos().getY() + 0.5f;
         this.z = blockEntity.getBlockPos().getZ() + 0.5f;

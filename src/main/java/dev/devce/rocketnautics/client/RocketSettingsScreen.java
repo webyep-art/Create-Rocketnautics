@@ -24,7 +24,7 @@ public class RocketSettingsScreen extends Screen {
         int x = this.width / 2;
         int y = 40;
 
-        // Tab Switchers
+        
         this.addRenderableWidget(Button.builder(Component.literal("Client Settings"), b -> {
             this.isServerTab = false;
             this.rebuildWidgets();
@@ -43,14 +43,14 @@ public class RocketSettingsScreen extends Screen {
             renderClientSettings(x, y);
         }
 
-        // Back button
+        
         this.addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> {
             this.minecraft.setScreen(this.lastScreen);
         }).bounds(x - 100, this.height - 30, 200, 20).build());
     }
 
     private void renderClientSettings(int x, int y) {
-        // Debug Overlay Toggle
+        
         this.addRenderableWidget(CycleButton.onOffBuilder(RocketConfig.CLIENT.showDebugOverlay.get())
             .create(x - 100, y, 200, 20, Component.literal("Debug Overlay"), (btn, val) -> {
                 RocketConfig.CLIENT.showDebugOverlay.set(val);
@@ -58,7 +58,7 @@ public class RocketSettingsScreen extends Screen {
             }));
         y += 25;
 
-        // Dynamic Render Distance
+        
         this.addRenderableWidget(CycleButton.onOffBuilder(RocketConfig.CLIENT.enableDynamicRenderDistance.get())
             .create(x - 100, y, 200, 20, Component.literal("Dynamic Render Distance"), (btn, val) -> {
                 RocketConfig.CLIENT.enableDynamicRenderDistance.set(val);
@@ -66,7 +66,7 @@ public class RocketSettingsScreen extends Screen {
             }));
         y += 25;
 
-        // Shake Intensity (Simplified as cycles)
+        
         this.addRenderableWidget(CycleButton.builder(val -> Component.literal("Shake: " + val + "x"))
             .withValues(0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0)
             .withInitialValue(RocketConfig.CLIENT.shakeIntensity.get())
@@ -89,9 +89,9 @@ public class RocketSettingsScreen extends Screen {
             return;
         }
 
-        // --- SINGLEPLAYER SERVER SETTINGS ---
         
-        // Max Fuel Consumption
+        
+        
         this.addRenderableWidget(CycleButton.builder(val -> Component.literal("Max Fuel: " + val + " mB/t"))
             .withValues(10, 20, 40, 60, 80, 100, 200)
             .withInitialValue(RocketConfig.SERVER.maxFuelConsumption.get())
@@ -101,7 +101,7 @@ public class RocketSettingsScreen extends Screen {
             }));
         y += 25;
 
-        // Jetpack Thrust
+        
         this.addRenderableWidget(CycleButton.builder(val -> Component.literal("Jetpack Power: " + val))
             .withValues(0.05, 0.1, 0.15, 0.2, 0.3, 0.5)
             .withInitialValue(RocketConfig.SERVER.jetpackThrust.get())
@@ -111,7 +111,7 @@ public class RocketSettingsScreen extends Screen {
             }));
         y += 25;
 
-        // Jetpack Sprint Thrust
+        
         this.addRenderableWidget(CycleButton.builder(val -> Component.literal("Sprint Power: " + val))
             .withValues(0.2, 0.3, 0.35, 0.4, 0.6, 1.0)
             .withInitialValue(RocketConfig.SERVER.jetpackSprintThrust.get())
@@ -121,7 +121,7 @@ public class RocketSettingsScreen extends Screen {
             }));
         y += 25;
 
-        // Ignition Flow
+        
         this.addRenderableWidget(CycleButton.builder(val -> Component.literal("Ignition Threshold: " + val + " mB/t"))
             .withValues(1, 2, 5, 10, 20)
             .withInitialValue(RocketConfig.SERVER.ignitionFlow.get())
@@ -133,7 +133,7 @@ public class RocketSettingsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.guiGraphics = guiGraphics; // Store for sub-methods
+        this.guiGraphics = guiGraphics; 
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 15, 0xFFFFFF);
         

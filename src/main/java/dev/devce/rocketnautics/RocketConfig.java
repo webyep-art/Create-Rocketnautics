@@ -26,6 +26,7 @@ public class RocketConfig {
         public final ModConfigSpec.DoubleValue jetpackSprintThrust;
         public final ModConfigSpec.IntValue ignitionFlow;
         public final ModConfigSpec.IntValue steamMinFlow;
+        public final ModConfigSpec.BooleanValue enableEngineDebugLogging;
 
         public Server(ModConfigSpec.Builder builder) {
             builder.push("Thrusters");
@@ -38,6 +39,9 @@ public class RocketConfig {
             steamMinFlow = builder
                     .comment("Flow threshold for pre-ignition steam phase (mB/tick)")
                     .defineInRange("steamMinFlow", 2, 1, 100);
+            enableEngineDebugLogging = builder
+                    .comment("Enable debug logging for engine fuel and thrust (can cause spam)")
+                    .define("enableEngineDebugLogging", false);
             builder.pop();
 
             builder.push("Jetpack");

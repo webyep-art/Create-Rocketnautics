@@ -26,10 +26,10 @@ public class JetpackLayer<T extends AbstractClientPlayer, M extends PlayerModel<
 
         poseStack.pushPose();
         
-        // Translate to back
+        
         this.getParentModel().body.translateAndRotate(poseStack);
         
-        // Offset and Scale
+        
         poseStack.translate(0.0, 0.4, 0.25);
         poseStack.mulPose(Axis.XP.rotationDegrees(180.0F));
         poseStack.scale(0.8F, 0.8F, 0.8F);

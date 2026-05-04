@@ -1,0 +1,24 @@
+{
+  "type": "create:mixing",
+  "heat_requirement": "superheated",
+  "ingredients": [
+    {
+      "tag": "c:ingots/titanium"
+    },
+    {
+      "tag": "c:ingots/titanium"
+    },
+    {
+      "tag": "c:ingots/titanium"
+    },
+    {
+      "item": "minecraft:netherite_scrap"
+    }
+  ],
+  "results": [
+    {
+      "count": 4,
+      "id": "rocketnautics:titanium_alloy"
+    }
+  ]
+}

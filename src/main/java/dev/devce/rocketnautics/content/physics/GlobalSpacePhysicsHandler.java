@@ -27,9 +27,6 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
-/**
- * Handles global space physics including zero-G simulation and atmospheric re-entry heat.
- */
 @EventBusSubscriber(modid = RocketNautics.MODID)
 public class GlobalSpacePhysicsHandler {
 
@@ -104,17 +101,17 @@ public class GlobalSpacePhysicsHandler {
         handle.applyLinearImpulse(localImpulse);
     }
 
-    private static double calculateGravityFactor(ServerLevel level, double y) {
+    private static double calculateGravityFactor(net.minecraft.world.level.Level level, double y) {
         if (gravityOverride != null) {
             return 1.0 - gravityOverride;
         }
 
-        // Always zero-G in space dimension
+        
         if (level.dimension().location().getPath().equals("space")) {
             return 1.0;
         }
 
-        // Gradual transition in Overworld
+        
         if (y <= SPACE_GRAVITY_START_Y) return 0.0;
         return Math.clamp((y - SPACE_GRAVITY_START_Y) / (SPACE_GRAVITY_FULL_Y - SPACE_GRAVITY_START_Y), 0.0, 1.0);
     }
@@ -148,8 +145,9 @@ public class GlobalSpacePhysicsHandler {
     @SubscribeEvent
     public static void onEntityTickPre(EntityTickEvent.Pre event) {
         Entity entity = event.getEntity();
-        if (shouldApplyZeroG(entity)) {
-            applyEntityZeroG(entity);
+        double factor = calculateGravityFactor(entity.level(), entity.getY());
+        if (factor > 0.0) {
+            applyEntityZeroG(entity, factor);
         }
     }
 
@@ -159,31 +157,78 @@ public class GlobalSpacePhysicsHandler {
         if (entity instanceof LivingEntity living) {
             updateLivingEntityGravityModifier(living);
             applyFallingHeatDamage(living);
+            applySpaceSuffocation(living);
         }
     }
 
-    private static boolean shouldApplyZeroG(Entity entity) {
-        if (gravityOverride != null) {
-            return gravityOverride < 0.1f;
+    private static void applySpaceSuffocation(LivingEntity entity) {
+        if (entity.level().isClientSide) return;
+        if (entity.getY() > 1000 || entity.level().dimension().location().getPath().equals("space")) {
+            if (entity instanceof net.minecraft.world.entity.player.Player player && (player.isCreative() || player.isSpectator())) return;
+            
+            net.minecraft.world.item.ItemStack headItem = entity.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD);
+            net.minecraft.world.item.ItemStack chestItem = entity.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST);
+            
+            boolean hasProtection = false;
+            
+            
+            if (headItem.is(net.minecraft.tags.ItemTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("c", "space_helmets")))) {
+                hasProtection = true;
+            }
+            
+            
+            ResourceLocation headId = BuiltInRegistries.ITEM.getKey(headItem.getItem());
+            if (headId.getNamespace().equals("create") && headId.getPath().contains("diving_helmet")) {
+                ResourceLocation chestId = BuiltInRegistries.ITEM.getKey(chestItem.getItem());
+                if ((chestId.getNamespace().equals("create") && chestId.getPath().contains("backtank")) || 
+                    chestId.getPath().contains("jetpack")) {
+                    hasProtection = true;
+                }
+            }
+
+            if (!hasProtection) {
+                int air = entity.getAirSupply();
+                
+                entity.setAirSupply(air - 5); 
+                
+                if (entity.getAirSupply() <= -20) {
+                    entity.setAirSupply(0);
+                    entity.hurt(entity.level().damageSources().drown(), 2.0f);
+                }
+            }
         }
-        return entity.getY() > 1000 || entity.level().dimension().location().getPath().equals("space");
     }
 
-    private static void applyEntityZeroG(Entity entity) {
+    private static void applyEntityZeroG(Entity entity, double factor) {
         if (entity instanceof ItemEntity item) {
-            item.setDeltaMovement(item.getDeltaMovement().add(0, 0.039, 0));
+            item.setDeltaMovement(item.getDeltaMovement().add(0, 0.039 * factor, 0));
         }
     }
 
     private static void updateLivingEntityGravityModifier(LivingEntity living) {
-        boolean shouldFloat = shouldApplyZeroG(living);
+        double gravityFactor = calculateGravityFactor(living.level(), living.getY());
         var gravityAttr = living.getAttribute(Attributes.GRAVITY);
         
         if (gravityAttr != null) {
-            if (shouldFloat && !gravityAttr.hasModifier(SPACE_GRAVITY_ID)) {
-                gravityAttr.addTransientModifier(SPACE_GRAVITY_MODIFIER);
-            } else if (!shouldFloat && gravityAttr.hasModifier(SPACE_GRAVITY_ID)) {
-                gravityAttr.removeModifier(SPACE_GRAVITY_ID);
+            if (gravityFactor > 0.0) {
+                double currentFactor = 0.0;
+                var currentMod = gravityAttr.getModifier(SPACE_GRAVITY_ID);
+                if (currentMod != null) {
+                    currentFactor = -currentMod.amount();
+                }
+                
+                if (Math.abs(currentFactor - gravityFactor) > 0.01) {
+                    gravityAttr.removeModifier(SPACE_GRAVITY_ID);
+                    gravityAttr.addTransientModifier(new AttributeModifier(
+                            SPACE_GRAVITY_ID, 
+                            -gravityFactor, 
+                            AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+                    ));
+                }
+            } else {
+                if (gravityAttr.hasModifier(SPACE_GRAVITY_ID)) {
+                    gravityAttr.removeModifier(SPACE_GRAVITY_ID);
+                }
             }
         }
     }

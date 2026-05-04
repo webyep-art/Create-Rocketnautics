@@ -41,7 +41,7 @@ public class RocketThrusterBlock extends DirectionalBlock implements EntityBlock
 
     @Override
     public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
-        // Redstone ignored for Rocket Thruster
+        
     }
 
     @Nullable

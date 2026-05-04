@@ -17,13 +17,21 @@ public class RocketTabs {
     public static final Supplier<CreativeModeTab> ROCKET_TAB = CREATIVE_MODE_TABS.register("rocket_tab",
             () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.rocketnautics.tab"))
-                    .icon(() -> new ItemStack(RocketBlocks.ROCKET_THRUSTER.get()))
+                    .icon(() -> new ItemStack(RocketBlocks.TITANIUM_BLOCK.get()))
                     .displayItems((parameters, output) -> {
-                        output.accept(RocketBlocks.ROCKET_THRUSTER.get());
-                        output.accept(RocketBlocks.VECTOR_THRUSTER.get());
-                        output.accept(RocketBlocks.BOOSTER_THRUSTER.get());
-                        output.accept(RocketBlocks.RCS_THRUSTER.get());
-                        output.accept(RocketBlocks.SEPARATOR.get());
+                        output.accept(RocketBlocks.TITANIUM_ORE.get());
+                        output.accept(RocketBlocks.DEEPSLATE_TITANIUM_ORE.get());
+                        output.accept(RocketBlocks.RAW_TITANIUM_BLOCK.get());
+                        output.accept(RocketBlocks.TITANIUM_BLOCK.get());
+                        output.accept(RocketBlocks.TITANIUM_ALLOY_BLOCK.get());
+                        output.accept(RocketBlocks.TITANIUM_INGOT.get());
+                        output.accept(RocketBlocks.TITANIUM_NUGGET.get());
+                        output.accept(RocketBlocks.TITANIUM_SHEET.get());
+                        output.accept(RocketBlocks.RAW_TITANIUM.get());
+                        output.accept(RocketBlocks.TITANIUM_ALLOY.get());
+                        output.accept(RocketBlocks.TITANIUM_ALLOY_NUGGET.get());
+                        output.accept(RocketBlocks.TITANIUM_ALLOY_SHEET.get());
+                        output.accept(RocketBlocks.TITANIUM_NOZZLE.get());
                         output.accept(RocketBlocks.MUSIC_DISC_SPACE.get());
                         ItemStack credits = new ItemStack(net.minecraft.world.item.Items.WRITTEN_BOOK);
                         credits.set(net.minecraft.core.component.DataComponents.ITEM_NAME, net.minecraft.network.chat.Component.translatable("item.rocketnautics.credits_book").withStyle(net.minecraft.ChatFormatting.GOLD));

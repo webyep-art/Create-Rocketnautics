@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.util.Mth;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -26,32 +27,27 @@ public class VectorThrusterRenderer extends SafeBlockEntityRenderer<VectorThrust
         ms.pushPose();
         ms.translate(0.5, 0.5, 0.5);
 
-        float gX = be.getRenderGimbalX();
-        float gY = be.getRenderGimbalY();
-        float gZ = be.getRenderGimbalZ();
         
-        Vector3f dir = new Vector3f(facing.getStepX() - gX, facing.getStepY() - gY, facing.getStepZ() - gZ).normalize();
+        float gX = Mth.lerp(partialTicks, be.getPrevGimbalX(), be.getGimbalX());
+        float gY = Mth.lerp(partialTicks, be.getPrevGimbalY(), be.getGimbalY());
+        float gZ = Mth.lerp(partialTicks, be.getPrevGimbalZ(), be.getGimbalZ());
         
-        int rotX = 0;
-        int rotY = 0;
-        switch (facing) {
-            case DOWN -> rotX = 180;
-            case EAST -> { rotX = 90; rotY = 90; }
-            case NORTH -> rotX = 90;
-            case SOUTH -> { rotX = 90; rotY = 180; }
-            case WEST -> { rotX = 90; rotY = 270; }
-            case UP -> {}
+        
+        Vector3f dir = new Vector3f(
+            facing.getStepX() - gX, 
+            facing.getStepY() - gY, 
+            facing.getStepZ() - gZ
+        );
+        
+        
+        if (dir.lengthSquared() < 0.0001f) {
+            dir.set(facing.getStepX(), facing.getStepY(), facing.getStepZ());
         }
-
-        Vector3f localDir = new Vector3f(dir);
-        localDir.rotateY((float) Math.toRadians(-rotY));
-        localDir.rotateX((float) Math.toRadians(-rotX));
-
-        Quaternionf qLocal = new Quaternionf().rotationTo(new Vector3f(0, 1, 0), localDir);
+        dir.normalize();
         
-        ms.mulPose(Axis.YP.rotationDegrees(rotY));
-        ms.mulPose(Axis.XP.rotationDegrees(rotX));
-        ms.mulPose(qLocal);
+        
+        Quaternionf q = new Quaternionf().rotationTo(new Vector3f(0, 1, 0), dir);
+        ms.mulPose(q);
         
         ms.translate(-0.5, -0.5, -0.5);
 

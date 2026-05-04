@@ -14,10 +14,10 @@ public class ClientLevelMixin {
 
     @Inject(method = "getSkyColor", at = @At("RETURN"), cancellable = true)
     private void rocketnautics$darkenSkyAtAltitude(Vec3 pos, float partialTick, CallbackInfoReturnable<Vec3> cir) {
-        // Use the actual position passed to the method
+        
         double y = pos.y; 
         
-        // Safety buffer: strictly vanilla below 800
+        
         if (y > 800) {
             float factor = (float) Mth.clamp((y - 1000.0) / 2000.0, 0.0, 1.0);
             if (factor <= 0.0f) return;

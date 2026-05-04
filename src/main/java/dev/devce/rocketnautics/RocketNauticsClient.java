@@ -36,19 +36,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Handles client-side initialization, rendering, and UI.
- */
 @EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class RocketNauticsClient {
 
     private static final int MAX_DEBUG_LOGS = 15;
     private static final int LINE_HEIGHT = 12;
-    private static final int BG_COLOR = 0xCC1A1A1A; // Flat Dark Gray
-    private static final int ACCENT_GOLD = 0xFFFFD700; // Gold
+    private static final int BG_COLOR = 0xCC1A1A1A; 
+    private static final int ACCENT_GOLD = 0xFFFFD700; 
     private static final int PANEL_BORDER = 0xEE333333;
 
     public static int originalRenderDistance = -1;
+    public static int lastAppliedRenderDistance = -1;
     public static final net.minecraft.client.KeyMapping JETPACK_TOGGLE = new net.minecraft.client.KeyMapping(
             "key.rocketnautics.toggle_jetpack",
             com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
@@ -79,23 +77,12 @@ public class RocketNauticsClient {
             originalRenderDistance = mc.options.renderDistance().get();
         }
         mc.options.renderDistance().set(2);
-        seamlessTransitionTicks = 100; // Time for world loading
+        lastAppliedRenderDistance = 2;
+        seamlessTransitionTicks = 100; 
     }
 
     public static void endSeamlessTransition() {
         seamlessTransitionTicks = 0;
-    }
-
-    public static void stepUpRenderDistance() {
-        Minecraft mc = Minecraft.getInstance();
-        if (originalRenderDistance == -1) return;
-        
-        int current = mc.options.renderDistance().get();
-        if (current < originalRenderDistance) {
-            mc.options.renderDistance().set(Math.min(current + 2, originalRenderDistance));
-        } else {
-            originalRenderDistance = -1; // Recovery complete
-        }
     }
 
     @SubscribeEvent
@@ -158,7 +145,7 @@ public class RocketNauticsClient {
         drawPanel(guiGraphics, String.format("Alt: %.2f", altitude), x, y, 0xAAAAAA);
         y += LINE_HEIGHT;
         
-        // Asteroid Debug
+        
         SubLevelContainer container = SubLevelContainer.getContainer(mc.level);
         if (container != null) {
             int asteroidCount = 0;
@@ -166,9 +153,9 @@ public class RocketNauticsClient {
             Vector3d playerPos = new Vector3d(mc.player.getX(), mc.player.getY(), mc.player.getZ());
             
             for (SubLevel sl : container.getAllSubLevels()) {
-                if (sl == ship) continue; // Ignore current ship
+                if (sl == ship) continue; 
                 
-                // Check if it's an asteroid by name
+                
                 boolean isAsteroid = false;
                 try {
                     String name = sl.getName();
@@ -247,7 +234,7 @@ public class RocketNauticsClient {
     public static void onClientSetup(FMLClientSetupEvent event) {
         RocketPartials.init();
         
-        // Register Config Screen via Extension Point (Alternative to event)
+        
         net.neoforged.fml.ModLoadingContext.get().registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class, 
             () -> (client, parent) -> new RocketSettingsScreen(parent));
 
@@ -278,7 +265,7 @@ public class RocketNauticsClient {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
-        // Render for all sub-levels in the current level
+        
         SubLevelContainer container = SubLevelContainer.getContainer(mc.level);
         if (container == null) return;
 
@@ -323,7 +310,7 @@ public class RocketNauticsClient {
         float b = 0.2f;
         drawDebugBox(buffer, matrix, worldCoM, b, 1f, 0.8f, 0f);
 
-        // Velocity Vector (Yellow)
+        
         if (speed > 0.1) {
             buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y, (float)worldCoM.z).setColor(1f, 1f, 0f, 1f);
             buffer.addVertex(matrix, (float)(worldCoM.x + velocity.x), (float)(worldCoM.y + velocity.y), (float)(worldCoM.z + velocity.z)).setColor(1f, 1f, 0f, 1f);
@@ -335,7 +322,7 @@ public class RocketNauticsClient {
 
     private static void drawDebugBox(BufferBuilder buffer, Matrix4f matrix, Vector3d pos, float s, float r, float g, float b) {
         float x = (float)pos.x; float y = (float)pos.y; float z = (float)pos.z;
-        // Edges
+        
         buffer.addVertex(matrix, x-s, y-s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y-s, z-s).setColor(r, g, b, 1f);
         buffer.addVertex(matrix, x+s, y-s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y+s, z-s).setColor(r, g, b, 1f);
         buffer.addVertex(matrix, x+s, y+s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y+s, z-s).setColor(r, g, b, 1f);

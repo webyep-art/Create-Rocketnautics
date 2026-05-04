@@ -1,6 +1,7 @@
 package dev.devce.rocketnautics.content.physics;
 
 import dev.devce.rocketnautics.RocketNautics;
+import dev.devce.rocketnautics.registry.RocketBlocks;
 import dev.devce.rocketnautics.content.commands.ShipCopyPasteCommand;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
@@ -41,18 +42,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-/**
- * Handles spawning and physics of ambient asteroids in space.
- */
 @EventBusSubscriber(modid = RocketNautics.MODID)
 public class AsteroidSpawner {
 
     private static final Random RANDOM = new Random();
-    private static final double SPAWN_CHANCE = 0.000083; // Average once per 10 minutes per player
+    private static final double SPAWN_CHANCE = 0.000083; 
     private static final double MIN_SPAWN_DIST = 150.0;
     private static final double MAX_SPAWN_DIST = 400.0;
-    private static final double DISCOVERY_DIST_SQ = 80.0 * 80.0; // Distance to 'save' the asteroid
-    private static final double DESPAWN_DIST_SQ = 600.0 * 600.0; // Delete if far and not discovered
+    private static final double DISCOVERY_DIST_SQ = 80.0 * 80.0; 
+    private static final double DESPAWN_DIST_SQ = 600.0 * 600.0; 
     
     private static final Set<UUID> PENDING_IMPULSE = ConcurrentHashMap.newKeySet();
     private static final Set<UUID> ASTEROIDS = ConcurrentHashMap.newKeySet();
@@ -64,7 +62,7 @@ public class AsteroidSpawner {
             ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
             if (container == null) return;
 
-            // Handle asteroid logic
+            
             Iterator<UUID> it = ASTEROIDS.iterator();
             while (it.hasNext()) {
                 UUID uuid = it.next();
@@ -75,7 +73,7 @@ public class AsteroidSpawner {
                     continue;
                 }
 
-                // Apply initial impulse if just spawned
+                
                 if (PENDING_IMPULSE.contains(uuid)) {
                     RigidBodyHandle handle = physicsSystem.getPhysicsHandle(asteroid);
                     if (handle != null) {
@@ -84,7 +82,7 @@ public class AsteroidSpawner {
                     }
                 }
 
-                // Check for discovery (player proximity)
+                
                 Vector3d pos = asteroid.logicalPose().position();
                 boolean nearPlayerForDiscovery = false;
                 boolean nearPlayerForDespawn = false;
@@ -104,13 +102,13 @@ public class AsteroidSpawner {
                     RocketNautics.LOGGER.info("Asteroid {} marked as PERMANENT (Player discovered it)", uuid);
                 }
                 
-                // Despawn logic
+                
                 if (!nearPlayerForDespawn) {
                     if (PERMANENT_ASTEROIDS.contains(uuid)) {
-                        // Just unload it from our management, Sable will save it to world files
+                        
                         it.remove();
                     } else {
-                        // Transient asteroid - delete it completely
+                        
                         asteroid.markRemoved();
                         it.remove();
                         RocketNautics.LOGGER.info("Transient asteroid {} despawned (not discovered)", uuid);
@@ -120,9 +118,7 @@ public class AsteroidSpawner {
         });
     }
 
-    /**
-     * Removes all managed asteroids from the level.
-     */
+    
     public static void clearAsteroids(ServerLevel level) {
         ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
         if (container == null) return;
@@ -148,7 +144,7 @@ public class AsteroidSpawner {
 
     private static void applyInitialImpulse(ServerSubLevel asteroid, RigidBodyHandle handle) {
         double mass = asteroid.getMassTracker().getMass();
-        // Slower, drifting movement for realism
+        
         Vector3d vel = new Vector3d(RANDOM.nextDouble() - 0.5, RANDOM.nextDouble() - 0.5, RANDOM.nextDouble() - 0.5).mul(2.0 * mass);
         Vector3d angVel = new Vector3d(RANDOM.nextDouble() - 0.5, RANDOM.nextDouble() - 0.5, RANDOM.nextDouble() - 0.5).mul(0.5 * mass);
         
@@ -163,7 +159,7 @@ public class AsteroidSpawner {
 
         ServerLevel level = (ServerLevel) player.level();
         
-        // Only spawn in space or high altitude
+        
         boolean inSpace = level.dimension().location().getPath().equals("space") || player.getY() > 5000;
         if (!inSpace) return;
 
@@ -176,7 +172,7 @@ public class AsteroidSpawner {
         ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
         if (container == null) return;
 
-        // Spherical spawn around player
+        
         double theta = RANDOM.nextDouble() * Math.PI * 2;
         double phi = Math.acos(2.0 * RANDOM.nextDouble() - 1.0);
         double r = MIN_SPAWN_DIST + RANDOM.nextDouble() * (MAX_SPAWN_DIST - MIN_SPAWN_DIST);
@@ -192,7 +188,7 @@ public class AsteroidSpawner {
         ServerSubLevel newShip = (ServerSubLevel) container.allocateNewSubLevel(pose);
         UUID uuid = newShip.getUniqueId();
 
-        // Try to set a name for identification
+        
         try {
             newShip.setName("Asteroid " + uuid.toString().substring(0, 4));
         } catch (Throwable ignored) {}
@@ -218,21 +214,21 @@ public class AsteroidSpawner {
     private static void generateAsteroidBlocks(ServerLevel world, ServerSubLevel asteroid, long seed) {
         Random random = new Random(seed);
         
-        // 1. Define shape parameters
-        int baseRadius = 6 + random.nextInt(8); // Smaller for safety in plot
+        
+        int baseRadius = 6 + random.nextInt(8); 
         int numLumps = 5 + random.nextInt(5);
         int numCraters = 3 + random.nextInt(4);
         
-        // Central position in the plot (Relative to plot 0,0,0)
+        
         int centerX = 64;
         int centerY = 64;
         int centerZ = 64;
 
         List<Sphere> lumps = new java.util.ArrayList<>();
-        // Base lump
+        
         lumps.add(new Sphere(centerX, centerY, centerZ, baseRadius));
         
-        // Add additional lumps to create an irregular shape
+        
         for (int i = 0; i < numLumps; i++) {
             double angle = random.nextDouble() * Math.PI * 2;
             double phi = Math.acos(2.0 * random.nextDouble() - 1.0);
@@ -246,7 +242,7 @@ public class AsteroidSpawner {
             lumps.add(new Sphere(lx, ly, lz, lr));
         }
 
-        // Define craters (negative spheres)
+        
         List<Sphere> craters = new java.util.ArrayList<>();
         for (int i = 0; i < numCraters; i++) {
             double angle = random.nextDouble() * Math.PI * 2;
@@ -261,7 +257,7 @@ public class AsteroidSpawner {
             craters.add(new Sphere(cx, cy, cz, cr));
         }
 
-        // 2. Prepare NBT structure
+        
         CompoundTag root = new CompoundTag();
         root.putInt("log_size", 7);
         root.putInt("data_version", 1);
@@ -270,7 +266,7 @@ public class AsteroidSpawner {
         CompoundTag chunksTag = new CompoundTag();
         Map<Long, Map<Integer, PalettedContainer<net.minecraft.world.level.block.state.BlockState>>> chunkMap = new java.util.HashMap<>();
 
-        // 3. Voxelize the shape
+        
         int bounds = baseRadius * 2 + 10;
         for (int dx = -bounds; dx <= bounds; dx++) {
             for (int dy = -bounds; dy <= bounds; dy++) {
@@ -279,9 +275,9 @@ public class AsteroidSpawner {
                     double vy = centerY + dy;
                     double vz = centerZ + dz;
                     
-                    // Check if inside any lump
+                    
                     boolean inside = false;
-                    double noise = (random.nextDouble() - 0.5) * 1.5; // Small surface noise
+                    double noise = (random.nextDouble() - 0.5) * 1.5; 
                     
                     for (Sphere s : lumps) {
                         double d2 = (vx-s.x)*(vx-s.x) + (vy-s.y)*(vy-s.y) + (vz-s.z)*(vz-s.z);
@@ -291,7 +287,7 @@ public class AsteroidSpawner {
                         }
                     }
                     
-                    // Subtract craters
+                    
                     if (inside) {
                         for (Sphere c : craters) {
                             double d2 = (vx-c.x)*(vx-c.x) + (vy-c.y)*(vy-c.y) + (vz-c.z)*(vz-c.z);
@@ -313,26 +309,27 @@ public class AsteroidSpawner {
                             PalettedContainer.Strategy.SECTION_STATES)
                         );
                         
-                        // Material distribution
+                        
                         net.minecraft.world.level.block.state.BlockState state = Blocks.STONE.defaultBlockState();
                         
-                        // Deepslate core
+                        
                         double distFromCenter = Math.sqrt(dx*dx + dy*dy + dz*dz);
                         if (distFromCenter < baseRadius * 0.4) {
                             state = Blocks.DEEPSLATE.defaultBlockState();
                         }
                         
-                        // Surface "dust" layer
+                        
                         if (distFromCenter > baseRadius * 0.8 && random.nextDouble() < 0.3) {
                             state = Blocks.GRAVEL.defaultBlockState();
                         }
 
-                        // Ores
+                        
                         double oreRoll = random.nextDouble();
                         if (oreRoll < 0.05) state = Blocks.COAL_ORE.defaultBlockState();
                         else if (oreRoll < 0.08) state = Blocks.IRON_ORE.defaultBlockState();
                         else if (oreRoll < 0.09) state = Blocks.COPPER_ORE.defaultBlockState();
                         else if (oreRoll < 0.095) state = Blocks.GOLD_ORE.defaultBlockState();
+                        else if (oreRoll < 0.10) state = RocketBlocks.TITANIUM_ORE.get().defaultBlockState();
                         
                         container.set((int)vx & 15, (int)vy & 15, (int)vz & 15, state);
                     }
@@ -340,7 +337,7 @@ public class AsteroidSpawner {
             }
         }
 
-        // 4. Serialize to NBT
+        
         for (var entry : chunkMap.entrySet()) {
             CompoundTag chunkTag = new CompoundTag();
             CompoundTag sectionsTag = new CompoundTag();

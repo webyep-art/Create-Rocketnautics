@@ -1,18 +1,4 @@
-/*
- * This file is part of Cosmonautics.
- * Cosmonautics is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Cosmonautics is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Cosmonautics.  If not, see <https://www.gnu.org/licenses/>.
- */
+
 
 package dev.devce.rocketnautics.client;
 
@@ -89,7 +75,7 @@ public class SkyHandler {
         ensureCloudTexture();
         ensureHaloTexture();
         updatePlanetTex(camX, camY, camZ);
-        // move towards our most recently received texture
+        
         if (texFade > 0) {
             texFade = Math.max(0, texFade - event.getPartialTick().getRealtimeDeltaTicks() / 20);
         }
@@ -105,10 +91,10 @@ public class SkyHandler {
         float relZ = (float) ((planet.getCenterZ() - camZ) * parallaxFactor);
 
         float prettyness = computePrettyness(planet, camY);
-        // shift toward zero
+        
         relX = Mth.lerp(prettyness, relX, 0);
         relZ = Mth.lerp(prettyness, relZ, 0);
-        // move towards optimal size ratio
+        
         double trueSize = SkyDataHandler.toTrueSize(planet.getPowerSize());
         double optimalSize = camY * (2 << SkyDataHandler.SCALE_FACTOR);
         double result = Math.min(prettyness > 0 ? optimalSize : trueSize, SkyDataHandler.toTrueSize(SkyDataHandler.MAX_POWER_SIZE));
@@ -201,21 +187,14 @@ public class SkyHandler {
     private static float texFade = 0;
     private static boolean awaitUpdate = false;
 
-    /**
-     *
-     * @return the level of interpolation to "prettyness" based on the render scale clamp.
-     * 0f means that the planet should be rendered exactly as configured by the static fields.
-     * 1f means that the planet should be centered on (0, 0) and resized so that the length from center to edge is
-     * {@link SkyDataHandler#SCALE_FACTOR} powers of two larger than the player's current height.
-     * Note - size should still not exceed maximum size set in {@link SkyDataHandler}
-     */
+    
     private static float computePrettyness(PlanetRenderInfo planet, double camY) {
         double continuousSize = SkyDataHandler.targetSizeForHeightContinuous(camY);
         if (continuousSize <= getMaximumScale() || continuousSize <= planet.getPowerSize()) {
             return 0;
         } else if (continuousSize >= SkyDataHandler.MAX_POWER_SIZE) {
-            // ensure we are completely centered at (0, 0) once our target size is large enough.
-            // if clamping never kicks in, the final set of squares is centered at (0, 0) as well.
+            
+            
             return 1;
         } else {
             return (float) (1 - 1 / (1 + continuousSize - planet.getPowerSize()));
@@ -223,14 +202,14 @@ public class SkyHandler {
     }
 
     private static int getMaximumScale() {
-        // TODO config to clamp the maximum powerSize
-        // 15 is the recommended clamp
+        
+        
         return 100;
     }
 
     private static void updatePlanetTex(double camX, double camY, double camZ) {
         if (awaitUpdate) return;
-        // check if we've moved far enough to need to refresh our data
+        
         boolean clamped = SkyDataHandler.targetSizeForHeightContinuous(camY) > getMaximumScale();
         double currentSize = clamped ? camY * (2 << SkyDataHandler.SCALE_FACTOR) : SkyDataHandler.toTrueSize(PLANET_TEXTURE_OBJ.getPowerSize());
         boolean violateX = Math.abs(camX - PLANET_TEXTURE_OBJ.getCenterX()) > currentSize * 3/5;
@@ -360,7 +339,6 @@ public class SkyHandler {
             awaitUpdate = false;
         });
     }        
-
 
     private static ResourceLocation CLOUD_TEXTURE_ID = null;
     private static DynamicTexture CLOUD_TEXTURE_OBJ = null;

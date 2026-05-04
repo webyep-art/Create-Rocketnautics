@@ -20,9 +20,7 @@ public class ThrusterClientHandler {
         }
     }
 
-    /**
-     * Simple wrapper to hold the sound instance without direct client class references in BlockEntity
-     */
+    
     public static class SoundContainer {
         public Object soundInstance;
     }

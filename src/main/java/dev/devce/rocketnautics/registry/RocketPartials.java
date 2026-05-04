@@ -13,6 +13,6 @@ public class RocketPartials {
     public static BakedModel vectorThrusterNozzle;
 
     public static void init() {
-        // init class
+        
     }
 }

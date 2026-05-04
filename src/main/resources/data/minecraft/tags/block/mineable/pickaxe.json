@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "rocketnautics:titanium_ore",
+    "rocketnautics:deepslate_titanium_ore",
+    "rocketnautics:titanium_block"
+  ]
+}
