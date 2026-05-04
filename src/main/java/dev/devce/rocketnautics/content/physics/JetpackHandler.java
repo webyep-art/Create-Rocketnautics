@@ -40,7 +40,7 @@ public class JetpackHandler {
     public static boolean isActive(Player player) {
         if (player == null) return false;
         
-        // Both conditions must be met: wearing it AND toggled ON
+        
         ItemStack chest = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST);
         boolean isWearing = chest.getItem() instanceof dev.devce.rocketnautics.content.items.JetpackItem;
         
@@ -75,7 +75,7 @@ public class JetpackHandler {
     public static void onEntityTick(EntityTickEvent.Pre event) {
         if (!(event.getEntity() instanceof Player player)) return;
 
-        // The jetpack logic now runs if the item is equipped OR command is active
+        
         if (isActive(player)) {
             applyJetpackPhysics(player);
             if (player.level().isClientSide && player.level().getGameTime() % 2 == 0) {
@@ -85,7 +85,7 @@ public class JetpackHandler {
     }
 
     private static void applyJetpackPhysics(Player player) {
-        // Only allow flight if wearing the jetpack item
+        
         ItemStack chest = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST);
         if (!(chest.getItem() instanceof dev.devce.rocketnautics.content.items.JetpackItem)) {
             return;
@@ -99,23 +99,23 @@ public class JetpackHandler {
         if (thrusting) {
             Vec3 look = player.getLookAngle();
             
-            // Standard jetpack thrust
+            
             double thrustPower = sprinting ? dev.devce.rocketnautics.RocketConfig.SERVER.jetpackSprintThrust.get() : dev.devce.rocketnautics.RocketConfig.SERVER.jetpackThrust.get();
             thrust = look.scale(thrustPower);
             
-            // Add vertical lift if looking horizontal or up
+            
             if (look.y > -0.5) {
                 thrust = thrust.add(0, 0.08, 0);
             }
         }
 
-        // Space physics: lower drag than normal ground movement
+        
         double drag = sprinting ? 0.98 : 0.95;
         
-        // Apply thrust and drag
+        
         Vec3 newMotion = motion.scale(drag).add(thrust);
         
-        // Limit max speed to something high but manageable
+        
         double maxSpeed = sprinting ? 3.0 : 1.2;
         if (newMotion.length() > maxSpeed) {
             newMotion = newMotion.normalize().scale(maxSpeed);
@@ -126,26 +126,29 @@ public class JetpackHandler {
     }
 
     private static void spawnJetpackParticles(Player player) {
-        // Position particles exactly at the jetpack nozzles on the back
+        boolean thrusting = ((dev.devce.rocketnautics.mixin.LivingEntityAccessor) player).rocketnautics$isJumping();
+        if (!thrusting) return;
+
+        
         float yaw = player.yBodyRot;
         float rad = yaw * (float) (Math.PI / 180.0);
         float cos = Mth.cos(rad);
         float sin = Mth.sin(rad);
 
-        // Offsets relative to player center (back and sides)
+        
         double backDist = 0.35;
         double sideDist = 0.22;
         double height = 0.7;
 
-        // Calculate world positions for left and right nozzles
+        
         double lx = player.getX() + (cos * sideDist + sin * backDist);
         double lz = player.getZ() + (sin * sideDist - cos * backDist);
         
         double rx = player.getX() + (-cos * sideDist + sin * backDist);
         double rz = player.getZ() + (-sin * sideDist - cos * backDist);
 
-        // Spawn particles going straight down
-        player.level().addParticle(ParticleTypes.SOUL_FIRE_FLAME, lx, player.getY() + height, lz, 0, -0.15, 0);
-        player.level().addParticle(ParticleTypes.SOUL_FIRE_FLAME, rx, player.getY() + height, rz, 0, -0.15, 0);
+        
+        player.level().addParticle(ParticleTypes.CLOUD, lx, player.getY() + height, lz, 0, -0.15, 0);
+        player.level().addParticle(ParticleTypes.CLOUD, rx, player.getY() + height, rz, 0, -0.15, 0);
     }
 }

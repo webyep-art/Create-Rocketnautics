@@ -26,7 +26,7 @@ public class RocketNautics {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public RocketNautics(IEventBus modEventBus, net.neoforged.fml.ModContainer modContainer) {
-        LOGGER.info("Initializing RocketNautics!");
+        LOGGER.info("Initializing Cosmonautics!");
         
         modContainer.registerConfig(ModConfig.Type.SERVER, (net.neoforged.fml.config.IConfigSpec) RocketConfig.SERVER_SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, (net.neoforged.fml.config.IConfigSpec) RocketConfig.CLIENT_SPEC);
@@ -34,12 +34,13 @@ public class RocketNautics {
         try {
             dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MIN.set(-1000000.0);
             dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MAX.set(1000000.0);
-            LOGGER.info("Successfully expanded Sable altitude limits for RocketNautics.");
+            LOGGER.info("Successfully expanded Sable altitude limits for Cosmonautics.");
         } catch (Exception e) {
             LOGGER.error("Failed to override SableConfig: {}", e.getMessage());
         }
 
         RocketBlocks.register(modEventBus);
+        dev.devce.rocketnautics.registry.RocketTabs.register(modEventBus);
         RocketBlockEntities.register(modEventBus);
         RocketParticles.register(modEventBus);
         RocketSounds.register(modEventBus);
@@ -53,7 +54,7 @@ public class RocketNautics {
     }
 
     private void setup(final FMLCommonSetupEvent event) {
-        LOGGER.info("RocketNautics Setup");
+        LOGGER.info("Cosmonautics Setup");
         event.enqueueWork(() -> {
             try {
                 dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MIN.set(-1000000.0);

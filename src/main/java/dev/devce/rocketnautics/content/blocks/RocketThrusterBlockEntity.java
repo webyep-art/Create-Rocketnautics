@@ -60,7 +60,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
     public boolean currentlyBurning = false;
     public float fuelThrottle = 0.0f;
     private float internalFlow = 0.0f;
-    private int startupTicks = 0; // Timer for the steam phase
+    private int startupTicks = 0; 
     public int currentFuelUsage = 0;
     private int totalAvailableFuel = 0;
     private float currentIspMultiplier = 1.0f;
@@ -136,7 +136,6 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
             
             if (active) {
                 Vector3d pDir = blockEntity.getParticleDirection();
-                
                 double x = pos.getX() + 0.5 + pDir.x() * 0.7;
                 double y = pos.getY() + 0.5 + pDir.y() * 0.7;
                 double z = pos.getZ() + 0.5 + pDir.z() * 0.7;
@@ -144,15 +143,31 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
                 RandomSource random = level.getRandom();
                 int power = blockEntity.getCurrentPower();
                 int visualPower = (int)(power * 2.85f);
+                float boost = blockEntity.getVisualBoost();
+
+                net.minecraft.world.phys.Vec3 start = new net.minecraft.world.phys.Vec3(x, y, z);
+                double maxSearchDist = 15.0 + (visualPower / 10.0);
+                net.minecraft.world.phys.Vec3 end = start.add(pDir.x() * maxSearchDist, pDir.y() * maxSearchDist, pDir.z() * maxSearchDist);
+                net.minecraft.world.phys.BlockHitResult hit = level.clip(new net.minecraft.world.level.ClipContext(start, end, net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, net.minecraft.world.phys.shapes.CollisionContext.empty()));
+                
+                double hitDist = maxSearchDist;
+                boolean hitBlock = false;
+                net.minecraft.world.phys.Vec3 hitPos = end;
+                if (hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+                    hitDist = start.distanceTo(hit.getLocation());
+                    hitBlock = true;
+                    hitPos = hit.getLocation();
+                }
 
                 int plumeCount = 1 + (visualPower / 5);
-                float boost = blockEntity.getVisualBoost();
-                float thrustSpeedMult = 0.8f + (visualPower / 100.0f) * 1.2f;
+                float baseSpeedMult = 0.8f + (visualPower / 100.0f) * 1.2f;
+                float maxSpeedMult = (float)(hitDist / 15.0);
+                float actualSpeedMult = Math.min(baseSpeedMult, maxSpeedMult);
             
                 for (int i = 0; i < plumeCount; i++) {
-                    double speedX = pDir.x() * (1.5 + random.nextDouble() * 1.0) * boost * thrustSpeedMult + (random.nextDouble() - 0.5) * 0.4;
-                    double speedY = pDir.y() * (1.5 + random.nextDouble() * 1.0) * boost * thrustSpeedMult + (random.nextDouble() - 0.5) * 0.4;
-                    double speedZ = pDir.z() * (1.5 + random.nextDouble() * 1.0) * boost * thrustSpeedMult + (random.nextDouble() - 0.5) * 0.4;
+                    double speedX = pDir.x() * (1.5 + random.nextDouble() * 1.0) * boost * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
+                    double speedY = pDir.y() * (1.5 + random.nextDouble() * 1.0) * boost * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
+                    double speedZ = pDir.z() * (1.5 + random.nextDouble() * 1.0) * boost * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
                     
                     var particle = (blockEntity.ignitionTicks < blockEntity.getWarmupTime()) ? 
                             RocketParticles.PLUME.get() : 
@@ -162,10 +177,18 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
                 }
                 
                 if (active) {
-                    if (random.nextFloat() < (visualPower / 100.0f)) {
-                        double smokeX = pos.getX() + 0.5 + pDir.x() * 2.5;
-                        double smokeY = pos.getY() + 0.5 + pDir.y() * 2.5;
-                        double smokeZ = pos.getZ() + 0.5 + pDir.z() * 2.5;
+                    if (hitBlock && random.nextFloat() < (visualPower / 50.0f)) {
+                        for (int i = 0; i < (1 + visualPower / 5); i++) {
+                            net.minecraft.world.phys.Vec3 normal = new net.minecraft.world.phys.Vec3(hit.getDirection().getStepX(), hit.getDirection().getStepY(), hit.getDirection().getStepZ());
+                            net.minecraft.world.phys.Vec3 randomDir = new net.minecraft.world.phys.Vec3(random.nextDouble() - 0.5, random.nextDouble() - 0.5, random.nextDouble() - 0.5).normalize();
+                            net.minecraft.world.phys.Vec3 spreadDir = randomDir.subtract(normal.scale(randomDir.dot(normal))).normalize();
+                            double speed = 0.5 + random.nextDouble() * 1.5;
+                            level.addParticle(RocketParticles.JET_SMOKE.get(), hitPos.x, hitPos.y, hitPos.z, spreadDir.x * speed, spreadDir.y * speed, spreadDir.z * speed);
+                        }
+                    } else if (!hitBlock && random.nextFloat() < (visualPower / 100.0f)) {
+                        double smokeX = x + pDir.x() * hitDist * 0.8;
+                        double smokeY = y + pDir.y() * hitDist * 0.8;
+                        double smokeZ = z + pDir.z() * hitDist * 0.8;
                         for (int i = 0; i < (1 + visualPower / 10); i++) {
                             double speedX = pDir.x() * (0.8 + random.nextDouble() * 0.5) + (random.nextDouble() - 0.5) * 0.8;
                             double speedY = pDir.y() * (0.8 + random.nextDouble() * 0.5) + (random.nextDouble() - 0.5) * 0.8;
@@ -326,38 +349,38 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         int targetConsumption = (int) (getMaxFuelConsumption() * currentEfficiencyMultiplier);
         int actuallyDrained = attemptFuelDrain(targetConsumption);
 
-        if (level.getGameTime() % 20 == 0) {
+        if (dev.devce.rocketnautics.RocketConfig.SERVER.enableEngineDebugLogging.get() && level.getGameTime() % 20 == 0) {
             String fluidName = fuelTank.getFluid().isEmpty() ? "Empty" : net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(fuelTank.getFluid().getFluid()).toString();
             dev.devce.rocketnautics.RocketNautics.LOGGER.info("Engine at {}: Fluid={}, Amount={}mB, Drained={}mB, Valid={}", 
                 worldPosition, fluidName, fuelTank.getFluidAmount(), actuallyDrained, isRocketFuel(fuelTank.getFluid()));
         }
 
-        // Target flow based on actual fuel availability
+        
         float targetFlow = actuallyDrained / (float) Math.max(1, targetConsumption);
         
-        // TWO-PHASE STARTUP LOGIC:
+        
         if (targetFlow > 0) {
-            if (startupTicks < 10) { // 0.5 seconds of steam
+            if (startupTicks < 10) { 
                 startupTicks++;
-                // Phase 1: Steam phase (capped flow)
+                
                 float steamCap = (getIgnitionFlow() - 1.0f) / (float)getMaxFuelConsumption();
                 this.internalFlow = net.minecraft.util.Mth.lerp(0.2f, this.internalFlow, Math.min(targetFlow, steamCap));
             } else {
-                // Phase 2: Ultra-fast expansion (Ignition)
+                
                 this.internalFlow = net.minecraft.util.Mth.lerp(0.5f, this.internalFlow, targetFlow);
             }
         } else {
-            // Phase 3: Smooth shutdown
+            
             this.internalFlow = net.minecraft.util.Mth.lerp(0.05f, this.internalFlow, 0.00f);
             if (this.internalFlow < 0.001f) {
                 this.internalFlow = 0;
-                if (burnoutDelay <= 0) startupTicks = 0; // Only reset after burnout delay ends
+                if (burnoutDelay <= 0) startupTicks = 0; 
             }
         }
 
         this.fuelThrottle = internalFlow;
 
-        // Effective flow for logic
+        
         float effectiveFlow = internalFlow * getMaxFuelConsumption();
 
         if (effectiveFlow >= (getIgnitionFlow() - 0.5f)) {
@@ -365,7 +388,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
                 this.currentlyBurning = true;
                 this.steamMode = false;
                 this.burnoutDelay = 10;
-                if (startupTicks < 10) startupTicks = 10; // Keep it primed
+                if (startupTicks < 10) startupTicks = 10; 
             } else {
                 this.currentlyBurning = false;
                 this.steamMode = true;
@@ -380,7 +403,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
             } else {
                 this.currentlyBurning = false;
                 this.steamMode = false;
-                startupTicks = 0; // Only reset startup if we actually burn out
+                startupTicks = 0; 
             }
         }
 
@@ -482,7 +505,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         tooltip.add(Component.literal("  ").append(Component.translatable("rocketnautics.goggles.thrust")).append(": ")
                 .append(Component.literal(power * 10 + " N").withStyle(net.minecraft.ChatFormatting.GOLD)));
         
-        // Flow rate in mB/s
+        
         int flowPerSecond = currentFuelUsage * 20;
         tooltip.add(Component.literal("  Flow Rate: ").append(Component.literal(flowPerSecond + " mB/s").withStyle(net.minecraft.ChatFormatting.AQUA)));
 
@@ -498,4 +521,9 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         
         return true;
     }
+    public int getStartupTicks() { return startupTicks; }
+    public int getBurnoutDelay() { return burnoutDelay; }
+    public float getCurrentIspMultiplier() { return currentIspMultiplier; }
+    public float getCurrentEfficiencyMultiplier() { return currentEfficiencyMultiplier; }
+    public boolean isSteamMode() { return steamMode; }
 }

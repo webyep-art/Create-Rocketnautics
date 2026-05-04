@@ -1,0 +1,13 @@
+{
+  "type": "create:pressing",
+  "ingredients": [
+    {
+      "tag": "c:ingots/titanium_alloy"
+    }
+  ],
+  "results": [
+    {
+      "id": "rocketnautics:titanium_alloy_sheet"
+    }
+  ]
+}

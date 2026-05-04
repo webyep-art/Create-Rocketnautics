@@ -86,11 +86,11 @@ public class NetworkHandler {
         if (!(rawPlayer instanceof ServerPlayer player)) return;
         ServerLevel level = player.serverLevel();
 
-        // Run generation async to avoid server lag
+        
         CompletableFuture.runAsync(() -> {
             SkyDataHandler handler = SkyDataHandler.getHandlerForLevel(level);
             PlanetMapPayload payload = handler.getRenderDataAtScaleAndPosition(powerSize, player.getBlockX(), player.getBlockZ());
-            // Send back on main thread
+            
             level.getServer().execute(() -> {
                 PacketDistributor.sendToPlayer(player, payload);
             });
