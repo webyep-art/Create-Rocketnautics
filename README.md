@@ -30,7 +30,7 @@ The mod features various engine types with unique performance characteristics:
 
 ### 4. EVA and Utility
 *   **Jetpack System**: Provides personal mobility in microgravity and planetary environments. Features throttle control and state synchronization across the server.
-*   **Magnetic Boots**: Allows players to remain attached to ship surfaces even during high-acceleration maneuvers or Zero-G conditions.
+
 
 ---
 
@@ -44,8 +44,8 @@ The mod features various engine types with unique performance characteristics:
 
 ### Setup for Developers
 1. Clone the repository.
-2. Run `./gradlew genSources` to initialize the development environment.
-3. Use `./gradlew runClient` to launch a test instance.
+2. Synchronize the Gradle project with your IDE (IntelliJ or VS Code). For manual setup, run `./gradlew neoForgeIdeSync` to prepare the environment.
+3. Use `./gradlew runClient` to launch a test instance or `./gradlew build` to compile the mod.
 
 ---
 
