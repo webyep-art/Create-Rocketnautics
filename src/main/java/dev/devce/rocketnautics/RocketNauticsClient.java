@@ -307,7 +307,7 @@ public class RocketNauticsClient {
     }
 
     /**
-     * Renders a 3D coordinate cross, velocity vector, landing path, and thruster vectors for a ship.
+     * Renders a 3D coordinate cross and velocity vector at a ship's center of mass.
      */
     private static void renderShipDebug3D(PoseStack poseStack, SubLevel ship) {
         Pose3d pose = ship.logicalPose();
@@ -325,11 +325,7 @@ public class RocketNauticsClient {
         float s = 1.5f; // Scale of the cross
         Matrix4f matrix = poseStack.last().pose();
         
-        // --- 1. Draw Ship Bounding Box (Cyan) ---
-        var bb = ship.boundingBox();
-        drawDebugBox(buffer, matrix, new Vector3d(bb.minX(), bb.minY(), bb.minZ()), new Vector3d(bb.maxX(), bb.maxY(), bb.maxZ()), 0f, 1f, 1f);
-
-        // --- 2. Draw Center of Mass Axis (X-Red, Y-Green, Z-Blue) ---
+        // Draw Axis (X-Red, Y-Green, Z-Blue)
         buffer.addVertex(matrix, (float)worldCoM.x - s, (float)worldCoM.y, (float)worldCoM.z).setColor(1f, 0.2f, 0.2f, 1f);
         buffer.addVertex(matrix, (float)worldCoM.x + s, (float)worldCoM.y, (float)worldCoM.z).setColor(1f, 0.2f, 0.2f, 1f);
         buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y - s, (float)worldCoM.z).setColor(0.2f, 1f, 0.2f, 1f);
@@ -337,102 +333,36 @@ public class RocketNauticsClient {
         buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y, (float)worldCoM.z - s).setColor(0.2f, 0.2f, 1f, 1f);
         buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y, (float)worldCoM.z + s).setColor(0.2f, 0.2f, 1f, 1f);
         
-        // --- 3. Draw Center Point Box (Orange) ---
-        drawDebugBox(buffer, matrix, new Vector3d(worldCoM).sub(0.2, 0.2, 0.2), new Vector3d(worldCoM).add(0.2, 0.2, 0.2), 1f, 0.8f, 0f);
+        // Draw Center Point Box
+        float b = 0.2f;
+        drawDebugBox(buffer, matrix, worldCoM, b, 1f, 0.8f, 0f);
 
-        // --- 4. Draw Velocity Vector (Yellow) ---
+        // Draw Velocity Vector (Yellow)
         if (speed > 0.1) {
             buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y, (float)worldCoM.z).setColor(1f, 1f, 0f, 1f);
             buffer.addVertex(matrix, (float)(worldCoM.x + velocity.x), (float)(worldCoM.y + velocity.y), (float)(worldCoM.z + velocity.z)).setColor(1f, 1f, 0f, 1f);
-            
-            // --- 5. Draw Predicted Landing Path (Green) ---
-            renderPredictedPath(buffer, matrix, worldCoM, velocity, 0.2f, 1f, 0.2f);
         }
-
-        // --- 6. Draw Thruster Vectors (Purple) ---
-        renderThrusterVectors(buffer, matrix, ship, pose);
 
         BufferUploader.drawWithShader(buffer.buildOrThrow());
         RenderSystem.enableDepthTest();
     }
 
-    private static void renderPredictedPath(BufferBuilder buffer, Matrix4f matrix, Vector3d start, Vector3d velocity, float r, float g, float b) {
-        Vector3d currentPos = new Vector3d(start);
-        Vector3d currentVel = new Vector3d(velocity).div(20.0); // Velocity per tick
+    private static void drawDebugBox(BufferBuilder buffer, Matrix4f matrix, Vector3d pos, float s, float r, float g, float b) {
+        float x = (float)pos.x; float y = (float)pos.y; float z = (float)pos.z;
         
-        for (int i = 0; i < 100; i++) {
-            Vector3d nextPos = new Vector3d(currentPos).add(currentVel);
-            
-            // Apply simple gravity (approximated)
-            currentVel.y -= 0.04; // Gravity constant approx
-            currentVel.mul(0.98); // Drag constant approx
-            
-            buffer.addVertex(matrix, (float)currentPos.x, (float)currentPos.y, (float)currentPos.z).setColor(r, g, b, 0.5f);
-            buffer.addVertex(matrix, (float)nextPos.x, (float)nextPos.y, (float)nextPos.z).setColor(r, g, b, 0.5f);
-            
-            currentPos.set(nextPos);
-            
-            // Stop if we hit "ground" (Y=0 or similar)
-            if (currentPos.y < -64) break;
-        }
-    }
-
-    private static void renderThrusterVectors(BufferBuilder buffer, Matrix4f matrix, SubLevel ship, Pose3d pose) {
-        net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
-        if (level == null) return;
-
-        net.minecraft.world.level.ChunkPos min = ship.getPlot().getChunkMin();
-        net.minecraft.world.level.ChunkPos max = ship.getPlot().getChunkMax();
+        buffer.addVertex(matrix, x-s, y-s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y-s, z-s).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x+s, y-s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y+s, z-s).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x+s, y+s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y+s, z-s).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x-s, y+s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y-s, z-s).setColor(r, g, b, 1f);
         
-        double originX = min.x * 16.0;
-        double originZ = min.z * 16.0;
-
-        for (int cx = min.x; cx <= max.x; cx++) {
-            for (int cz = min.z; cz <= max.z; cz++) {
-                net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunk(cx, cz, false);
-                if (chunk == null) continue;
-
-                for (net.minecraft.world.level.block.entity.BlockEntity be : chunk.getBlockEntities().values()) {
-                    if (be instanceof dev.devce.rocketnautics.content.blocks.RocketThrusterBlockEntity thruster && thruster.isActive()) {
-                        // Calculate world position of thruster
-                        Vector3d localPos = new Vector3d(be.getBlockPos().getX() + 0.5 - originX, be.getBlockPos().getY() + 0.5, be.getBlockPos().getZ() + 0.5 - originZ);
-                        Vector3d worldPos = new Vector3d(localPos).rotate(pose.orientation()).add(pose.position());
-                        
-                        // Get thrust direction
-                        net.minecraft.core.Direction dir = thruster.getThrustDirection().getOpposite();
-                        double power = thruster.getCurrentPower() / 10.0;
-                        
-                        Vector3d thrustDir = new Vector3d(dir.getStepX(), dir.getStepY(), dir.getStepZ()).rotate(pose.orientation()).mul(power);
-                        
-                        // Draw vector (Purple)
-                        buffer.addVertex(matrix, (float)worldPos.x, (float)worldPos.y, (float)worldPos.z).setColor(0.8f, 0.2f, 1f, 1f);
-                        buffer.addVertex(matrix, (float)(worldPos.x + thrustDir.x), (float)(worldPos.y + thrustDir.y), (float)(worldPos.z + thrustDir.z)).setColor(0.8f, 0.2f, 1f, 1f);
-                    }
-                }
-            }
-        }
-    }
-
-    private static void drawDebugBox(BufferBuilder buffer, Matrix4f matrix, Vector3d min, Vector3d max, float r, float g, float b) {
-        float x1 = (float)min.x; float y1 = (float)min.y; float z1 = (float)min.z;
-        float x2 = (float)max.x; float y2 = (float)max.y; float z2 = (float)max.z;
+        buffer.addVertex(matrix, x-s, y-s, z+s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y-s, z+s).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x+s, y-s, z+s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y+s, z+s).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x+s, y+s, z+s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y+s, z+s).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x-s, y+s, z+s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y-s, z+s).setColor(r, g, b, 1f);
         
-        // Bottom
-        buffer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y1, z1).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x2, y1, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y1, z2).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x2, y1, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y1, z2).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x1, y1, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, 1f);
-        
-        // Top
-        buffer.addVertex(matrix, x1, y2, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y2, z1).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x2, y2, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y2, z2).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x1, y2, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y2, z1).setColor(r, g, b, 1f);
-        
-        // Pillars
-        buffer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y2, z1).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x2, y1, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y2, z1).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x2, y1, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x1, y1, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y2, z2).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x-s, y-s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y-s, z+s).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x+s, y-s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y-s, z+s).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x+s, y+s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y+s, z+s).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x-s, y+s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y+s, z+s).setColor(r, g, b, 1f);
     }
 }

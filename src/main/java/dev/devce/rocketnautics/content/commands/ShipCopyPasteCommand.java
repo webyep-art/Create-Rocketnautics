@@ -64,8 +64,6 @@ public class ShipCopyPasteCommand {
                         .executes(ShipCopyPasteCommand::loadShip)))
                 .then(Commands.literal("list")
                     .executes(ShipCopyPasteCommand::listShips))
-                .then(Commands.literal("delete")
-                    .executes(ShipCopyPasteCommand::deleteShip))
             )
         );
     }
@@ -176,24 +174,6 @@ public class ShipCopyPasteCommand {
 
         source.sendSuccess(() -> Component.literal("Ship spawned!"), true);
         return 1;
-    }
-
-    private static int deleteShip(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        CommandSourceStack source = ctx.getSource();
-        ServerPlayer player = source.getPlayerOrException();
-        
-        HitResult hit = player.pick(128.0, 1.0f, false);
-        if (hit instanceof BlockHitResult blockHit) {
-            ServerSubLevel subLevel = (ServerSubLevel) Sable.HELPER.getContaining(source.getLevel(), blockHit.getBlockPos());
-            if (subLevel != null) {
-                UUID id = subLevel.getUniqueId();
-                subLevel.remove();
-                source.sendSuccess(() -> Component.literal("Ship " + id.toString().substring(0, 8) + " has been deleted."), true);
-                return 1;
-            }
-        }
-        source.sendFailure(Component.literal("No ship found in view to delete!"));
-        return 0;
     }
 
     private static int listShips(CommandContext<CommandSourceStack> ctx) {
