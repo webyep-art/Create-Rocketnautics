@@ -67,7 +67,6 @@ public class RocketNautics {
         
         // Initialize physics and game mechanics handlers
         GlobalSpacePhysicsHandler.init();
-        dev.devce.rocketnautics.content.physics.CollisionDamageHandler.init();
         dev.devce.rocketnautics.content.physics.AsteroidSpawner.init();
         dev.devce.rocketnautics.content.physics.SpaceTransitionHandler.init();
     }

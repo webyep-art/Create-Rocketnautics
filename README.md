@@ -21,7 +21,6 @@ The mod features various engine types with unique performance characteristics:
 ### 2. Physical Mechanics
 *   **Dynamic Gravity**: Gravity strength scales with altitude. Players and ships experience microgravity (Zero-G) upon reaching space altitudes or the dedicated space dimension.
 *   **Reentry Effects**: Descending through the atmosphere at high velocities triggers intense visual heating effects and atmospheric drag.
-*   **Collision Visuals**: High-velocity impacts are detected by the physics engine, triggering cinematic explosions and fire effects based on the vessel's remaining fuel levels.
 
 ### 3. Space Environment
 *   **Seamless Transitions**: The mod manages transitions between the Overworld and the Space dimension. Ships reaching threshold altitudes automatically jump dimensions, maintaining their momentum and entity attachments.

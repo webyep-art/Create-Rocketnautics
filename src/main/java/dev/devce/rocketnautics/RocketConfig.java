@@ -35,10 +35,6 @@ public class RocketConfig {
         public final ModConfigSpec.IntValue ignitionFlow;
         public final ModConfigSpec.IntValue steamMinFlow;
         public final ModConfigSpec.BooleanValue enableEngineDebugLogging;
-        public final ModConfigSpec.BooleanValue enableCollisionExplosion;
-        public final ModConfigSpec.DoubleValue collisionExplosionThreshold;
-        public final ModConfigSpec.DoubleValue maxExplosionPower;
-        public final ModConfigSpec.IntValue maxExplosionsPerShip;
 
         public Server(ModConfigSpec.Builder builder) {
             builder.push("Thrusters");
@@ -54,18 +50,6 @@ public class RocketConfig {
             enableEngineDebugLogging = builder
                     .comment("Enable debug logging for engine fuel and thrust (can cause spam)")
                     .define("enableEngineDebugLogging", false);
-            enableCollisionExplosion = builder
-                    .comment("Enable explosion of fuel storage blocks on high-speed collision")
-                    .define("enableCollisionExplosion", true);
-            collisionExplosionThreshold = builder
-                    .comment("Velocity change threshold (m/s) for collision explosion")
-                    .defineInRange("collisionExplosionThreshold", 15.0, 1.0, 100.0);
-            maxExplosionPower = builder
-                    .comment("Maximum power of a single fuel block explosion")
-                    .defineInRange("maxExplosionPower", 15.0, 1.0, 50.0);
-            maxExplosionsPerShip = builder
-                    .comment("Maximum number of block explosions per ship impact tick")
-                    .defineInRange("maxExplosionsPerShip", 8, 1, 100);
             builder.pop();
 
             builder.push("Jetpack");
