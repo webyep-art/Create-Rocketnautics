@@ -22,7 +22,7 @@ public class ClientModEvents {
 
     @SubscribeEvent
     public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
-        // Add jetpack layer to all player skin models (WIDE and SLIM)
+        
         for (PlayerSkin.Model model : event.getSkins()) {
             PlayerRenderer renderer = event.getSkin(model);
             if (renderer != null) {

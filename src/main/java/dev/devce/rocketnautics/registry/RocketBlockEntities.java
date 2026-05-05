@@ -42,5 +42,10 @@ public class RocketBlockEntities {
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ROCKET_THRUSTER.get(), (be, side) -> be.fuelTank);
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, VECTOR_THRUSTER.get(), (be, side) -> be.fuelTank);
+
+        
+        if (net.neoforged.fml.ModList.get().isLoaded("computercraft")) {
+            dev.devce.rocketnautics.compat.computercraft.ComputerCraftCompat.registerCapabilities(event);
+        }
     }
 }

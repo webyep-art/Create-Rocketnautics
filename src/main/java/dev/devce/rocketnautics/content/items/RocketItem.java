@@ -17,7 +17,7 @@ public class RocketItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
         if (Screen.hasShiftDown()) {
-            tooltipComponents.add(Component.literal(" ")); // Top spacer
+            tooltipComponents.add(Component.literal(" ")); 
             tooltipComponents.add(Component.translatable(this.getDescriptionId() + ".tooltip.shift").withStyle(ChatFormatting.GOLD));
         } else {
             tooltipComponents.add(Component.translatable("rocketnautics.tooltip.hold_shift").withStyle(ChatFormatting.DARK_GRAY));

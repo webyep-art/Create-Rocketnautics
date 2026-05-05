@@ -1,18 +1,4 @@
-/*
- * This file is part of Cosmonautics.
- * Cosmonautics is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Cosmonautics is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Cosmonautics.  If not, see <https://www.gnu.org/licenses/>.
- */
+
 
 package dev.devce.rocketnautics.content.physics;
 
@@ -71,20 +57,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Handles interplanetary transitions and ship persistence across dimensions.
- */
 @EventBusSubscriber(modid = RocketNautics.MODID)
 public class SpaceTransitionHandler {
     
-    // Thresholds
+    
     public static final double OVERWORLD_SPACE_Y = 20000.0;
     private static final double SPACE_EXIT_Y = 0.0;
     private static final double TRANSITION_SAFE_OFFSET = 50.0;
     private static final int REBUILD_DELAY_TICKS = 3;
     private static final int SEATING_RECOVERY_TIMEOUT = 30;
 
-    // NBT Keys
+    
     private static final String KEY_PLAYER_REL_X = "player_rel_x";
     private static final String KEY_PLAYER_REL_Y = "player_rel_y";
     private static final String KEY_PLAYER_REL_Z = "player_rel_z";
@@ -124,17 +107,17 @@ public class SpaceTransitionHandler {
         SableEventPlatform.INSTANCE.onPhysicsTick((physicsSystem, timeStep) -> {
             ServerLevel level = physicsSystem.getLevel();
             
-            // 1. Process Outgoing Transitions (from this level)
+            
             ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
             if (container != null) {
-                // Use a copy of IDs to avoid concurrent modification during removal
+                
                 List<UUID> shipIds = container.getAllSubLevels().stream().map(SubLevel::getUniqueId).toList();
                 for (UUID id : shipIds) {
                     SubLevel sl = container.getSubLevel(id);
                     if (!(sl instanceof ServerSubLevel ship) || ship.isRemoved()) continue;
                     if (PENDING_AUTONOMOUS.containsKey(id)) continue;
 
-                    // Skip ships with players
+                    
                     boolean hasPlayer = false;
                     for (ServerPlayer player : level.players()) {
                         if (Sable.HELPER.getContaining(level, player.blockPosition()) == ship) {
@@ -179,7 +162,7 @@ public class SpaceTransitionHandler {
                 }
             }
 
-            // 2. Process Incoming Transitions (to this level)
+            
             var iterator = PENDING_AUTONOMOUS.entrySet().iterator();
             while (iterator.hasNext()) {
                 var entry = iterator.next();
@@ -189,7 +172,7 @@ public class SpaceTransitionHandler {
                     if (task.ticksLeft > 0) {
                         PENDING_AUTONOMOUS.put(entry.getKey(), task.withTicksDecrement());
                     } else {
-                        // Rebuild
+                        
                         UUID originalUUID = entry.getKey();
                         File file = new File(SHIPS_DIR.toFile(), "auto_" + originalUUID + ".nbt");
                         if (file.exists()) {
@@ -210,7 +193,7 @@ public class SpaceTransitionHandler {
                                 newShip.getPlot().updateBoundingBox();
                                 newShip.updateBoundingBox();
 
-                                // Apply velocity
+                                
                                 var handle = physicsSystem.getPhysicsHandle(newShip);
                                 if (handle != null) {
                                     double mass = newShip.getMassTracker().getMass();
@@ -328,8 +311,8 @@ public class SpaceTransitionHandler {
 
     private static void destroyShipInSourceDimension(ServerSubLevel ship) {
         ship.deleteAllEntities();
-        // Removed destroyAllBlocks() to avoid noise during transition.
-        // markRemoved() unloads the plot chunks silently.
+        
+        
         ship.markRemoved();
     }
 
@@ -365,7 +348,7 @@ public class SpaceTransitionHandler {
             CompoundTag tag = ship.getPlot().save();
             Pose3d pose = ship.logicalPose();
             
-            // Save relative player position
+            
             Vec3 playerWorldPos = Sable.HELPER.projectOutOfSubLevel(player.level(), player.position());
             tag.putDouble(KEY_PLAYER_REL_X, playerWorldPos.x - pose.position().x);
             tag.putDouble(KEY_PLAYER_REL_Y, playerWorldPos.y - pose.position().y);
@@ -386,7 +369,7 @@ public class SpaceTransitionHandler {
         ChunkPos minChunk = ship.getPlot().getChunkMin();
         Entity vehicle = player.getVehicle();
 
-        // Save vehicle player is sitting in
+        
         if (vehicle != null) {
             CompoundTag vehicleTag = new CompoundTag();
             if (vehicle.saveAsPassenger(vehicleTag)) {
@@ -402,14 +385,14 @@ public class SpaceTransitionHandler {
                 vehicleTag.putDouble(KEY_PLOT_REL_Z, relZ);
                 entityList.add(vehicleTag);
                 
-                // Redundant check for safety
+                
                 tag.putDouble("vehicle_plot_rel_x", relX);
                 tag.putDouble("vehicle_plot_rel_y", relY);
                 tag.putDouble("vehicle_plot_rel_z", relZ);
             }
         }
 
-        // Save other entities in plot area
+        
         AABB plotBounds = new AABB(minChunk.getMinBlockX(), -64, minChunk.getMinBlockZ(), minChunk.getMaxBlockX() + 1, 320, minChunk.getMaxBlockZ() + 1);
         for (Entity e : ((ServerLevel)player.level()).getEntitiesOfClass(Entity.class, plotBounds)) {
             if (e != player && e != vehicle) {
@@ -441,10 +424,10 @@ public class SpaceTransitionHandler {
         try {
             CompoundTag tag = NbtIo.readCompressed(file.toPath(), NbtAccounter.unlimitedHeap());
             
-            // Calculate new pose based on player position
+            
             Pose3d newPose = calculateNewPose(player, tag);
             
-            // Allocate and load ship
+            
             ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
             ServerSubLevel newShip = (ServerSubLevel) container.allocateNewSubLevel(newPose);
             
@@ -557,7 +540,7 @@ public class SpaceTransitionHandler {
         double ty = task.relPlotY;
         double tz = minChunk.getMinBlockZ() + task.relPlotZ;
 
-        // Retry block seating one last time
+        
         if (tryBlockSeating(player, task)) {
             PENDING_SEATING.put(player.getUUID(), new SeatingTask(
                 task.shipUUID, task.relPlotX, task.relPlotY, task.relPlotZ,
@@ -565,7 +548,7 @@ public class SpaceTransitionHandler {
             return;
         }
 
-        // Project player to seating position in world space
+        
         Vec3 worldPos = Sable.HELPER.projectOutOfSubLevel(level, new Vec3(tx, ty + 0.5, tz));
         player.teleportTo(worldPos.x, worldPos.y, worldPos.z);
         ((EntityMovementExtension) player).sable$setTrackingSubLevel(ship);
@@ -596,7 +579,7 @@ public class SpaceTransitionHandler {
             }
         }
 
-        // Fallback: search via AABB
+        
         AABB plotBounds = new AABB(
             minChunk.getMinBlockX(), -64, minChunk.getMinBlockZ(),
             minChunk.getMaxBlockX() + 16, 320, minChunk.getMaxBlockZ() + 16

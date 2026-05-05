@@ -14,7 +14,7 @@ public class CameraShakeHandler {
 
     public static void tick() {
         if (shakeIntensity > 0) {
-            shakeIntensity *= 0.95f; // Slower decay
+            shakeIntensity *= 0.95f; 
             if (shakeIntensity < 0.001f) shakeIntensity = 0;
         }
     }
@@ -26,10 +26,10 @@ public class CameraShakeHandler {
     public static void applyShake(float partialTicks, float[] angles) {
         if (shakeIntensity <= 0) return;
 
-        // Linear intensity for better visibility at all distances
+        
         float currentShake = shakeIntensity; 
         
-        // Increased multipliers for a "violent" shake
+        
         angles[0] += (random.nextFloat() - 0.5f) * currentShake * 25f;
         angles[1] += (random.nextFloat() - 0.5f) * currentShake * 25f;
         angles[2] += (random.nextFloat() - 0.5f) * currentShake * 10f;

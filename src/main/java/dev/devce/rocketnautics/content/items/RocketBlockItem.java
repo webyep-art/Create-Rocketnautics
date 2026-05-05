@@ -18,13 +18,13 @@ public class RocketBlockItem extends BlockItem {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
         if (Screen.hasShiftDown()) {
-            tooltipComponents.add(Component.literal(" ")); // Top spacer
+            tooltipComponents.add(Component.literal(" ")); 
             tooltipComponents.add(Component.translatable(this.getDescriptionId() + ".tooltip.shift").withStyle(ChatFormatting.GOLD));
             
-            // Special extra lines for specific blocks if needed
+            
             String id = this.getDescriptionId();
             if (id.contains("rocket_thruster")) {
-                tooltipComponents.add(Component.literal(" ")); // Spacer
+                tooltipComponents.add(Component.literal(" ")); 
                 tooltipComponents.add(Component.translatable("rocketnautics.tooltip.rocket_thruster.extra").withStyle(ChatFormatting.GRAY));
             } else if (id.contains("booster_thruster")) {
                 tooltipComponents.add(Component.literal(" "));

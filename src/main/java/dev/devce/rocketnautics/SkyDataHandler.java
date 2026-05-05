@@ -1,18 +1,4 @@
-/*
- * This file is part of Cosmonautics.
- * Cosmonautics is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Cosmonautics is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Cosmonautics.  If not, see <https://www.gnu.org/licenses/>.
- */
+
 
 package dev.devce.rocketnautics;
 
@@ -35,14 +21,14 @@ import java.util.Map;
 public class SkyDataHandler {
 
     public static final int MAX_POWER_SIZE = 24;
-    public static final int MAX_TRUE_SIZE = 2 << MAX_POWER_SIZE; // approximately 30 million
+    public static final int MAX_TRUE_SIZE = 2 << MAX_POWER_SIZE; 
     public static final int MIN_POWER_SIZE = 14;
 
     public static final int SCALE_FACTOR = 3;
 
     public static final Map<ServerLevel, SkyDataHandler> HANDLERS = new HashMap<>();
 
-    // level -> height offset, level to pull from
+    
     public static final Map<ResourceKey<Level>, DoubleObjectPair<ResourceKey<Level>>> OVERRIDES = new HashMap<>();
 
     static {
@@ -54,18 +40,18 @@ public class SkyDataHandler {
 
     public SkyDataHandler(ServerLevel level) {
         this.level = level;
-        // root is never rendered, only its four children may be rendered at once.
+        
         this.root = new RecursiveDataSquare(null, MAX_POWER_SIZE + 1, -MAX_TRUE_SIZE, -MAX_TRUE_SIZE);
     }
 
-    // client and server (used on client)
+    
     public static double getHeightOffsetForLevel(ResourceKey<Level> level) {
         DoubleObjectPair<ResourceKey<Level>> pair = OVERRIDES.get(level);
         if (pair == null) return 0;
         return pair.firstDouble();
     }
 
-    // server only
+    
     public static SkyDataHandler getHandlerForLevel(ServerLevel level) {
         if (OVERRIDES.containsKey(level.dimension())) {
             level = level.getServer().getLevel(OVERRIDES.get(level.dimension()).right());
@@ -87,9 +73,9 @@ public class SkyDataHandler {
     }
 
     public PlanetMapPayload getRenderDataAtScaleAndPosition(int powerSize, int trueX, int trueZ) {
-        // get the square we are on
+        
         DataSquare square = getSquareAtPosition(powerSize, trueX, trueZ);
-        // get the nearest four squares
+        
         boolean posX = square.isPosX(trueX);
         boolean posZ = square.isPosZ(trueZ);
         DataSquare posXPosZ;
@@ -127,13 +113,12 @@ public class SkyDataHandler {
             }
         }
 
-
         return new PlanetMapPayload(square.powerSize, posXPosZ.trueNegXCorner, posXPosZ.trueNegZCorner, posXPosZ.getRenderData(), posXNegZ.getRenderData(), negXPosZ.getRenderData(), negXNegZ.getRenderData());
     }
 
     protected DataSquare getSquareAtPosition(int powerSize, int trueX, int trueZ) {
         DataSquare square = root;
-        do { // we never render the root, so always descend one step before checking powerSize.
+        do { 
             if (square instanceof RecursiveDataSquare r) {
                 square = r.getChildAtTruePosition(trueX, trueZ);
             } else {
@@ -252,7 +237,7 @@ public class SkyDataHandler {
         }
 
         protected byte biomeToData(Holder<Biome> biome) {
-            byte colorIdx = 4; // Default plains/grass
+            byte colorIdx = 4; 
             if (biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_DEEP_OCEAN)) colorIdx = 0;
             else if (biome.is(BiomeTags.IS_RIVER)) colorIdx = 1;
             else if (biome.is(BiomeTags.IS_BEACH)) colorIdx = 2;
@@ -272,7 +257,7 @@ public class SkyDataHandler {
                 BiomeSource source = level.getChunkSource().getGenerator().getBiomeSource();
                 Climate.Sampler sampler = level.getChunkSource().randomState().sampler();
 
-                int step = toTrueSize(powerSize - 8); // -8 is equivalent to /256
+                int step = toTrueSize(powerSize - 8); 
 
                 for (int x = 0; x < 256; x++) {
                     for (int z = 0; z < 256; z++) {

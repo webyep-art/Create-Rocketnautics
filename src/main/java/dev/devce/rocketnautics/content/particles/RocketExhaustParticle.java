@@ -16,20 +16,20 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         this.zd = zSpeed;
         this.setAlpha(0.4F + this.random.nextFloat() * 0.3F);
         this.lifetime = 20 + this.random.nextInt(10);
-        this.baseScale = 0.4F + this.random.nextFloat() * 0.6F; // 2x bigger than previous tiny state
+        this.baseScale = 0.4F + this.random.nextFloat() * 0.6F; 
         this.quadSize = this.baseScale;
         
         if (sprites != null) {
             this.setSpriteFromAge(sprites);
         } else {
-            this.remove(); // Failsafe: if no sprites, remove immediately
+            this.remove(); 
         }
         
-        this.hasPhysics = true; // Enable collisions with blocks!
-        this.friction = 0.98F;  // Slight air resistance
-        this.gravity = 0.01F;   // Slight gravity to make them fall eventually (optional)
+        this.hasPhysics = true; 
+        this.friction = 0.98F;  
+        this.gravity = 0.01F;   
         
-        // Coloring for flame default
+        
         this.rCol = 1.0F;
         this.gCol = 0.6F + this.random.nextFloat() * 0.4F;
         this.bCol = 0.2F;
@@ -47,9 +47,9 @@ public class RocketExhaustParticle extends TextureSheetParticle {
                 this.setSpriteFromAge(this.sprites);
             }
             
-            // Three-stage color interpolation:
-            // 0.0 -> 0.2: White to Target (Blue/Orange)
-            // 0.2 -> 1.0: Target to Cooling Color (Yellow/Orange)
+            
+            
+            
             float ageFactor = (float)this.age / (float)this.lifetime;
             
             float r, g, b;
@@ -66,7 +66,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
                 b = this.targetB + (this.coolingB - this.targetB) * f;
             }
             
-            // Expanding or shrinking plume effect
+            
             float animScale = this.shrinking ? (1.0f - ageFactor * 0.9f) : (1.0f + ageFactor * 1.5f);
             this.quadSize = this.baseScale * animScale * (0.8f + this.random.nextFloat() * 0.4f);
             
@@ -74,7 +74,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
             this.gCol = g;
             this.bCol = b;
             
-            // Fade out alpha over time
+            
             this.alpha = (1.0f - ageFactor) * this.maxAlpha;
 
             this.move(this.xd, this.yd, this.zd);
@@ -104,7 +104,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         this.targetR = r;
         this.targetG = g;
         this.targetB = b;
-        // Start as pure white
+        
         this.rCol = 1.0f;
         this.gCol = 1.0f;
         this.bCol = 1.0f;
@@ -132,7 +132,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
 
     @Override
     public int getLightColor(float partialTick) {
-        return 15728880; // Full brightness (Lightmap.FULL_BRIGHT)
+        return 15728880; 
     }
 
     @Override
@@ -151,7 +151,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         public Particle createParticle(@NotNull SimpleParticleType type, @NotNull ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
             RocketExhaustParticle particle = new RocketExhaustParticle(level, x, y, z, xSpeed, ySpeed, zSpeed, this.sprites);
             
-            // Determine thrust factor for color mode
+            
             double speed = Math.sqrt(xSpeed * xSpeed + ySpeed * ySpeed + zSpeed * zSpeed);
             float thrustFactor = (float) ((speed - 2.5) / 1.5);
             if (thrustFactor < 0) thrustFactor = 0;
@@ -160,19 +160,19 @@ public class RocketExhaustParticle extends TextureSheetParticle {
             String name = net.minecraft.core.registries.BuiltInRegistries.PARTICLE_TYPE.getKey(type).getPath();
             
             if (name.contains("blue_flame") && thrustFactor > 0.4f) {
-                // HIGH POWER PLASMA MODE (Blue -> Purple/Dark)
-                particle.setColor(0.2f, 0.5f, 1.0f); // Vibrant Blue
-                particle.setCoolingColor(0.4f, 0.1f, 0.8f); // Cooling into Purple
+                
+                particle.setColor(0.2f, 0.5f, 1.0f); 
+                particle.setCoolingColor(0.4f, 0.1f, 0.8f); 
             } else if (name.contains("plasma")) {
-                particle.setColor(0.3F, 0.8F, 1.0F); // Cyan plasma
-                particle.setCoolingColor(0.1F, 0.4F, 1.0F); // Deep blue
+                particle.setColor(0.3F, 0.8F, 1.0F); 
+                particle.setCoolingColor(0.1F, 0.4F, 1.0F); 
             } else {
-                // STANDARD ROCKET MODE (Orange -> Red/Dark)
-                particle.setColor(1.0f, 0.6f, 0.1f); // Hot Orange
-                particle.setCoolingColor(0.8f, 0.1f, 0.0f); // Cooling into Red
+                
+                particle.setColor(1.0f, 0.6f, 0.1f); 
+                particle.setCoolingColor(0.8f, 0.1f, 0.0f); 
             }
             
-            particle.gravity = 0.0F; // Fire doesn't fall
+            particle.gravity = 0.0F; 
             return particle;
         }
     }
@@ -187,10 +187,10 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         @Override
         public Particle createParticle(@NotNull SimpleParticleType type, @NotNull ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
             RocketExhaustParticle particle = new RocketExhaustParticle(level, x, y, z, xSpeed, ySpeed, zSpeed, this.sprites);
-            particle.setLifetime(20 + level.random.nextInt(15)); // Shorter but visible
+            particle.setLifetime(20 + level.random.nextInt(15)); 
             particle.scale(1.2f + level.random.nextFloat() * 0.8f);
             
-            // Pure white smoke for rockets
+            
             particle.setColor(1.0F, 1.0F, 1.0F);
             return particle;
         }
@@ -206,15 +206,15 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         @Override
         public Particle createParticle(@NotNull SimpleParticleType type, @NotNull ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
             RocketExhaustParticle particle = new RocketExhaustParticle(level, x, y, z, xSpeed, ySpeed, zSpeed, this.sprites);
-            particle.setLifetime(15 + level.random.nextInt(10)); // Lives longer to fly further
-            particle.scale(0.4f + level.random.nextFloat() * 0.4f); // 2x smaller than before
-            particle.friction = 0.98F; // Standard air resistance
+            particle.setLifetime(15 + level.random.nextInt(10)); 
+            particle.scale(0.4f + level.random.nextFloat() * 0.4f); 
+            particle.friction = 0.98F; 
             particle.setShrinking(true);
-            particle.setMaxAlpha(1.0F); // Pure solid white at start
-            particle.gravity = 0.0F; // Gas doesn't fall down
-            particle.hasPhysics = false; // Prevent gas from getting stuck inside the thruster block
+            particle.setMaxAlpha(1.0F); 
+            particle.gravity = 0.0F; 
+            particle.hasPhysics = false; 
             
-            // Pure white gas that stays white
+            
             particle.setColor(1.0F, 1.0F, 1.0F);
             particle.setCoolingColor(1.0F, 1.0F, 1.0F);
             return particle;

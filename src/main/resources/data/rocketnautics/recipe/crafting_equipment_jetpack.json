@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " P ",
+    "TBT",
+    "N N"
+  ],
+  "key": {
+    "P": {
+      "item": "create:precision_mechanism"
+    },
+    "T": {
+      "tag": "c:plates/titanium"
+    },
+    "B": {
+      "item": "create:netherite_backtank"
+    },
+    "N": {
+      "item": "rocketnautics:titanium_nozzle"
+    }
+  },
+  "result": {
+    "id": "rocketnautics:jetpack",
+    "count": 1
+  }
+}

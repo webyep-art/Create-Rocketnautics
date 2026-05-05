@@ -11,7 +11,6 @@ import net.minecraft.world.item.component.WrittenBookContent;
 
 import java.util.List;
 
-
 public class CreditsBookItem extends Item {
 
     public CreditsBookItem(Properties properties) {
@@ -61,6 +60,15 @@ public class CreditsBookItem extends Item {
                             .append(Component.literal("ABOBA, Kernos, MrFeddy\n"))
                             .append(Component.literal("Music: ").withStyle(ChatFormatting.DARK_AQUA))
                             .append(Component.literal("Kevin Macleod"))
+                    ),
+                    Filterable.passThrough(
+                        Component.literal("")
+                            .append(Component.literal("    Hall of Fame\n\n")
+                                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
+                            .append(Component.literal("Apollo1641\n")
+                                .withStyle(ChatFormatting.DARK_BLUE, ChatFormatting.BOLD))
+                            .append(Component.literal("Winner of the First Rocket Contest!")
+                                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC))
                     )
                 ),
                 true

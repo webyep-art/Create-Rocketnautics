@@ -1,0 +1,36 @@
+{
+  "type": "create:mechanical_crafting",
+  "accept_mirrored": false,
+  "category": "misc",
+  "key": {
+    "A": {
+      "tag": "c:plates/iron"
+    },
+    "B": {
+      "tag": "c:ingots/iron"
+    },
+    "C": {
+      "tag": "c:plates/titanium"
+    },
+    "D": {
+      "item": "create:sturdy_sheet"
+    },
+    "E": {
+      "item": "rocketnautics:titanium_nozzle"
+    },
+    "F": {
+      "tag": "c:ingots/titanium"
+    }
+  },
+  "pattern": [
+    "ABA",
+    "DCD",
+    "DFD",
+    "DED"
+  ],
+  "result": {
+    "count": 1,
+    "id": "rocketnautics:booster_thruster"
+  },
+  "show_notification": false
+}

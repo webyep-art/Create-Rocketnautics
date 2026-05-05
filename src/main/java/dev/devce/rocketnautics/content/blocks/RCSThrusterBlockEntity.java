@@ -49,7 +49,7 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
         double currentThrust = 100.0;
         double y = serverSubLevel.logicalPose().position().y;
         
-        // Altitude gradient: 100 at 5k+, 7 at 2k-, linear in between
+        
         if (y < 5000) {
             if (y <= 2000) {
                 currentThrust = 7.0;
@@ -76,7 +76,6 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
     public int getWarmupTime() {
         return 0;
     }
-
 
     public static void tick(Level level, BlockPos pos, BlockState state, RCSThrusterBlockEntity blockEntity) {
         boolean active = blockEntity.isActive();

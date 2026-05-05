@@ -18,9 +18,15 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
     private float gimbalY = 0;
     private float gimbalZ = 0;
     
-    private float renderGimbalX = 0;
-    private float renderGimbalY = 0;
-    private float renderGimbalZ = 0;
+    private float prevGimbalX = 0;
+    private float prevGimbalY = 0;
+    private float prevGimbalZ = 0;
+
+    private float ccGimbalX = 0;
+    private float ccGimbalY = 0;
+    private float ccGimbalZ = 0;
+
+    
 
     public VectorThrusterBlockEntity(BlockPos pos, BlockState state) {
         super(RocketBlockEntities.VECTOR_THRUSTER.get(), pos, state);
@@ -35,43 +41,58 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
     public Vector3d getParticleDirection() {
         Direction nozzle = getThrustDirection();
         return new Vector3d(
-                nozzle.getStepX() - renderGimbalX,
-                nozzle.getStepY() - renderGimbalY,
-                nozzle.getStepZ() - renderGimbalZ
+                nozzle.getStepX() - gimbalX,
+                nozzle.getStepY() - gimbalY,
+                nozzle.getStepZ() - gimbalZ
         ).normalize();
+    }
+
+    public void setComputerGimbal(float x, float y, float z) {
+        this.ccGimbalX = Math.max(-1.0f, Math.min(1.0f, x));
+        this.ccGimbalY = Math.max(-1.0f, Math.min(1.0f, y));
+        this.ccGimbalZ = Math.max(-1.0f, Math.min(1.0f, z));
+        setChanged();
     }
 
     public void updateGimbalAngles() {
         if (level == null) return;
         Direction nozzle = getThrustDirection();
         
-        float gX = 0;
-        float gY = 0;
-        float gZ = 0;
+        float gX = ccGimbalX;
+        float gY = ccGimbalY;
+        float gZ = ccGimbalZ;
         
         for (Direction dir : DIRECTIONS) {
             if (dir.getAxis() != nozzle.getAxis()) {
                 int signal = level.getSignal(worldPosition.relative(dir), dir);
-                gX += dir.getStepX() * signal * 0.02f;
-                gY += dir.getStepY() * signal * 0.02f;
-                gZ += dir.getStepZ() * signal * 0.02f;
+                float strength = signal * 0.033f;
+                gX += dir.getStepX() * strength;
+                gY += dir.getStepY() * strength;
+                gZ += dir.getStepZ() * strength;
             }
         }
         
-        gimbalX = gX;
-        gimbalY = gY;
-        gimbalZ = gZ;
+        gX = Math.max(-1.0f, Math.min(1.0f, gX));
+        gY = Math.max(-1.0f, Math.min(1.0f, gY));
+        gZ = Math.max(-1.0f, Math.min(1.0f, gZ));
         
-        setChanged();
-        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        if (Math.abs(gimbalX - gX) > 0.001f || Math.abs(gimbalY - gY) > 0.001f || Math.abs(gimbalZ - gZ) > 0.001f) {
+            gimbalX = gX;
+            gimbalY = gY;
+            gimbalZ = gZ;
+            if (!level.isClientSide) {
+                sendData();
+                setChanged();
+            }
+        }
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, VectorThrusterBlockEntity blockEntity) {
-        if (level.isClientSide) {
-            blockEntity.renderGimbalX += (blockEntity.gimbalX - blockEntity.renderGimbalX) * 0.2f;
-            blockEntity.renderGimbalY += (blockEntity.gimbalY - blockEntity.renderGimbalY) * 0.2f;
-            blockEntity.renderGimbalZ += (blockEntity.gimbalZ - blockEntity.renderGimbalZ) * 0.2f;
-        }
+        blockEntity.prevGimbalX = blockEntity.gimbalX;
+        blockEntity.prevGimbalY = blockEntity.gimbalY;
+        blockEntity.prevGimbalZ = blockEntity.gimbalZ;
+
+        blockEntity.updateGimbalAngles();
         
         RocketThrusterBlockEntity.tick(level, pos, state, blockEntity);
     }
@@ -82,13 +103,17 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
 
         Direction facing = getThrustDirection();
         Direction pushDirection = facing.getOpposite();
-        double currentThrust = getCurrentPower() * 10.0;
         
-        Vector3d thrustVector = new Vector3d(
-                pushDirection.getStepX() + gimbalX,
-                pushDirection.getStepY() + gimbalY,
-                pushDirection.getStepZ() + gimbalZ
-        ).normalize().mul(currentThrust);
+        
+        double vx = pushDirection.getStepX() + gimbalX;
+        double vy = pushDirection.getStepY() + gimbalY;
+        double vz = pushDirection.getStepZ() + gimbalZ;
+        
+        double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
+        if (length < 0.001) return; 
+
+        double currentThrust = getCurrentPower() * 10.0;
+        Vector3d thrustVector = new Vector3d(vx / length, vy / length, vz / length).mul(currentThrust);
 
         Vector3d blockCenter = new Vector3d(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5);
         handle.applyImpulseAtPoint(blockCenter, thrustVector.mul(deltaTime));
@@ -100,6 +125,9 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
         tag.putFloat("GimbalX", gimbalX);
         tag.putFloat("GimbalY", gimbalY);
         tag.putFloat("GimbalZ", gimbalZ);
+        tag.putFloat("CCGimbalX", ccGimbalX);
+        tag.putFloat("CCGimbalY", ccGimbalY);
+        tag.putFloat("CCGimbalZ", ccGimbalZ);
     }
 
     @Override
@@ -108,9 +136,16 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
         gimbalX = tag.getFloat("GimbalX");
         gimbalY = tag.getFloat("GimbalY");
         gimbalZ = tag.getFloat("GimbalZ");
+        ccGimbalX = tag.getFloat("CCGimbalX");
+        ccGimbalY = tag.getFloat("CCGimbalY");
+        ccGimbalZ = tag.getFloat("CCGimbalZ");
     }
 
-    public float getRenderGimbalX() { return renderGimbalX; }
-    public float getRenderGimbalY() { return renderGimbalY; }
-    public float getRenderGimbalZ() { return renderGimbalZ; }
+    public float getPrevGimbalX() { return prevGimbalX; }
+    public float getPrevGimbalY() { return prevGimbalY; }
+    public float getPrevGimbalZ() { return prevGimbalZ; }
+
+    public float getGimbalX() { return gimbalX; }
+    public float getGimbalY() { return gimbalY; }
+    public float getGimbalZ() { return gimbalZ; }
 }

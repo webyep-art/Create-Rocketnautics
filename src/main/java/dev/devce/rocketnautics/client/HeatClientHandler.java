@@ -43,9 +43,9 @@ public class HeatClientHandler {
             Vec3 targetPos = entry.getKey();
             float intensity = entry.getValue();
 
-            // Find the sub-level closest to the target position
+            
             SubLevel matchingSubLevel = null;
-            double minDist = 25.0; // Max search radius squared (5 blocks)
+            double minDist = 25.0; 
             
             for (SubLevel sl : container.getAllSubLevels()) {
                 Vector3d pos = sl.logicalPose().position();
@@ -69,14 +69,14 @@ public class HeatClientHandler {
         Vector3d pos = subLevel.logicalPose().position();
         if (pos == null) return;
 
-        // Reduce count slightly for better visibility
+        
         int count = (int) (intensity * 15); 
         for (int i = 0; i < count; i++) {
             double px = pos.x + (level.random.nextDouble() - 0.5) * 4.5;
-            double py = pos.y + (level.random.nextDouble() - 0.5) * 2.0; // Wider Y spread
+            double py = pos.y + (level.random.nextDouble() - 0.5) * 2.0; 
             double pz = pos.z + (level.random.nextDouble() - 0.5) * 4.5;
             
-            // Velocity is positive Y so it trails UP behind the falling rocket
+            
             double trailSpeed = 0.4 * intensity;
             level.addParticle(dev.devce.rocketnautics.registry.RocketParticles.BLUE_FLAME.get(), px, py, pz, 
                 (level.random.nextDouble() - 0.5) * 0.1, trailSpeed, (level.random.nextDouble() - 0.5) * 0.1);

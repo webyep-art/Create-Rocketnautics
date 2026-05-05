@@ -93,13 +93,29 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
                 int power = blockEntity.thrustPower.getValue();
                 int visualPower = (int)(power * 2.85f);
 
+                net.minecraft.world.phys.Vec3 start = new net.minecraft.world.phys.Vec3(x, y, z);
+                double maxSearchDist = 15.0 + (visualPower / 10.0);
+                net.minecraft.world.phys.Vec3 end = start.add(nozzle.getStepX() * maxSearchDist, nozzle.getStepY() * maxSearchDist, nozzle.getStepZ() * maxSearchDist);
+                net.minecraft.world.phys.BlockHitResult hit = level.clip(new net.minecraft.world.level.ClipContext(start, end, net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, net.minecraft.world.phys.shapes.CollisionContext.empty()));
+                
+                double hitDist = maxSearchDist;
+                boolean hitBlock = false;
+                net.minecraft.world.phys.Vec3 hitPos = end;
+                if (hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+                    hitDist = start.distanceTo(hit.getLocation());
+                    hitBlock = true;
+                    hitPos = hit.getLocation();
+                }
+
                 int plumeCount = 1 + (visualPower / 5);
-                float thrustSpeedMult = 0.8f + (visualPower / 100.0f) * 1.2f;
+                float baseSpeedMult = 0.8f + (visualPower / 100.0f) * 1.2f;
+                float maxSpeedMult = (float)(hitDist / 15.0);
+                float actualSpeedMult = Math.min(baseSpeedMult, maxSpeedMult);
             
                 for (int i = 0; i < plumeCount; i++) {
-                    double speedX = nozzle.getStepX() * (1.5 + random.nextDouble() * 1.0) * 1.0f * thrustSpeedMult + (random.nextDouble() - 0.5) * 0.4;
-                    double speedY = nozzle.getStepY() * (1.5 + random.nextDouble() * 1.0) * 1.0f * thrustSpeedMult + (random.nextDouble() - 0.5) * 0.4;
-                    double speedZ = nozzle.getStepZ() * (1.5 + random.nextDouble() * 1.0) * 1.0f * thrustSpeedMult + (random.nextDouble() - 0.5) * 0.4;
+                    double speedX = nozzle.getStepX() * (1.5 + random.nextDouble() * 1.0) * 1.0f * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
+                    double speedY = nozzle.getStepY() * (1.5 + random.nextDouble() * 1.0) * 1.0f * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
+                    double speedZ = nozzle.getStepZ() * (1.5 + random.nextDouble() * 1.0) * 1.0f * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
                     
                     var particle = (blockEntity.ignitionTicks < blockEntity.getWarmupTime()) ? 
                             RocketParticles.PLUME.get() : 
@@ -108,10 +124,18 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
                     level.addParticle(particle, x, y, z, speedX, speedY, speedZ);
                 }
                 
-                if (random.nextFloat() < (visualPower / 100.0f)) {
-                    double smokeX = pos.getX() + 0.5 + nozzle.getStepX() * 2.5;
-                    double smokeY = pos.getY() + 0.5 + nozzle.getStepY() * 2.5;
-                    double smokeZ = pos.getZ() + 0.5 + nozzle.getStepZ() * 2.5;
+                if (hitBlock && random.nextFloat() < (visualPower / 50.0f)) {
+                    for (int i = 0; i < (1 + visualPower / 5); i++) {
+                        net.minecraft.world.phys.Vec3 normal = new net.minecraft.world.phys.Vec3(hit.getDirection().getStepX(), hit.getDirection().getStepY(), hit.getDirection().getStepZ());
+                        net.minecraft.world.phys.Vec3 randomDir = new net.minecraft.world.phys.Vec3(random.nextDouble() - 0.5, random.nextDouble() - 0.5, random.nextDouble() - 0.5).normalize();
+                        net.minecraft.world.phys.Vec3 spreadDir = randomDir.subtract(normal.scale(randomDir.dot(normal))).normalize();
+                        double speed = 0.5 + random.nextDouble() * 1.5;
+                        level.addParticle(RocketParticles.JET_SMOKE.get(), hitPos.x, hitPos.y, hitPos.z, spreadDir.x * speed, spreadDir.y * speed, spreadDir.z * speed);
+                    }
+                } else if (!hitBlock && random.nextFloat() < (visualPower / 100.0f)) {
+                    double smokeX = x + nozzle.getStepX() * hitDist * 0.8;
+                    double smokeY = y + nozzle.getStepY() * hitDist * 0.8;
+                    double smokeZ = z + nozzle.getStepZ() * hitDist * 0.8;
                     
                     for (int i = 0; i < (1 + visualPower / 10); i++) {
                         double speedX = nozzle.getStepX() * (0.8 + random.nextDouble() * 0.5) + (random.nextDouble() - 0.5) * 0.8;
@@ -417,4 +441,8 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
         
         return true;
     }
+
+    public boolean isIgnited() { return ignited; }
+    public boolean isSpent() { return isSpent; }
+    public int getFuelTicks() { return fuelTicks; }
 }
