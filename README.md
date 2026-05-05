@@ -6,7 +6,7 @@
 
 **Create: Cosmonautics** is a high-fidelity industrial-aerospace expansion for the **Create** mod. It enables the construction of physics-driven launch vehicles, orbital stations, and interstellar exploration systems.
 
-Utilizing the **Sable** physics engine, this mod transitions ships from static structures into dynamic rigid bodies. Mechanics such as thrust-to-weight ratios, center of mass alignment, atmospheric drag, and reentry heating are accurately simulated, providing a gameplay experience reminiscent of *Kerbal Space Program* within the Minecraft ecosystem.
+Featuring dynamic rigid body physics, the mod integrates mechanics such as thrust-to-weight ratios, center of mass alignment, and atmospheric drag, providing an immersive aerospace experience within the Minecraft ecosystem.
 
 ---
 
@@ -20,8 +20,8 @@ The mod features various engine types with unique performance characteristics:
 
 ### 2. Physical Mechanics
 *   **Dynamic Gravity**: Gravity strength scales with altitude. Players and ships experience microgravity (Zero-G) upon reaching space altitudes or the dedicated space dimension.
-*   **Reentry Heating**: Descending through the atmosphere at high velocities generates friction heat. Ships must be designed to withstand these thermal loads, or they risk catastrophic failure.
-*   **Collision and Failure**: High-velocity impacts are detected by the physics engine, triggering synchronized explosions that destroy both the vessel and the surrounding environment based on remaining fuel levels.
+*   **Reentry Effects**: Descending through the atmosphere at high velocities triggers intense visual heating effects and atmospheric drag.
+*   **Collision Visuals**: High-velocity impacts are detected by the physics engine, triggering cinematic explosions and fire effects based on the vessel's remaining fuel levels.
 
 ### 3. Space Environment
 *   **Seamless Transitions**: The mod manages transitions between the Overworld and the Space dimension. Ships reaching threshold altitudes automatically jump dimensions, maintaining their momentum and entity attachments.
@@ -30,6 +30,7 @@ The mod features various engine types with unique performance characteristics:
 
 ### 4. EVA and Utility
 *   **Jetpack System**: Provides personal mobility in microgravity and planetary environments. Features throttle control and state synchronization across the server.
+*   **Magnetic Boots**: Allows players to remain securely attached to ship surfaces even during high-acceleration maneuvers or Zero-G conditions.
 
 
 ---
