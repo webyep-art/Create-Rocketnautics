@@ -19,11 +19,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * System for managing jetpack flight mechanics.
+ * Handles state synchronization between server and client, flight physics (thrust/drag),
+ * and exhaust particle effects.
+ */
 @EventBusSubscriber(modid = RocketNautics.MODID)
 public class JetpackHandler {
     private static final Set<UUID> SERVER_ACTIVE_JETPACKS = new HashSet<>();
     private static final Map<Integer, Boolean> CLIENT_ACTIVE_JETPACKS = new HashMap<>();
 
+    /**
+     * Toggles the jetpack state for a player and syncs the change to all clients.
+     */
     public static void toggle(ServerPlayer player) {
         UUID uuid = player.getUUID();
         boolean newState = !SERVER_ACTIVE_JETPACKS.contains(uuid);
@@ -84,6 +92,10 @@ public class JetpackHandler {
         }
     }
 
+    /**
+     * Calculates and applies jetpack flight physics to the player.
+     * Uses the player's look vector for thrust direction and applies drag to simulate flight.
+     */
     private static void applyJetpackPhysics(Player player) {
         
         ItemStack chest = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST);
@@ -92,6 +104,7 @@ public class JetpackHandler {
         }
 
         Vec3 motion = player.getDeltaMovement();
+        // Check if player is holding the jump key using a Mixin accessor
         boolean thrusting = ((dev.devce.rocketnautics.mixin.LivingEntityAccessor) player).rocketnautics$isJumping();
         boolean sprinting = player.isSprinting();
 
@@ -99,55 +112,58 @@ public class JetpackHandler {
         if (thrusting) {
             Vec3 look = player.getLookAngle();
             
-            
+            // Scaled thrust power from config
             double thrustPower = sprinting ? dev.devce.rocketnautics.RocketConfig.SERVER.jetpackSprintThrust.get() : dev.devce.rocketnautics.RocketConfig.SERVER.jetpackThrust.get();
             thrust = look.scale(thrustPower);
             
-            
+            // Add a small constant upward lift to assist horizontal flight
             if (look.y > -0.5) {
                 thrust = thrust.add(0, 0.08, 0);
             }
         }
 
-        
+        // Apply drag: sprinting has less air resistance
         double drag = sprinting ? 0.98 : 0.95;
         
-        
+        // Final motion calculation: Motion = (OldMotion * Drag) + Thrust
         Vec3 newMotion = motion.scale(drag).add(thrust);
         
-        
+        // Speed capping for stability
         double maxSpeed = sprinting ? 3.0 : 1.2;
         if (newMotion.length() > maxSpeed) {
             newMotion = newMotion.normalize().scale(maxSpeed);
         }
 
         player.setDeltaMovement(newMotion);
-        player.fallDistance = 0;
+        player.fallDistance = 0; // Prevent fall damage while using jetpack
     }
 
+    /**
+     * Spawns exhaust cloud particles behind the player's shoulders.
+     */
     private static void spawnJetpackParticles(Player player) {
         boolean thrusting = ((dev.devce.rocketnautics.mixin.LivingEntityAccessor) player).rocketnautics$isJumping();
         if (!thrusting) return;
 
-        
+        // Calculate offset positions relative to player body rotation
         float yaw = player.yBodyRot;
         float rad = yaw * (float) (Math.PI / 180.0);
         float cos = Mth.cos(rad);
         float sin = Mth.sin(rad);
 
-        
+        // Position offsets for the two nozzles
         double backDist = 0.35;
         double sideDist = 0.22;
         double height = 0.7;
 
-        
+        // Transform local nozzle coordinates to world coordinates
         double lx = player.getX() + (cos * sideDist + sin * backDist);
         double lz = player.getZ() + (sin * sideDist - cos * backDist);
         
         double rx = player.getX() + (-cos * sideDist + sin * backDist);
         double rz = player.getZ() + (-sin * sideDist - cos * backDist);
 
-        
+        // Spawn particles
         player.level().addParticle(ParticleTypes.CLOUD, lx, player.getY() + height, lz, 0, -0.15, 0);
         player.level().addParticle(ParticleTypes.CLOUD, rx, player.getY() + height, rz, 0, -0.15, 0);
     }

@@ -20,17 +20,32 @@ import com.mojang.logging.LogUtils;
 
 import net.neoforged.fml.config.ModConfig;
 
+/**
+ * Main class for the Cosmonautics (RocketNautics) mod.
+ * This class handles mod initialization, configuration registration, 
+ * and various system setups for physics, commands, and registry.
+ */
 @Mod(RocketNautics.MODID)
 public class RocketNautics {
+    /** The unique identifier for this mod. */
     public static final String MODID = "rocketnautics";
+    /** Global logger instance for this mod. */
     public static final Logger LOGGER = LogUtils.getLogger();
 
+    /**
+     * Constructor for the mod. Performs initial registration of configs, blocks, and handlers.
+     * 
+     * @param modEventBus The event bus for mod-specific events.
+     * @param modContainer The container for this mod instance.
+     */
     public RocketNautics(IEventBus modEventBus, net.neoforged.fml.ModContainer modContainer) {
         LOGGER.info("Initializing Cosmonautics!");
         
+        // Register mod configurations
         modContainer.registerConfig(ModConfig.Type.SERVER, (net.neoforged.fml.config.IConfigSpec) RocketConfig.SERVER_SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, (net.neoforged.fml.config.IConfigSpec) RocketConfig.CLIENT_SPEC);
 
+        // Attempt to expand Sable altitude limits to allow for high-altitude flight
         try {
             dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MIN.set(-1000000.0);
             dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MAX.set(1000000.0);
@@ -39,6 +54,7 @@ public class RocketNautics {
             LOGGER.error("Failed to override SableConfig: {}", e.getMessage());
         }
 
+        // Register registries
         RocketBlocks.register(modEventBus);
         dev.devce.rocketnautics.registry.RocketTabs.register(modEventBus);
         RocketBlockEntities.register(modEventBus);
@@ -48,13 +64,20 @@ public class RocketNautics {
 
         modEventBus.addListener(this::setup);
         NeoForge.EVENT_BUS.register(this);
+        
+        // Initialize physics and game mechanics handlers
         GlobalSpacePhysicsHandler.init();
+        dev.devce.rocketnautics.content.physics.CollisionDamageHandler.init();
         dev.devce.rocketnautics.content.physics.AsteroidSpawner.init();
         dev.devce.rocketnautics.content.physics.SpaceTransitionHandler.init();
     }
 
+    /**
+     * Common setup logic that runs during the mod loading phase.
+     */
     private void setup(final FMLCommonSetupEvent event) {
         LOGGER.info("Cosmonautics Setup");
+        // Ensure Sable altitude limits are set even if constructor override was too early
         event.enqueueWork(() -> {
             try {
                 dev.ryanhcode.sable.SableConfig.SUB_LEVEL_REMOVE_MIN.set(-1000000.0);
@@ -66,6 +89,9 @@ public class RocketNautics {
         });
     }
 
+    /**
+     * Registers console commands for the mod.
+     */
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         GravityCommand.register(event.getDispatcher());

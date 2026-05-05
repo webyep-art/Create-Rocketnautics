@@ -36,6 +36,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Main client-side class for Cosmonautics.
+ * Handles debug overlays, rendering layers, particle registration, and 3D debug visualizations for ships.
+ */
 @EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class RocketNauticsClient {
 
@@ -45,16 +49,23 @@ public class RocketNauticsClient {
     private static final int ACCENT_GOLD = 0xFFFFD700; 
     private static final int PANEL_BORDER = 0xEE333333;
 
+    /** Original render distance of the user before mod-induced changes. */
     public static int originalRenderDistance = -1;
+    /** The last render distance value that was programmatically applied. */
     public static int lastAppliedRenderDistance = -1;
+    
+    /** Key mapping to toggle the jetpack on/off. */
     public static final net.minecraft.client.KeyMapping JETPACK_TOGGLE = new net.minecraft.client.KeyMapping(
             "key.rocketnautics.toggle_jetpack",
             com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
             org.lwjgl.glfw.GLFW.GLFW_KEY_G,
             "key.categories.rocketnautics"
     );
+    
+    /** Timer for the seamless atmosphere-to-space transition effect. */
     public static int seamlessTransitionTicks = 0;
     
+    /** Checks if the debug overlay is enabled in the config. */
     public static boolean isDebugOverlayEnabled() {
         return RocketConfig.CLIENT.showDebugOverlay.get();
     }
@@ -71,6 +82,10 @@ public class RocketNauticsClient {
         RocketNautics.LOGGER.info("[RENDER INFO] {}", message);
     }
 
+    /**
+     * Triggers the seamless transition sequence, reducing render distance to 
+     * maintain performance during world/dimension swaps.
+     */
     public static void startSeamlessTransition() {
         Minecraft mc = Minecraft.getInstance();
         if (originalRenderDistance == -1) {
@@ -81,6 +96,7 @@ public class RocketNauticsClient {
         seamlessTransitionTicks = 100; 
     }
 
+    /** Ends the seamless transition sequence. */
     public static void endSeamlessTransition() {
         seamlessTransitionTicks = 0;
     }
@@ -91,6 +107,9 @@ public class RocketNauticsClient {
                 RocketNauticsClient::renderDebugOverlays);
     }
 
+    /**
+     * Renders all enabled debug overlays (status bar, left panel, right logs).
+     */
     private static void renderDebugOverlays(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || !isDebugOverlayEnabled()) return;
@@ -258,6 +277,9 @@ public class RocketNauticsClient {
         RocketPartials.vectorThrusterNozzle = event.getModels().get(RocketPartials.VECTOR_THRUSTER_NOZZLE_MODEL);
     }
 
+    /**
+     * Renders 3D debug visualizations for nearby SubLevels (ships/asteroids) during the level render stage.
+     */
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (!isDebugOverlayEnabled() || event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
@@ -284,6 +306,9 @@ public class RocketNauticsClient {
         poseStack.popPose();
     }
 
+    /**
+     * Renders a 3D coordinate cross and velocity vector at a ship's center of mass.
+     */
     private static void renderShipDebug3D(PoseStack poseStack, SubLevel ship) {
         Pose3d pose = ship.logicalPose();
         Vector3d worldCoM = new Vector3d();
@@ -297,9 +322,10 @@ public class RocketNauticsClient {
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         BufferBuilder buffer = tesselator.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
         
-        float s = 1.5f;
+        float s = 1.5f; // Scale of the cross
         Matrix4f matrix = poseStack.last().pose();
         
+        // Draw Axis (X-Red, Y-Green, Z-Blue)
         buffer.addVertex(matrix, (float)worldCoM.x - s, (float)worldCoM.y, (float)worldCoM.z).setColor(1f, 0.2f, 0.2f, 1f);
         buffer.addVertex(matrix, (float)worldCoM.x + s, (float)worldCoM.y, (float)worldCoM.z).setColor(1f, 0.2f, 0.2f, 1f);
         buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y - s, (float)worldCoM.z).setColor(0.2f, 1f, 0.2f, 1f);
@@ -307,10 +333,11 @@ public class RocketNauticsClient {
         buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y, (float)worldCoM.z - s).setColor(0.2f, 0.2f, 1f, 1f);
         buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y, (float)worldCoM.z + s).setColor(0.2f, 0.2f, 1f, 1f);
         
+        // Draw Center Point Box
         float b = 0.2f;
         drawDebugBox(buffer, matrix, worldCoM, b, 1f, 0.8f, 0f);
 
-        
+        // Draw Velocity Vector (Yellow)
         if (speed > 0.1) {
             buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y, (float)worldCoM.z).setColor(1f, 1f, 0f, 1f);
             buffer.addVertex(matrix, (float)(worldCoM.x + velocity.x), (float)(worldCoM.y + velocity.y), (float)(worldCoM.z + velocity.z)).setColor(1f, 1f, 0f, 1f);

@@ -24,9 +24,17 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
+/**
+ * Handles custom sky rendering for high altitudes and the space dimension.
+ * This includes atmospheric fog color adjustments, procedural planet rendering,
+ * and dynamic planet map texture management.
+ */
 @EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class SkyHandler {
 
+    /**
+     * Adjusts the fog color towards black as the player ascends into space.
+     */
     @SubscribeEvent
     public static void onComputeFogColor(ViewportEvent.ComputeFogColor event) {
         Minecraft mc = Minecraft.getInstance();
@@ -34,6 +42,7 @@ public class SkyHandler {
 
         double y = mc.gameRenderer.getMainCamera().getPosition().y + SkyDataHandler.getHeightOffsetForLevel(mc.level.dimension());
         if (y > 1000.0) {
+            // Gradually fade fog to black above 1000m
             float factor = (float) Mth.clamp((y - 1000.0) / 1000.0, 0.0, 1.0);
             
             event.setRed(Mth.lerp(factor, event.getRed(), 0.0f));
@@ -42,6 +51,9 @@ public class SkyHandler {
         }
     }
 
+    /**
+     * Renders the custom planet geometry after the vanilla sky has been drawn.
+     */
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY) return;
@@ -53,6 +65,7 @@ public class SkyHandler {
         double camY = camera.getPosition().y + SkyDataHandler.getHeightOffsetForLevel(mc.level.dimension());
         if (camY < 1000.0) return;
 
+        // Determine visibility based on altitude
         float visibility = (float) Mth.clamp((camY - 1000.0) / 500.0, 0.0, 1.0);
         if (visibility <= 0) return;
 
@@ -62,32 +75,46 @@ public class SkyHandler {
         Matrix4f matrix = poseStack.last().pose();
         matrix.identity();
         
+        // Counteract camera rotation to render in fixed screen-space or world-aligned space
         Quaternionf invRot = new Quaternionf(camera.rotation());
         invRot.conjugate();
         poseStack.mulPose(invRot);
 
         int renderDist = mc.options.renderDistance().get();
+        // Calculate parallax based on altitude: higher means less parallax (planet seems further)
         float parallaxFactor = (float) (renderDist / Math.max(100.0, camY)); 
         double camX = camera.getPosition().x;
         double camZ = camera.getPosition().z;
 
+        // Ensure all procedural textures are initialized
         ensurePlanetTexObj();
         ensureCloudTexture();
         ensureHaloTexture();
+        
+        // Request map updates from server if player moved too far
         updatePlanetTex(camX, camY, camZ);
         
+        // Cross-fade between old and new planet map textures
         if (texFade > 0) {
             texFade = Math.max(0, texFade - event.getPartialTick().getRealtimeDeltaTicks() / 20);
         }
+        
+        // Render planet with layered effects (Map + Clouds + Halo)
         renderPlanet(PLANET_TEXTURE_OBJ_LAST, camX, camY, camZ, renderDist, parallaxFactor, matrix, texFade * visibility);
         renderPlanet(PLANET_TEXTURE_OBJ, camX, camY, camZ, renderDist, parallaxFactor, matrix, (1 - texFade) * visibility);
+        
         poseStack.popPose();
     }
 
+    /**
+     * Renders the planet quad with Map, Clouds, and Halo layers.
+     */
     private static void renderPlanet(PlanetRenderInfo planet, double camX, double camY, double camZ, float renderDist, float parallaxFactor, Matrix4f matrix, float visibility) {
         if (visibility <= 0) return;
+        
+        // Calculate relative position based on parallax
         float relX = (float) ((planet.getCenterX() - camX) * parallaxFactor);
-        float relY = -renderDist;
+        float relY = -renderDist; // Render "below" the player
         float relZ = (float) ((planet.getCenterZ() - camZ) * parallaxFactor);
 
         float prettyness = computePrettyness(planet, camY);
@@ -95,16 +122,20 @@ public class SkyHandler {
         relX = Mth.lerp(prettyness, relX, 0);
         relZ = Mth.lerp(prettyness, relZ, 0);
         
+        // Determine quad size based on altitude and scale factor
         double trueSize = SkyDataHandler.toTrueSize(planet.getPowerSize());
         double optimalSize = camY * (2 << SkyDataHandler.SCALE_FACTOR);
         double result = Math.min(prettyness > 0 ? optimalSize : trueSize, SkyDataHandler.toTrueSize(SkyDataHandler.MAX_POWER_SIZE));
         float size = (float) (result * (renderDist / Math.max(100.0, camY)));
 
+        // Setup rendering state
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.depthMask(false);
         RenderSystem.disableDepthTest();
         RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+        
+        // --- Layer 1: Planet Surface Map ---
         if (planet.getTexID() != null) {
             RenderSystem.setShaderTexture(0, planet.getTexID());
         } else {
@@ -116,20 +147,14 @@ public class SkyHandler {
         BufferBuilder bufferbuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 
         float r = 1.0f, g = 1.0f, b = 1.0f;
-
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-
         bufferbuilder.addVertex(matrix, relX - size, relY, relZ - size).setColor(r, g, b, visibility).setUv(0.0f, 0.0f);
         bufferbuilder.addVertex(matrix, relX - size, relY, relZ + size).setColor(r, g, b, visibility).setUv(0.0f, 1.0f);
         bufferbuilder.addVertex(matrix, relX + size, relY, relZ + size).setColor(r, g, b, visibility).setUv(1.0f, 1.0f);
         bufferbuilder.addVertex(matrix, relX + size, relY, relZ - size).setColor(r, g, b, visibility).setUv(1.0f, 0.0f);
-
         BufferUploader.drawWithShader(bufferbuilder.buildOrThrow());
 
+        // --- Layer 2: Scrolling Clouds ---
         if (CLOUD_TEXTURE_ID != null) {
-            RenderSystem.enableBlend();
-            RenderSystem.defaultBlendFunc();
             RenderSystem.setShaderTexture(0, CLOUD_TEXTURE_ID);
             long factor = 1000L * SkyDataHandler.toTrueSize(planet.getPowerSize() / 2);
             float timeOffset = (System.currentTimeMillis() % (20L * factor)) / (float) factor;
@@ -142,9 +167,9 @@ public class SkyHandler {
             BufferUploader.drawWithShader(cloudBuilder.buildOrThrow());
         }
 
+        // --- Layer 3: Atmospheric Halo (Glow) ---
         if (HALO_TEXTURE_ID != null) {
-            RenderSystem.enableBlend();
-            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
+            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE); // Additive blend
             RenderSystem.setShaderTexture(0, HALO_TEXTURE_ID);
 
             float haloSize = size * 1.3f;

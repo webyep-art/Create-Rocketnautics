@@ -13,18 +13,25 @@ import net.minecraft.util.Mth;
 import dev.devce.rocketnautics.client.CameraShakeHandler;
 import dev.devce.rocketnautics.RocketConfig;
 
+/**
+ * Event subscriber for game-bus client-side events.
+ * Manages dynamic render distance, camera shake, and client-side tick logic.
+ */
 @EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class RocketNauticsClientEvents {
     private static float currentRoll = 0;
     private static float prevRoll = 0;
 
+    /**
+     * Handles dynamic render distance adjustment and jetpack input processing every tick.
+     */
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
+        // Force minimum render distance during seamless dimension transitions
         if (RocketNauticsClient.seamlessTransitionTicks > 0) {
-            
             if (mc.options.renderDistance().get() > 2) {
                 mc.options.renderDistance().set(2);
                 RocketNauticsClient.lastAppliedRenderDistance = 2;
@@ -32,23 +39,21 @@ public class RocketNauticsClientEvents {
             return;
         }
 
-        
         int currentDist = mc.options.renderDistance().get();
         
-        
+        // Capture original render distance if not yet set
         if (RocketNauticsClient.originalRenderDistance == -1) {
             double y = mc.player.getY();
             String dim = mc.level.dimension().location().getPath();
             boolean isAtForcedAltitude = (dim.equals("overworld") && y > 15000) || (dim.equals("space") && y < 800);
             
-            
-            
+            // Avoid capturing the 'forced' value of 2 as the original setting
             if (currentDist > 2 || !isAtForcedAltitude) {
                 RocketNauticsClient.originalRenderDistance = currentDist;
                 RocketNauticsClient.lastAppliedRenderDistance = currentDist;
             }
         } else {
-            
+            // Update original setting if user manually changed it in options
             if (RocketNauticsClient.lastAppliedRenderDistance != -1 && currentDist != RocketNauticsClient.lastAppliedRenderDistance) {
                 RocketNauticsClient.originalRenderDistance = currentDist;
                 RocketNauticsClient.lastAppliedRenderDistance = currentDist;
@@ -58,7 +63,7 @@ public class RocketNauticsClientEvents {
         if (RocketNauticsClient.originalRenderDistance != -1) {
             int targetDist = RocketNauticsClient.originalRenderDistance;
 
-            
+            // Apply dynamic adjustment based on altitude to prevent lag at high views
             if (RocketConfig.CLIENT.enableDynamicRenderDistance.get()) {
                 double y = mc.player.getY();
                 String dim = mc.level.dimension().location().getPath();
@@ -76,7 +81,7 @@ public class RocketNauticsClientEvents {
                 }
             }
 
-            
+            // Gradually transition to target distance to avoid stutter
             if (targetDist != currentDist && mc.level.getGameTime() % 10 == 0) {
                 int nextDist = currentDist < targetDist ? Math.min(currentDist + 2, targetDist) : Math.max(currentDist - 2, targetDist);
                 mc.options.renderDistance().set(nextDist);

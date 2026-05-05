@@ -15,7 +15,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         this.yd = ySpeed;
         this.zd = zSpeed;
         this.setAlpha(0.4F + this.random.nextFloat() * 0.3F);
-        this.lifetime = 20 + this.random.nextInt(10);
+        this.lifetime = 40 + this.random.nextInt(30);
         this.baseScale = 0.4F + this.random.nextFloat() * 0.6F; 
         this.quadSize = this.baseScale;
         
@@ -26,7 +26,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         }
         
         this.hasPhysics = true; 
-        this.friction = 0.98F;  
+        this.friction = 0.99F;  
         this.gravity = 0.01F;   
         
         
@@ -159,17 +159,20 @@ public class RocketExhaustParticle extends TextureSheetParticle {
 
             String name = net.minecraft.core.registries.BuiltInRegistries.PARTICLE_TYPE.getKey(type).getPath();
             
-            if (name.contains("blue_flame") && thrustFactor > 0.4f) {
-                
+            if (name.contains("blue_flame")) {
                 particle.setColor(0.2f, 0.5f, 1.0f); 
                 particle.setCoolingColor(0.4f, 0.1f, 0.8f); 
             } else if (name.contains("plasma")) {
-                particle.setColor(0.3F, 0.8F, 1.0F); 
-                particle.setCoolingColor(0.1F, 0.4F, 1.0F); 
+                // Explosion Core - White Hot
+                particle.setColor(1.0F, 1.0F, 0.8F); 
+                particle.setCoolingColor(1.0F, 0.6F, 0.2F); 
+            } else if (name.contains("plume")) {
+                // Main Fireball - Orange Red
+                particle.setColor(1.0F, 0.6F, 0.1F); 
+                particle.setCoolingColor(0.8F, 0.1F, 0.0F); 
             } else {
-                
-                particle.setColor(1.0f, 0.6f, 0.1f); 
-                particle.setCoolingColor(0.8f, 0.1f, 0.0f); 
+                particle.setColor(1.0f, 1.0f, 1.0f); 
+                particle.setCoolingColor(0.5f, 0.5f, 0.5f); 
             }
             
             particle.gravity = 0.0F; 
