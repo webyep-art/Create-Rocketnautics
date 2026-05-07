@@ -66,6 +66,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
     public boolean currentlyBurning = false;
     public float fuelThrottle = 0.0f;
     private float internalFlow = 0.0f;
+    private boolean targetActive = false; // Added: Control for activation
     private int startupTicks = 0; 
     public int currentFuelUsage = 0;
     private int totalAvailableFuel = 0;
@@ -73,6 +74,10 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
     private float currentEfficiencyMultiplier = 1.0f;
     private int burnoutDelay = 0;
     private boolean steamMode = false;
+    private float targetThrottle = 1.0f; // Added: Control for throttle
+    
+    // Gimbal state
+    public Vector3d gimbalOffset = new Vector3d(0, 0, 0);
 
     public int getWarmupTime() {
         return 40;
@@ -121,7 +126,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         int max = maxThrust.getValue();
         if (min > max) min = max;
         
-        return (int) (min + (max - min) * fuelThrottle);
+        return (int) ((min + (max - min) * fuelThrottle) * targetThrottle);
     }
 
     private float getVisualBoost() {
@@ -305,14 +310,34 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         Direction pushDirection = facing.getOpposite(); // Thrust pushes in opposite direction of nozzle
         double currentThrust = getCurrentPower() * 10.0;
         
+        // Base thrust vector
         Vector3d thrustVector = new Vector3d(
-                pushDirection.getStepX() * currentThrust,
-                pushDirection.getStepY() * currentThrust,
-                pushDirection.getStepZ() * currentThrust
+                pushDirection.getStepX(),
+                pushDirection.getStepY(),
+                pushDirection.getStepZ()
         );
+        
+        // Apply gimbal offset (rotate base vector)
+        // For simplicity, we just add the offset and re-normalize if needed, 
+        // but better to treat offset as rotation or additive vector.
+        // Let's treat it as a small deviation vector.
+        thrustVector.add(gimbalOffset);
+        if (thrustVector.length() > 0.001) {
+            thrustVector.normalize().mul(currentThrust);
+        }
 
         Vector3d blockCenter = new Vector3d(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5);
         handle.applyImpulseAtPoint(blockCenter, thrustVector.mul(deltaTime));
+    }
+
+    public void setGimbal(double x, double y, double z) {
+        this.gimbalOffset.set(x, y, z);
+        // Limit gimbal range (e.g., max 20 degrees deviation)
+        if (this.gimbalOffset.length() > 0.35) { // ~20 degrees
+            this.gimbalOffset.normalize().mul(0.35);
+        }
+        setChanged();
+        sendData();
     }
 
     @Override
@@ -372,7 +397,11 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
 
         updateFuelProperties();
         
-        int targetConsumption = (int) (getMaxFuelConsumption() * currentEfficiencyMultiplier);
+        // --- Fuel Consumption Fix ---
+        // Only consume if targetActive is true. 
+        // Consumption is proportional to current throttle AND targetThrottle, with a 10% floor for ignition.
+        int baseConsumption = (int) (getMaxFuelConsumption() * currentEfficiencyMultiplier);
+        int targetConsumption = targetActive ? (int) (baseConsumption * Math.max(0.1f, fuelThrottle * targetThrottle)) : 0;
         int actuallyDrained = attemptFuelDrain(targetConsumption);
 
         if (dev.devce.rocketnautics.RocketConfig.SERVER.enableEngineDebugLogging.get() && level.getGameTime() % 20 == 0) {
@@ -488,29 +517,43 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
     protected void write(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
         super.write(tag, registries, clientPacket);
         tag.putBoolean("Burning", currentlyBurning);
+        tag.putBoolean("TargetActive", targetActive);
         tag.putInt("IgnitionTicks", ignitionTicks);
         tag.putFloat("FuelThrottle", fuelThrottle);
         tag.putInt("FuelUsage", currentFuelUsage);
         tag.putBoolean("SteamMode", steamMode);
         tag.putInt("StartupTicks", startupTicks);
         tag.putInt("TotalFuel", totalAvailableFuel);
+        tag.putFloat("TargetThrottle", targetThrottle);
         tag.putFloat("IspMult", currentIspMultiplier);
         tag.put("FuelTank", fuelTank.writeToNBT(registries, new CompoundTag()));
+        
+        CompoundTag gimbalTag = new CompoundTag();
+        gimbalTag.putDouble("x", gimbalOffset.x);
+        gimbalTag.putDouble("y", gimbalOffset.y);
+        gimbalTag.putDouble("z", gimbalOffset.z);
+        tag.put("Gimbal", gimbalTag);
     }
 
     @Override
     protected void read(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
         super.read(tag, registries, clientPacket);
         currentlyBurning = tag.getBoolean("Burning");
+        targetActive = tag.getBoolean("TargetActive");
         ignitionTicks = tag.getInt("IgnitionTicks");
         fuelThrottle = tag.getFloat("FuelThrottle");
         currentFuelUsage = tag.getInt("FuelUsage");
         steamMode = tag.getBoolean("SteamMode");
         startupTicks = tag.getInt("StartupTicks");
         totalAvailableFuel = tag.getInt("TotalFuel");
+        targetThrottle = tag.getFloat("TargetThrottle");
         currentIspMultiplier = tag.getFloat("IspMult");
         if (tag.contains("FuelTank")) {
             fuelTank.readFromNBT(registries, tag.getCompound("FuelTank"));
+        }
+        if (tag.contains("Gimbal")) {
+            CompoundTag gimbalTag = tag.getCompound("Gimbal");
+            gimbalOffset.set(gimbalTag.getDouble("x"), gimbalTag.getDouble("y"), gimbalTag.getDouble("z"));
         }
     }
 
@@ -536,7 +579,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         tooltip.add(Component.literal("  Flow Rate: ").append(Component.literal(flowPerSecond + " mB/s").withStyle(net.minecraft.ChatFormatting.AQUA)));
 
         if (totalAvailableFuel > 0) {
-            String fuelName = fuelTank.getFluid().getDisplayName().getString();
+            String fuelName = fuelTank.getFluid().getHoverName().getString();
             tooltip.add(Component.literal("  ").append(Component.translatable("rocketnautics.goggles.fuel")).append(": ")
                     .append(Component.literal(fuelName + " (" + totalAvailableFuel + " mB)").withStyle(net.minecraft.ChatFormatting.AQUA)));
         }
@@ -552,4 +595,27 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
     public float getCurrentIspMultiplier() { return currentIspMultiplier; }
     public float getCurrentEfficiencyMultiplier() { return currentEfficiencyMultiplier; }
     public boolean isSteamMode() { return steamMode; }
+
+    @Override
+    public void setActive(boolean active) {
+        this.targetActive = active;
+        notifyUpdate();
+    }
+
+    @Override
+    public void setThrottle(float throttle) {
+        this.targetThrottle = Math.max(0.0f, Math.min(1.0f, throttle));
+        setChanged();
+        sendData();
+    }
+
+    @Override
+    public void setGimbal(double pitch, double yaw) {
+        // Standard thruster has no gimbal
+    }
+
+    @Override
+    public float getFlow() {
+        return fuelThrottle;
+    }
 }

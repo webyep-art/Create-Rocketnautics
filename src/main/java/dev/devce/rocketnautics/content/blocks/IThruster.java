@@ -10,4 +10,8 @@ public interface IThruster {
     BlockPos getBlockPos();
     Level getLevel();
     ScrollValueBehaviour getThrustPower();
+    void setActive(boolean active);
+    void setThrottle(float throttle);
+    void setGimbal(double pitch, double yaw);
+    float getFlow();
 }

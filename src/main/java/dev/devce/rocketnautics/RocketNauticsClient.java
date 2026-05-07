@@ -32,15 +32,19 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import org.joml.Quaterniond;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import net.neoforged.fml.common.EventBusSubscriber.Bus;
 
 /**
  * Main client-side class for Cosmonautics.
  * Handles debug overlays, rendering layers, particle registration, and 3D debug visualizations for ships.
  */
-@EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class RocketNauticsClient {
 
     private static final int MAX_DEBUG_LOGS = 15;
@@ -280,7 +284,6 @@ public class RocketNauticsClient {
     /**
      * Renders 3D debug visualizations for nearby SubLevels (ships/asteroids) during the level render stage.
      */
-    @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (!isDebugOverlayEnabled() || event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
         
@@ -298,7 +301,7 @@ public class RocketNauticsClient {
         poseStack.translate(-cam.x, -cam.y, -cam.z);
 
         for (SubLevel ship : container.getAllSubLevels()) {
-            if (ship.boundingBox().center(new Vector3d()).distance(new Vector3d(mc.player.getX(), mc.player.getY(), mc.player.getZ())) < 200) {
+            if (ship.boundingBox().center(new Vector3d()).distance(new Vector3d(mc.player.getX(), mc.player.getY(), mc.player.getZ())) < 1000) {
                 renderShipDebug3D(poseStack, ship);
             }
         }
@@ -307,7 +310,7 @@ public class RocketNauticsClient {
     }
 
     /**
-     * Renders a 3D coordinate cross and velocity vector at a ship's center of mass.
+     * Renders a 3D coordinate cross, velocity vector, landing path, and thruster vectors for a ship.
      */
     private static void renderShipDebug3D(PoseStack poseStack, SubLevel ship) {
         Pose3d pose = ship.logicalPose();
@@ -325,7 +328,11 @@ public class RocketNauticsClient {
         float s = 1.5f; // Scale of the cross
         Matrix4f matrix = poseStack.last().pose();
         
-        // Draw Axis (X-Red, Y-Green, Z-Blue)
+        // --- 1. Draw Ship Bounding Box (Cyan) ---
+        var bb = ship.boundingBox();
+        drawDebugBox(buffer, matrix, new Vector3d(bb.minX(), bb.minY(), bb.minZ()), new Vector3d(bb.maxX(), bb.maxY(), bb.maxZ()), 0f, 1f, 1f);
+
+        // --- 2. Draw Center of Mass Axis (X-Red, Y-Green, Z-Blue) ---
         buffer.addVertex(matrix, (float)worldCoM.x - s, (float)worldCoM.y, (float)worldCoM.z).setColor(1f, 0.2f, 0.2f, 1f);
         buffer.addVertex(matrix, (float)worldCoM.x + s, (float)worldCoM.y, (float)worldCoM.z).setColor(1f, 0.2f, 0.2f, 1f);
         buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y - s, (float)worldCoM.z).setColor(0.2f, 1f, 0.2f, 1f);
@@ -333,36 +340,236 @@ public class RocketNauticsClient {
         buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y, (float)worldCoM.z - s).setColor(0.2f, 0.2f, 1f, 1f);
         buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y, (float)worldCoM.z + s).setColor(0.2f, 0.2f, 1f, 1f);
         
-        // Draw Center Point Box
-        float b = 0.2f;
-        drawDebugBox(buffer, matrix, worldCoM, b, 1f, 0.8f, 0f);
+        // --- 3. Draw Center Point Box (Orange) ---
+        drawDebugBox(buffer, matrix, new Vector3d(worldCoM).sub(0.2, 0.2, 0.2), new Vector3d(worldCoM).add(0.2, 0.2, 0.2), 1f, 0.8f, 0f);
 
-        // Draw Velocity Vector (Yellow)
-        if (speed > 0.1) {
+        // --- 4. Draw Velocity Vector (Yellow) ---
+        if (speed > 0.01) {
             buffer.addVertex(matrix, (float)worldCoM.x, (float)worldCoM.y, (float)worldCoM.z).setColor(1f, 1f, 0f, 1f);
             buffer.addVertex(matrix, (float)(worldCoM.x + velocity.x), (float)(worldCoM.y + velocity.y), (float)(worldCoM.z + velocity.z)).setColor(1f, 1f, 0f, 1f);
         }
 
+        // --- 5. Draw Predicted Landing Path (Green) ---
+        renderPredictedPath(buffer, matrix, ship, worldCoM, velocity, 0.2f, 1f, 0.2f);
+
+        // --- 6. Draw Thruster Vectors (Purple) ---
+        renderThrusterVectors(buffer, matrix, ship, pose);
+
         BufferUploader.drawWithShader(buffer.buildOrThrow());
+
+        // --- 7. Draw Floating Info Text ---
+        renderShipInfoText(poseStack, ship, worldCoM, velocity, speed, pose);
+
         RenderSystem.enableDepthTest();
     }
+    
+    private static void renderShipInfoText(PoseStack poseStack, SubLevel ship, Vector3d pos, Vector3d velocity, double speed, Pose3d shipPose) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+        
+        List<String> lines = new ArrayList<>();
+        lines.add("§6§lShip Telemetry");
+        lines.add(String.format("§7ID: %s", ship.getUniqueId().toString().substring(0, 8)));
+        lines.add("");
+        lines.add(String.format("§fSpeed: §a%.2f m/s", speed));
+        lines.add(String.format("§fV-SPD: §a%.2f m/s", velocity.y));
+        
+        Vector3d rot = new Vector3d();
+        shipPose.orientation().getEulerAnglesXYZ(rot);
+        lines.add(String.format("§fPitch: §d%.1f°", Math.toDegrees(rot.x)));
+        lines.add(String.format("§fYaw:   §d%.1f°", Math.toDegrees(rot.y)));
+        
+        lines.add("");
+        lines.add(String.format("§fAltitude: §e%.1f", pos.y));
+        
+        // Offset to the side of the ship
+        var bb = ship.boundingBox();
+        double shipWidth = (bb.maxX() - bb.minX()) / 2.0;
+        double textY = pos.y + (bb.maxY() - bb.minY()) / 2.0 + 0.5;
+        double textX = pos.x + shipWidth + 1.0; // 1 block to the right
+        
+        poseStack.pushPose();
+        poseStack.translate(textX, textY, pos.z);
+        poseStack.mulPose(mc.gameRenderer.getMainCamera().rotation());
+        poseStack.scale(0.035f, -0.035f, 0.035f);
+        
+        Matrix4f mat = poseStack.last().pose();
+        var src = mc.renderBuffers().bufferSource();
+        net.minecraft.client.gui.Font font = mc.font;
+        
+        // Restore shader to fix black text
+        RenderSystem.setShader(GameRenderer::getRendertypeTextShader);
+        
+        int bg = 0x80000000;
+        int lineIdx = 0;
+        for (String text : lines) {
+            if (text.isEmpty()) {
+                lineIdx++;
+                continue;
+            }
+            // Left align
+            font.drawInBatch(text, 0, lineIdx * 12f, 0xFFFFFFFF, false, mat, src,
+                net.minecraft.client.gui.Font.DisplayMode.SEE_THROUGH, bg, 0xF000F0);
+            lineIdx++;
+        }
+        
+        src.endBatch();
+        poseStack.popPose();
+    }
 
-    private static void drawDebugBox(BufferBuilder buffer, Matrix4f matrix, Vector3d pos, float s, float r, float g, float b) {
-        float x = (float)pos.x; float y = (float)pos.y; float z = (float)pos.z;
+    private static void renderPredictedPath(BufferBuilder buffer, Matrix4f matrix, SubLevel ship, Vector3d start, Vector3d velocity, float r, float g, float b) {
+        Vector3d currentPos = new Vector3d(start);
+        // Offset start to be below the ship to avoid hitting the ship itself
+        currentPos.y -= (ship.boundingBox().maxY() - ship.boundingBox().minY()) / 2.0 + 0.5;
         
-        buffer.addVertex(matrix, x-s, y-s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y-s, z-s).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x+s, y-s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y+s, z-s).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x+s, y+s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y+s, z-s).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x-s, y+s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y-s, z-s).setColor(r, g, b, 1f);
+        Vector3d currentVel = new Vector3d(velocity).div(20.0); // Velocity per tick
         
-        buffer.addVertex(matrix, x-s, y-s, z+s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y-s, z+s).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x+s, y-s, z+s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y+s, z+s).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x+s, y+s, z+s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y+s, z+s).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x-s, y+s, z+s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y-s, z+s).setColor(r, g, b, 1f);
+        // Calculate net thrust vector for the simulation
+        Vector3d netThrust = new Vector3d();
+        net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
+        if (level != null) {
+            net.minecraft.world.level.ChunkPos min = ship.getPlot().getChunkMin();
+            net.minecraft.world.level.ChunkPos max = ship.getPlot().getChunkMax();
+            double originX = min.x * 16.0;
+            double originZ = min.z * 16.0;
+
+            for (int cx = min.x; cx <= max.x; cx++) {
+                for (int cz = min.z; cz <= max.z; cz++) {
+                    net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunk(cx, cz, false);
+                    if (chunk == null) continue;
+                    for (net.minecraft.world.level.block.entity.BlockEntity be : chunk.getBlockEntities().values()) {
+                        if (be instanceof dev.devce.rocketnautics.content.blocks.RocketThrusterBlockEntity thruster && thruster.isActive()) {
+                            net.minecraft.core.Direction dir = thruster.getThrustDirection().getOpposite();
+                            double power = thruster.getCurrentPower() * 10.0;
+                            Vector3d thrustDir = new Vector3d(dir.getStepX(), dir.getStepY(), dir.getStepZ()).rotate(ship.logicalPose().orientation()).mul(power);
+                            netThrust.add(thrustDir);
+                        }
+                    }
+                }
+            }
+        }
         
-        buffer.addVertex(matrix, x-s, y-s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y-s, z+s).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x+s, y-s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y-s, z+s).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x+s, y+s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x+s, y+s, z+s).setColor(r, g, b, 1f);
-        buffer.addVertex(matrix, x-s, y+s, z-s).setColor(r, g, b, 1f); buffer.addVertex(matrix, x-s, y+s, z+s).setColor(r, g, b, 1f);
+        double mass = 1000.0; // FIXME: Get mass from physics system when API is clarified
+        
+        Vector3d thrustAccel = netThrust.div(mass).div(400.0); // Acceleration per tick
+
+        Vector3d lastPos = new Vector3d(currentPos);
+        boolean hitGround = false;
+
+        for (int i = 0; i < 200; i++) {
+            Vector3d nextPos = new Vector3d(currentPos).add(currentVel);
+            
+            // Apply thrust, gravity, and drag
+            currentVel.add(thrustAccel);
+            currentVel.y -= 0.04; // Gravity approx
+            currentVel.mul(0.99); // Drag approx
+            
+            buffer.addVertex(matrix, (float)currentPos.x, (float)currentPos.y, (float)currentPos.z).setColor(r, g, b, 1.0f);
+            buffer.addVertex(matrix, (float)nextPos.x, (float)nextPos.y, (float)nextPos.z).setColor(r, g, b, 1.0f);
+            
+            lastPos.set(currentPos);
+            currentPos.set(nextPos);
+            
+            // Ground collision check
+            if (currentPos.y < 320) { // Only check below build limit
+                net.minecraft.world.phys.BlockHitResult hit = level.clip(new net.minecraft.world.level.ClipContext(
+                    new net.minecraft.world.phys.Vec3(lastPos.x, lastPos.y, lastPos.z),
+                    new net.minecraft.world.phys.Vec3(currentPos.x, currentPos.y, currentPos.z),
+                    net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                    net.minecraft.world.level.ClipContext.Fluid.NONE,
+                    net.minecraft.world.phys.shapes.CollisionContext.empty()
+                ));
+                
+                if (hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+                    drawImpactMarker(buffer, matrix, new Vector3d(hit.getLocation().x, hit.getLocation().y, hit.getLocation().z), r, g, b);
+                    hitGround = true;
+                    break;
+                }
+            }
+
+            if (currentPos.y < -64) break;
+        }
+        
+        // If we didn't hit anything, draw marker at Y=0
+        if (!hitGround) {
+            drawImpactMarker(buffer, matrix, new Vector3d(currentPos.x, 0, currentPos.z), r, g, b);
+        }
+    }
+
+    private static void drawImpactMarker(BufferBuilder buffer, Matrix4f matrix, Vector3d pos, float r, float g, float b) {
+        float size = 1.0f;
+        int segments = 16;
+        for (int i = 0; i < segments; i++) {
+            double angle1 = (i * 2 * Math.PI) / segments;
+            double angle2 = ((i + 1) * 2 * Math.PI) / segments;
+            
+            buffer.addVertex(matrix, (float)(pos.x + Math.cos(angle1) * size), (float)pos.y + 0.3f, (float)(pos.z + Math.sin(angle1) * size)).setColor(r, g, b, 1f);
+            buffer.addVertex(matrix, (float)(pos.x + Math.cos(angle2) * size), (float)pos.y + 0.3f, (float)(pos.z + Math.sin(angle2) * size)).setColor(r, g, b, 1f);
+        }
+        
+        // Cross inside
+        buffer.addVertex(matrix, (float)pos.x - size, (float)pos.y + 0.3f, (float)pos.z).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, (float)pos.x + size, (float)pos.y + 0.3f, (float)pos.z).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, (float)pos.x, (float)pos.y + 0.3f, (float)pos.z - size).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, (float)pos.x, (float)pos.y + 0.3f, (float)pos.z + size).setColor(r, g, b, 1f);
+    }
+
+    private static void renderThrusterVectors(BufferBuilder buffer, Matrix4f matrix, SubLevel ship, Pose3d pose) {
+        net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) return;
+
+        net.minecraft.world.level.ChunkPos min = ship.getPlot().getChunkMin();
+        net.minecraft.world.level.ChunkPos max = ship.getPlot().getChunkMax();
+        
+        double originX = min.x * 16.0;
+        double originZ = min.z * 16.0;
+
+        for (int cx = min.x; cx <= max.x; cx++) {
+            for (int cz = min.z; cz <= max.z; cz++) {
+                net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunk(cx, cz, false);
+                if (chunk == null) continue;
+
+                for (net.minecraft.world.level.block.entity.BlockEntity be : chunk.getBlockEntities().values()) {
+                    if (be instanceof dev.devce.rocketnautics.content.blocks.RocketThrusterBlockEntity thruster && thruster.isActive()) {
+                        // Calculate world position of thruster
+                        Vector3d localPos = new Vector3d(be.getBlockPos().getX() + 0.5 - originX, be.getBlockPos().getY() + 0.5, be.getBlockPos().getZ() + 0.5 - originZ);
+                        Vector3d worldPos = new Vector3d(localPos).rotate(pose.orientation()).add(pose.position());
+                        
+                        // Get thrust direction
+                        net.minecraft.core.Direction dir = thruster.getThrustDirection().getOpposite();
+                        double power = thruster.getCurrentPower() / 10.0;
+                        
+                        Vector3d thrustDir = new Vector3d(dir.getStepX(), dir.getStepY(), dir.getStepZ()).rotate(pose.orientation()).mul(power);
+                        
+                        // Draw vector (Purple)
+                        buffer.addVertex(matrix, (float)worldPos.x, (float)worldPos.y, (float)worldPos.z).setColor(0.8f, 0.2f, 1f, 1f);
+                        buffer.addVertex(matrix, (float)(worldPos.x + thrustDir.x), (float)(worldPos.y + thrustDir.y), (float)(worldPos.z + thrustDir.z)).setColor(0.8f, 0.2f, 1f, 1f);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void drawDebugBox(BufferBuilder buffer, Matrix4f matrix, Vector3d min, Vector3d max, float r, float g, float b) {
+        float x1 = (float)min.x; float y1 = (float)min.y; float z1 = (float)min.z;
+        float x2 = (float)max.x; float y2 = (float)max.y; float z2 = (float)max.z;
+        
+        // Bottom
+        buffer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y1, z1).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x2, y1, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y1, z2).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x2, y1, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y1, z2).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x1, y1, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, 1f);
+        
+        // Top
+        buffer.addVertex(matrix, x1, y2, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y2, z1).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x2, y2, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y2, z2).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x1, y2, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y2, z1).setColor(r, g, b, 1f);
+        
+        // Pillars
+        buffer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y2, z1).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x2, y1, z1).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y2, z1).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x2, y1, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, 1f);
+        buffer.addVertex(matrix, x1, y1, z2).setColor(r, g, b, 1f); buffer.addVertex(matrix, x1, y2, z2).setColor(r, g, b, 1f);
     }
 }

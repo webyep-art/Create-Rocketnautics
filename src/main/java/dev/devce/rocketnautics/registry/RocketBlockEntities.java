@@ -34,6 +34,10 @@ public class RocketBlockEntities {
             BLOCK_ENTITIES.register("rcs_thruster", 
                     () -> BlockEntityType.Builder.of(RCSThrusterBlockEntity::new, RocketBlocks.RCS_THRUSTER.get()).build(null));
 
+    public static final Supplier<BlockEntityType<dev.devce.rocketnautics.content.blocks.SputnikBlockEntity>> SPUTNIK =
+            BLOCK_ENTITIES.register("sputnik",
+                    () -> BlockEntityType.Builder.of(dev.devce.rocketnautics.content.blocks.SputnikBlockEntity::new, RocketBlocks.SPUTNIK.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
         eventBus.addListener(RocketBlockEntities::registerCapabilities);

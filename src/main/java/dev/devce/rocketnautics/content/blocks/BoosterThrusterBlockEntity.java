@@ -270,6 +270,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
     private BlockPos cachedFuelPos = null;
     private long cachedFuelPosTick = Long.MIN_VALUE;
     private boolean fuelCacheValid = false;
+    private boolean computerActive = false;
 
     public boolean isActive() {
         if (level != null && level.isClientSide) return currentlyBurning;
@@ -280,7 +281,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
 
         if (!ignited) {
             boolean redstonePowered = getBlockState().getValue(BoosterThrusterBlock.POWERED);
-            if (redstonePowered && hasSolidFuelBehind()) {
+            if ((redstonePowered || computerActive) && hasSolidFuelBehind()) {
                 ignited = true;
                 consumeSolidFuelBlock();
                 notifyUpdate();
@@ -396,6 +397,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
         tag.putBoolean("Burning", currentlyBurning);
         tag.putBoolean("Ignited", ignited);
         tag.putBoolean("Spent", isSpent);
+        tag.putBoolean("ComputerActive", computerActive);
         tag.putInt("FuelTicks", fuelTicks);
         tag.putInt("IgnitionTicks", ignitionTicks);
     }
@@ -406,6 +408,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
         currentlyBurning = tag.getBoolean("Burning");
         ignited = tag.getBoolean("Ignited");
         isSpent = tag.getBoolean("Spent");
+        computerActive = tag.getBoolean("ComputerActive");
         fuelTicks = tag.getInt("FuelTicks");
         ignitionTicks = tag.getInt("IgnitionTicks");
         invalidateFuelCache();
@@ -445,4 +448,25 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
     public boolean isIgnited() { return ignited; }
     public boolean isSpent() { return isSpent; }
     public int getFuelTicks() { return fuelTicks; }
+
+    @Override
+    public void setActive(boolean active) {
+        this.computerActive = active;
+        notifyUpdate();
+    }
+
+    @Override
+    public void setThrottle(float throttle) {
+        // Solid fuel boosters cannot be throttled once ignited.
+    }
+
+    @Override
+    public void setGimbal(double pitch, double yaw) {
+        // Solid fuel boosters typically do not have gimbaled nozzles.
+    }
+
+    @Override
+    public float getFlow() {
+        return isActive() ? 1.0f : 0.0f;
+    }
 }

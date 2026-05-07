@@ -13,12 +13,16 @@ import dev.devce.rocketnautics.content.commands.GravityCommand;
 import dev.devce.rocketnautics.content.commands.JetpackCommand;
 import dev.devce.rocketnautics.content.commands.ShipCopyPasteCommand;
 import net.neoforged.fml.common.Mod;
+import dev.devce.rocketnautics.network.NetworkHandler;
 import dev.devce.rocketnautics.content.physics.GlobalSpacePhysicsHandler;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import dev.devce.rocketnautics.content.blocks.nodes.LinkedSignalHandler;
 
 /**
  * Main class for the Cosmonautics (RocketNautics) mod.
@@ -62,6 +66,14 @@ public class RocketNautics {
         RocketSounds.register(modEventBus);
         RocketSimulatedTab.init();
 
+        // Register mod-bus event subscribers manually to avoid deprecated bus() parameter
+        modEventBus.register(NetworkHandler.class);
+        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+            modEventBus.register(dev.devce.rocketnautics.client.ClientModEvents.class);
+            modEventBus.register(RocketNauticsClient.class);
+            NeoForge.EVENT_BUS.register(dev.devce.rocketnautics.client.RocketNauticsClientEvents.class);
+        }
+
         modEventBus.addListener(this::setup);
         NeoForge.EVENT_BUS.register(this);
         
@@ -97,5 +109,16 @@ public class RocketNautics {
         ShipCopyPasteCommand.register(event.getDispatcher());
         JetpackCommand.register(event.getDispatcher());
         dev.devce.rocketnautics.content.commands.AsteroidCommand.register(event.getDispatcher());
+    }
+    @SubscribeEvent
+    public void onLevelTick(LevelTickEvent.Post event) {
+        LinkedSignalHandler.tick(event.getLevel());
+    }
+
+    @SubscribeEvent
+    public void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof net.minecraft.world.level.Level level) {
+            LinkedSignalHandler.onWorldUnload(level);
+        }
     }
 }

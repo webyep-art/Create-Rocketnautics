@@ -13,11 +13,12 @@ import net.minecraft.client.resources.PlayerSkin;
 
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 
+import net.neoforged.fml.common.EventBusSubscriber.Bus;
+
 /**
  * Event subscriber for mod-bus client-side events.
  * Handles key mapping registration and entity rendering layers.
  */
-@EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientModEvents {
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {

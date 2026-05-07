@@ -19,6 +19,7 @@ public class RocketSimulatedTab {
         register("booster_thruster", RocketBlocks.BOOSTER_THRUSTER);
         register("rcs_thruster", RocketBlocks.RCS_THRUSTER);
         register("separator", RocketBlocks.SEPARATOR);
+        register("sputnik", RocketBlocks.SPUTNIK);
         register("music_disc_space", RocketBlocks.MUSIC_DISC_SPACE);
         register("credits_book", RocketBlocks.CREDITS_BOOK);
         register("jetpack", RocketBlocks.JETPACK);

@@ -8,6 +8,8 @@ import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -35,11 +37,19 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
         return isActive() ? 1 : 0;
     }
 
+    private boolean computerActive = false;
+
     @Override
     public boolean isActive() {
         if (level == null) return false;
         if (level.isClientSide) return currentlyBurning;
-        return level.hasNeighborSignal(worldPosition);
+        return level.hasNeighborSignal(worldPosition) || computerActive;
+    }
+
+    @Override
+    public void setActive(boolean active) {
+        this.computerActive = active;
+        notifyUpdate();
     }
 
     @Override
@@ -114,6 +124,18 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
         } else {
             if (blockEntity.ignitionTicks > 0) blockEntity.ignitionTicks--;
         }
+    }
+
+    @Override
+    protected void write(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
+        super.write(tag, registries, clientPacket);
+        tag.putBoolean("ComputerActive", computerActive);
+    }
+
+    @Override
+    protected void read(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
+        super.read(tag, registries, clientPacket);
+        computerActive = tag.getBoolean("ComputerActive");
     }
 
     @Override

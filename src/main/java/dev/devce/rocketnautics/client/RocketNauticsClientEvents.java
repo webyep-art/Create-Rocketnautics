@@ -2,6 +2,7 @@ package dev.devce.rocketnautics.client;
 
 import dev.devce.rocketnautics.RocketNautics;
 import dev.devce.rocketnautics.RocketNauticsClient;
+import net.neoforged.fml.common.EventBusSubscriber.Bus;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -12,12 +13,12 @@ import dev.devce.rocketnautics.content.physics.JetpackHandler;
 import net.minecraft.util.Mth;
 import dev.devce.rocketnautics.client.CameraShakeHandler;
 import dev.devce.rocketnautics.RocketConfig;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 /**
  * Event subscriber for game-bus client-side events.
  * Manages dynamic render distance, camera shake, and client-side tick logic.
  */
-@EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class RocketNauticsClientEvents {
     private static float currentRoll = 0;
     private static float prevRoll = 0;
@@ -115,5 +116,10 @@ public class RocketNauticsClientEvents {
         event.setPitch(angles[0]);
         event.setYaw(angles[1]);
         event.setRoll(angles[2]);
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+        RocketNauticsClient.onRenderLevelStage(event);
     }
 }

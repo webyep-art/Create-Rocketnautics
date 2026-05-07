@@ -6,6 +6,7 @@ import dev.devce.rocketnautics.content.blocks.VectorThrusterBlock;
 import dev.devce.rocketnautics.content.blocks.BoosterThrusterBlock;
 import dev.devce.rocketnautics.content.blocks.RCSThrusterBlock;
 import dev.devce.rocketnautics.content.blocks.SeparatorBlock;
+import dev.devce.rocketnautics.content.blocks.SputnikBlock;
 import dev.devce.rocketnautics.content.items.CreditsBookItem;
 import dev.devce.rocketnautics.content.items.RocketItem;
 import dev.devce.rocketnautics.content.items.RocketBlockItem;
@@ -42,6 +43,9 @@ public class RocketBlocks {
 
     public static final DeferredBlock<Block> SEPARATOR = registerBlock("separator",
             () -> new SeparatorBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+
+    public static final DeferredBlock<Block> SPUTNIK = registerBlock("sputnik",
+            () -> new SputnikBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
 
     public static final DeferredItem<RocketItem> MUSIC_DISC_SPACE = ITEMS.register("music_disc_space",
             () -> new RocketItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
