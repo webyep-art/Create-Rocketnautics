@@ -142,7 +142,7 @@ public class NodeScreen extends Screen {
         
         // Refresh engines on client periodically to save performance (still feels real-time at 5-10 ticks)
         if (minecraft.level.getGameTime() % 10 == 0) {
-            sputnik.refreshEngines();
+            sputnik.refreshPeripherals();
         }
 
         if (minecraft.level.getGameTime() % 20 == 0 && isSearching) {

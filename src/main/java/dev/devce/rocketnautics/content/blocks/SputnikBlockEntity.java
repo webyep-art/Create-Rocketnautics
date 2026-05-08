@@ -84,15 +84,6 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
     }
 
     private void tickNodes() {
-        // Reset/Update peripherals if needed
-        for (IPeripheral peripheral : discoveredPeripherals) {
-            if (peripheral instanceof IThruster thruster && !thruster.isRemoved()) {
-                thruster.setThrottle(1.0f);
-                thruster.setActive(true);
-                thruster.setGimbal(0, 0);
-            }
-        }
-
         graph.tick(this);
         
         // Sync graph values to client periodically for UI display
