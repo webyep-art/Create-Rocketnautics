@@ -2,14 +2,14 @@ package dev.devce.rocketnautics.network;
 
 import dev.devce.rocketnautics.RocketNautics;
 import dev.devce.rocketnautics.SkyDataHandler;
+import dev.devce.rocketnautics.client.DeepSpaceHandler;
+import dev.devce.rocketnautics.client.PlanetColors;
 import dev.devce.rocketnautics.client.SkyHandler;
-import net.minecraft.core.Holder;
+import dev.devce.rocketnautics.content.orbit.DeepSpaceData;
+import dev.devce.rocketnautics.content.orbit.universe.CubePlanet;
+import dev.devce.rocketnautics.content.orbit.universe.UniverseDefinition;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BiomeTags;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.BiomeSource;
-import net.minecraft.world.level.biome.Climate;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -66,6 +66,30 @@ public class NetworkHandler {
             JetpackPayload.CODEC,
             (payload, context) -> context.enqueueWork(() -> handleJetpackState(payload.entityId(), payload.active()))
         );
+
+        registrar.playToServer(
+                PlanetRenderRequestPayload.TYPE,
+                PlanetRenderRequestPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> handlePlanetRenderRequest(context.player(), payload.ids(), payload.powerScale()))
+        );
+
+        registrar.playToClient(
+                PlanetRenderPayload.TYPE,
+                PlanetRenderPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> handlePlanetRenderData(payload.id(), payload.renderData(), payload.powerSize()))
+        );
+
+        registrar.playToClient(
+                UniverseDefinitionPayload.TYPE,
+                UniverseDefinitionPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> handleUniverseDefinition(payload.definition()))
+        );
+
+        registrar.playToClient(
+                DeepSpacePositionPayload.TYPE,
+                DeepSpacePositionPayload.CODEC,
+                (payload, context) -> context.enqueueWork(payload::handle)
+        );
     }
 
     @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
@@ -105,5 +129,38 @@ public class NetworkHandler {
     @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
     private static void handleHeatData(double x, double y, double z, float intensity) {
         dev.devce.rocketnautics.client.HeatClientHandler.updateHeat(x, y, z, intensity);
+    }
+
+    private static void handlePlanetRenderRequest(net.minecraft.world.entity.player.Player rawPlayer, int[] ids, int powerSize) {
+        if (!(rawPlayer instanceof ServerPlayer player)) return;
+        ServerLevel level = player.serverLevel();
+
+        CompletableFuture.runAsync(() -> {
+            DeepSpaceData data = DeepSpaceData.getInstance(level.getServer());
+            UniverseDefinition def = data.getUniverse();
+            for (int id : ids) {
+                CubePlanet planet = def.getPlanetById(id);
+                // computing the render data may take time, so we dispatch in separate packets.
+                // would it be better to send a single large packet after loading everything?
+                byte[] send;
+                if (planet == null) {
+                    send = PlanetColors.BLANK;
+                } else {
+                    send = planet.getRenderData(powerSize);
+                }
+                PlanetRenderPayload payload = new PlanetRenderPayload(id, send, powerSize);
+                level.getServer().execute(() -> PacketDistributor.sendToPlayer(player, payload));
+            }
+        });
+    }
+
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private static void handlePlanetRenderData(int id, byte[] renderData, int powerSize) {
+        DeepSpaceHandler.receiveRenderData(id, renderData, powerSize);
+    }
+
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private static void handleUniverseDefinition(UniverseDefinition definition) {
+        DeepSpaceHandler.receiveUniverse(definition);
     }
 }

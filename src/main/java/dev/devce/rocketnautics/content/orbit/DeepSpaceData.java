@@ -1,6 +1,8 @@
 package dev.devce.rocketnautics.content.orbit;
 
 import dev.devce.rocketnautics.RocketNautics;
+import dev.devce.rocketnautics.content.orbit.universe.StandardUniverseProvider;
+import dev.devce.rocketnautics.content.orbit.universe.UniverseDefinition;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.HolderLookup;
@@ -13,14 +15,21 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.BooleanOp;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.jetbrains.annotations.NotNull;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeOffset;
+import org.orekit.utils.PVCoordinates;
+import org.orekit.utils.TimeStampedPVCoordinates;
 
 @EventBusSubscriber(modid = RocketNautics.MODID)
 public class DeepSpaceData extends SavedData {
@@ -55,21 +64,29 @@ public class DeepSpaceData extends SavedData {
 
     @SubscribeEvent
     public static void advanceUniverse(ServerTickEvent.Post event) {
-        getInstance(event.getServer()).tick();
+        getInstance(event.getServer()).tick(event.getServer());
     }
 
     // end static //
 
-    private final UniverseDefinition universe = StandardUniverse.INSTANCE;
+    private final UniverseDefinition universe = StandardUniverseProvider.createSunOverworldMoon().build();
 
     private final Int2ObjectArrayMap<DeepSpaceInstance> instances = new Int2ObjectArrayMap<>();
 
     private long universeTicks;
     private int nextFreeID = 0;
 
-    public void tick() {
+    public void tick(MinecraftServer server) {
         universeTicks += 1;
-        instances.values().forEach(DeepSpaceInstance::tick);
+        instances.values().forEach(i -> i.tick(server));
+        if (instances.isEmpty()) debugInstance();
+    }
+
+    private void debugInstance() {
+        // execute in rocketnautics:deep_space run tp Dev 48 16 16
+        DeepSpaceInstance instance = new DeepSpaceInstance(this, 32, 32, 0, 0);
+        instances.put(0, instance);
+        instance.getPosition().init(universe, "overworld", new TimeStampedPVCoordinates(EPOCH, new Vector3D(0, 0, 6_000_000D), new Vector3D(0, 20_000, 0)));
     }
 
     public UniverseDefinition getUniverse() {
@@ -85,6 +102,9 @@ public class DeepSpaceData extends SavedData {
     }
 
     public static AbsoluteDate getTime(long ticks) {
+        if (ticks < 0) {
+            return EPOCH.shiftedBy(TICK.negate().multiply(-ticks));
+        }
         return EPOCH.shiftedBy(TICK.multiply(ticks));
     }
 
@@ -110,5 +130,54 @@ public class DeepSpaceData extends SavedData {
             data.instances.put(instance.getId(), instance);
         }
         return data;
+    }
+
+    public DeepSpaceInstance getInstanceForPosition() {
+        return null;
+    }
+
+    // TODO mixin to CollisionGetter#borderCollision and Entity#collectColliders to add this
+    // collision box at the same place the world border's collision box is added.
+    public static VoxelShape getColliderForPosition(Vec3 position) {
+        // compute the instance we are in
+        int[] sizeAndId = getChunkPowerSizeIdWithinSizeForParameters((int) position.x, (int) position.z);
+        int[] corners = getCornerXCornerZForParameters(sizeAndId[0], sizeAndId[1]);
+        int blockSize = 16 * (2 << sizeAndId[0]);
+        // subtract the instance bounds from the infinity box
+        return Shapes.join(
+                Shapes.INFINITY,
+                Shapes.box(
+                        corners[0],
+                        0,
+                        corners[1],
+                        corners[0] + blockSize + 1,
+                        blockSize + 1,
+                        corners[1] + blockSize + 1
+                ),
+                BooleanOp.ONLY_FIRST
+        );
+    }
+
+    private static int[] getChunkPowerSizeIdWithinSizeForParameters(int negX, int negZ) {
+        if (negX < 0 || negZ < 0) return new int[] { 1, 0 };
+        // convert to chunkpos
+        negX /= 16;
+        negZ /= 16;
+        // derive chunk size from X position
+        // since the power term dominates at large scale, get a definite upper bound
+        int chunkPowerSize = Math.max((int) (Math.log(negX * 1.1) / Math.log(2)) + 1, 1);
+        // descend until we are below or equal to the target; at large scales, we will need to do this once.
+        int size = chunkPowerSize * 16 + (2 << chunkPowerSize);
+        while (size > negX) {
+            chunkPowerSize--;
+            size = chunkPowerSize * 16 + (2 << chunkPowerSize);
+        }
+        // derive id from Z position and chunk size
+        return new int[] { chunkPowerSize, negZ / (16 + size) };
+    }
+
+    private static int[] getCornerXCornerZForParameters(int chunkPowerSize, int idWithinSize) {
+        int chunkSize = 2 << chunkPowerSize;
+        return new int[] { 16 * (chunkPowerSize * 16 + chunkSize), 16 * (idWithinSize * (16 + chunkSize)) };
     }
 }

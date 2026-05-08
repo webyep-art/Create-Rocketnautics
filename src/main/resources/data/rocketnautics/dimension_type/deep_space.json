@@ -12,9 +12,9 @@
   "bed_works": false,
   "respawn_anchor_works": false,
   "has_raids": false,
-  "min_y": 0,
+  "min_y": -128,
   "height": 16,
   "logical_height": 16,
   "infiniburn": "#minecraft:infiniburn_overworld",
-  "effects": "rocketnautics:space"
+  "effects": "rocketnautics:deep_space"
 }

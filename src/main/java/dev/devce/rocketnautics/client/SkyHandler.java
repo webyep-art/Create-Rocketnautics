@@ -6,6 +6,7 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import dev.devce.rocketnautics.RocketConfig;
 import dev.devce.rocketnautics.RocketNautics;
 import dev.devce.rocketnautics.SkyDataHandler;
 import dev.devce.rocketnautics.content.orbit.DeepSpaceData;
@@ -202,10 +203,8 @@ public class SkyHandler {
         }
     }
 
-    private static int getMaximumScale() {
-        
-        
-        return 100;
+    public static int getMaximumScale() {
+        return RocketConfig.CLIENT.planetRenderMaximumScale.getAsInt();
     }
 
     private static void updatePlanetTex(double camX, double camY, double camZ) {
@@ -314,23 +313,7 @@ public class SkyHandler {
                             colorIdx = mapDataNegXNegZ[sampleX + sampleY * dataSize];
                         }
                     }
-                    int r = 30, g = 120, b = 40;
-                    switch (colorIdx) {
-                        case 0: r = 10; g = 40; b = 120; break;
-                        case 1: r = 20; g = 80; b = 180; break;
-                        case 2: r = 210; g = 190; b = 140; break;
-                        case 3: r = 200; g = 180; b = 100; break;
-                        case 4: r = 30; g = 120; b = 40; break;
-                        case 5: r = 20; g = 90; b = 30; break;
-                        case 6: r = 10; g = 70; b = 20; break;
-                        case 7: r = 20; g = 60; b = 40; break;
-                        case 8: r = 220; g = 220; b = 230; break;
-                        case 9: r = 180; g = 80; b = 30; break;
-                        case 10: r = 120; g = 120; b = 120; break;
-                    }
-                    
-                    int color = (255 << 24) | (b << 16) | (g << 8) | r;
-                    image.setPixelRGBA(x, y, color);
+                    image.setPixelRGBA(x, y, PlanetColors.getPackedColor(colorIdx));
                 }
             }
             

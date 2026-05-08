@@ -219,6 +219,18 @@ public class RocketNauticsClient {
                     return false;
                 }
             });
+        event.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "deep_space"),
+                new DimensionSpecialEffects(Float.NaN, false, DimensionSpecialEffects.SkyType.NONE, false, false) {
+                    @Override
+                    public Vec3 getBrightnessDependentFogColor(Vec3 fogColor, float brightness) {
+                        return Vec3.ZERO;
+                    }
+
+                    @Override
+                    public boolean isFoggyAt(int x, int y) {
+                        return false;
+                    }
+                });
     }
 
     @SubscribeEvent

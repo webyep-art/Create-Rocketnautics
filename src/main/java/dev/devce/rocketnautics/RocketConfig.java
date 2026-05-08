@@ -60,6 +60,7 @@ public class RocketConfig {
         public final ModConfigSpec.DoubleValue shakeRadius;
         public final ModConfigSpec.BooleanValue enableDynamicRenderDistance;
         public final ModConfigSpec.BooleanValue showDebugOverlay;
+        public final ModConfigSpec.IntValue planetRenderMaximumScale;
 
         public Client(ModConfigSpec.Builder builder) {
             builder.push("Visuals");
@@ -75,6 +76,10 @@ public class RocketConfig {
             showDebugOverlay = builder
                     .comment("Show the Cosmonautics debug overlay (Alt/Speed/etc)")
                     .define("showDebugOverlay", false);
+            planetRenderMaximumScale = builder
+                    .comment("The maximum texture scale for the planet render.")
+                    .comment("Recommended scale for the render to maintain visual structure is 15 or 16.")
+                    .defineInRange("planetRenderMaximumScale", 100, SkyDataHandler.MIN_POWER_SIZE, 100);
             builder.pop();
         }
     }
