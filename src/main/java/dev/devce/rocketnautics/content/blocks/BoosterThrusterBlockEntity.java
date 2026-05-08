@@ -66,7 +66,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
         );
         thrustPower.between(1, 50);
         thrustPower.withFormatter(v -> (v * 10) + " N");
-        thrustPower.setValue(5);
+        thrustPower.setValue(50);
         
         behaviours.add(thrustPower);
     }
