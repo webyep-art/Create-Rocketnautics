@@ -22,6 +22,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.minecraft.world.item.ItemStack;
 import dev.devce.rocketnautics.content.blocks.nodes.NodeGraph;
+import dev.devce.rocketnautics.content.blocks.nodes.Node;
 import dev.devce.rocketnautics.content.blocks.RocketThrusterBlockEntity;
 
 import dev.devce.rocketnautics.api.nodes.NodeContext;
