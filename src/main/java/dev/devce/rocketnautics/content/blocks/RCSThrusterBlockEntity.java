@@ -18,6 +18,10 @@ import org.joml.Vector3d;
 import java.util.List;
 
 public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
+    @Override
+    public String getPeripheralType() {
+        return "rcs";
+    }
 
     public RCSThrusterBlockEntity(BlockPos pos, BlockState state) {
         super(RocketBlockEntities.RCS_THRUSTER.get(), pos, state);

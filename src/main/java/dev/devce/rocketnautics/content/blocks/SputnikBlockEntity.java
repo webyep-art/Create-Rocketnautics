@@ -24,14 +24,19 @@ import net.minecraft.world.item.ItemStack;
 import dev.devce.rocketnautics.content.blocks.nodes.NodeGraph;
 import dev.devce.rocketnautics.content.blocks.RocketThrusterBlockEntity;
 
-public class SputnikBlockEntity extends BlockEntity implements NodeGraph.EvaluationContext {
+import dev.devce.rocketnautics.api.nodes.NodeContext;
+import dev.devce.rocketnautics.api.peripherals.IPeripheral;
+import java.util.Collections;
+import java.util.UUID;
+
+public class SputnikBlockEntity extends BlockEntity implements NodeContext {
     public final NodeGraph graph = new NodeGraph();
     private boolean isForced = false;
     private ChunkPos lastForcedParentChunk = null;
     private ServerLevel lastForcedParentLevel = null;
     
-    private final List<IThruster> discoveredEngines = new ArrayList<>();
-    private int engineScanCooldown = 0;
+    private final List<IPeripheral> discoveredPeripherals = new ArrayList<>();
+    private int scanCooldown = 0;
 
     // Stage Planner Data
     // 5 Stages, each needs 2 items for frequency = 10 slots total
@@ -53,10 +58,19 @@ public class SputnikBlockEntity extends BlockEntity implements NodeGraph.Evaluat
         super(RocketBlockEntities.SPUTNIK.get(), pos, state);
     }
 
+    private SubLevel getSubLevel() {
+        if (level == null) return null;
+        Object lvlObj = level;
+        if (lvlObj instanceof SubLevel sl) return sl;
+        Object obj = dev.ryanhcode.sable.Sable.HELPER.getContaining(level, worldPosition);
+        if (obj instanceof SubLevel sl) return sl;
+        return null;
+    }
+
     public static void tick(Level level, BlockPos pos, BlockState state, SputnikBlockEntity blockEntity) {
-        if (blockEntity.engineScanCooldown-- <= 0) {
-            blockEntity.refreshEngines();
-            blockEntity.engineScanCooldown = 20;
+        if (blockEntity.scanCooldown-- <= 0) {
+            blockEntity.refreshPeripherals();
+            blockEntity.scanCooldown = 20;
         }
 
         if (!level.isClientSide) {
@@ -68,24 +82,10 @@ public class SputnikBlockEntity extends BlockEntity implements NodeGraph.Evaluat
         }
     }
 
-    private SubLevel getSubLevel() {
-        if (level == null) return null;
-        Object lvlObj = level;
-        if (lvlObj instanceof SubLevel sl) return sl;
-        Object obj = dev.ryanhcode.sable.Sable.HELPER.getContaining(level, worldPosition);
-        if (obj instanceof SubLevel sl) return sl;
-        return null;
-    }
-
     private void tickNodes() {
-        if (engineScanCooldown-- <= 0) {
-            refreshEngines();
-            engineScanCooldown = 20; // Scan once per second
-        }
-
-        // Reset all engines before evaluation to handle deleted/disconnected nodes correctly
-        for (IThruster thruster : discoveredEngines) {
-            if (thruster != null && !thruster.isRemoved()) {
+        // Reset/Update peripherals if needed
+        for (IPeripheral peripheral : discoveredPeripherals) {
+            if (peripheral instanceof IThruster thruster && !thruster.isRemoved()) {
                 thruster.setThrottle(0);
                 thruster.setGimbal(0, 0);
             }
@@ -94,52 +94,61 @@ public class SputnikBlockEntity extends BlockEntity implements NodeGraph.Evaluat
         graph.tick(this);
     }
 
-    public void refreshEngines() {
-        discoveredEngines.clear();
+    public void refreshPeripherals() {
+        discoveredPeripherals.clear();
         SubLevel sl = getSubLevel();
         
         if (sl != null) {
-            // Since we are on a sub-level, we scan its plot area for engines
             net.minecraft.world.level.ChunkPos min = sl.getPlot().getChunkMin();
             net.minecraft.world.level.ChunkPos max = sl.getPlot().getChunkMax();
 
             for (int cx = min.x; cx <= max.x; cx++) {
                 for (int cz = min.z; cz <= max.z; cz++) {
-                    // Use level.getChunk to ensure we don't skip loaded plot chunks on server
                     net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(cx, cz);
                     if (chunk == null) continue;
                     for (BlockEntity be : chunk.getBlockEntities().values()) {
-                        if (be instanceof IThruster thruster) {
-                            discoveredEngines.add(thruster);
+                        if (be instanceof IPeripheral peripheral) {
+                            discoveredPeripherals.add(peripheral);
                         }
                     }
                 }
             }
         } else {
-            // Fallback: Scan 17x17x17 area around sputnik if not on a sub-level (direct connection)
             for (int x = -8; x <= 8; x++) {
                 for (int y = -8; y <= 8; y++) {
                     for (int z = -8; z <= 8; z++) {
                         BlockEntity be = level.getBlockEntity(worldPosition.offset(x, y, z));
-                        if (be instanceof IThruster thruster && !discoveredEngines.contains(thruster)) {
-                            discoveredEngines.add(thruster);
+                        if (be instanceof IPeripheral peripheral && !discoveredPeripherals.contains(peripheral)) {
+                            discoveredPeripherals.add(peripheral);
                         }
                     }
                 }
             }
         }
 
-        if (dev.devce.rocketnautics.RocketConfig.SERVER.enableEngineDebugLogging.get() && level.getGameTime() % 40 == 0) {
-             dev.devce.rocketnautics.RocketNautics.LOGGER.info("Sputnik at {} found {} engines. SubLevel: {}", worldPosition, discoveredEngines.size(), sl != null ? sl.getUniqueId() : "none");
-             for (int i = 0; i < discoveredEngines.size(); i++) {
-                 dev.devce.rocketnautics.RocketNautics.LOGGER.info("  Engine {}: {} at {}", i, discoveredEngines.get(i).getClass().getSimpleName(), discoveredEngines.get(i).getBlockPos());
-             }
-        }
+        // Sort for stable IDs
+        discoveredPeripherals.sort(Comparator.comparingInt((IPeripheral p) -> p.getBlockPos().getX())
+            .thenComparingInt(p -> p.getBlockPos().getY())
+            .thenComparingInt(p -> p.getBlockPos().getZ()));
+    }
 
-        // Sort by BlockPos for stable IDs
-        discoveredEngines.sort(Comparator.comparingInt((IThruster thruster) -> thruster.getBlockPos().getX())
-            .thenComparingInt(thruster -> thruster.getBlockPos().getY())
-            .thenComparingInt(thruster -> thruster.getBlockPos().getZ()));
+    @Override
+    public List<IPeripheral> getPeripherals() {
+        return Collections.unmodifiableList(discoveredPeripherals);
+    }
+
+    public int getEngineCount() { return discoveredPeripherals.size(); }
+    public net.minecraft.core.BlockPos getEnginePos(int i) { 
+        return (i >= 0 && i < discoveredPeripherals.size()) ? discoveredPeripherals.get(i).getBlockPos() : null; 
+    }
+    public double getEngineThrust(int i) {
+        return (i >= 0 && i < discoveredPeripherals.size()) ? discoveredPeripherals.get(i).readValue("thrust") : 0;
+    }
+    public void refreshEngines() { refreshPeripherals(); }
+
+    @Override
+    public double evaluateInput(UUID nodeId, int pin) {
+        return graph.getInputValue(nodeId, pin, this);
     }
 
     @Override
@@ -148,49 +157,6 @@ public class SputnikBlockEntity extends BlockEntity implements NodeGraph.Evaluat
     public double getY() { return getGlobalPos().y; }
     @Override
     public double getZ() { return getGlobalPos().z; }
-
-    @Override
-    public double getEngineThrust(int index) {
-        if (index >= 0 && index < discoveredEngines.size()) {
-            return discoveredEngines.get(index).getFlow() * 100.0;
-        }
-        return 0;
-    }
-
-    @Override
-    public void setEngineThrust(int index, double thrust) {
-        if (index >= 0 && index < discoveredEngines.size()) {
-            IThruster thruster = discoveredEngines.get(index);
-            thruster.setActive(thrust > 0);
-            thruster.setThrottle((float) thrust);
-            if (dev.devce.rocketnautics.RocketConfig.SERVER.enableEngineDebugLogging.get() && level.getGameTime() % 10 == 0 && thrust > 0) {
-                dev.devce.rocketnautics.RocketNautics.LOGGER.info("Sputnik at {} setting Engine {} thrust to {}", worldPosition, index, thrust);
-            }
-        }
-    }
-
-    @Override
-    public void setEngineGimbal(int index, double pitch, double yaw) {
-        if (index >= 0 && index < discoveredEngines.size()) {
-            discoveredEngines.get(index).setGimbal(pitch, yaw);
-            if (dev.devce.rocketnautics.RocketConfig.SERVER.enableEngineDebugLogging.get() && level.getGameTime() % 10 == 0) {
-                dev.devce.rocketnautics.RocketNautics.LOGGER.info("Sputnik at {} setting Engine {} gimbal to ({}, {})", worldPosition, index, pitch, yaw);
-            }
-        }
-    }
-
-    @Override
-    public int getEngineCount() {
-        return discoveredEngines.size();
-    }
-
-    @Override
-    public BlockPos getEnginePos(int index) {
-        if (index >= 0 && index < discoveredEngines.size()) {
-            return discoveredEngines.get(index).getBlockPos();
-        }
-        return BlockPos.ZERO;
-    }
 
     @Override
     public double getAltitude() {

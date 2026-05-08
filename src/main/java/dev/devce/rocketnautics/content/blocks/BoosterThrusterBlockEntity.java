@@ -27,6 +27,18 @@ import org.joml.Vector3d;
 import java.util.List;
 
 public class BoosterThrusterBlockEntity extends SmartBlockEntity implements BlockEntitySubLevelActor, IThruster, com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation {
+    @Override
+    public String getPeripheralType() {
+        return "booster";
+    }
+
+    @Override
+    public double readValue(String key) {
+        if (key.equals("thrust")) return getFlow() * 100.0;
+        if (key.equals("fuel")) return fuelTicks;
+        if (key.equals("ignited")) return ignited ? 1.0 : 0.0;
+        return 0;
+    }
     private static final long FUEL_SCAN_CACHE_TICKS = 5L;
 
     public ScrollValueBehaviour thrustPower;

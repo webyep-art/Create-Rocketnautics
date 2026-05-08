@@ -4,7 +4,9 @@ import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollVa
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
-public interface IThruster {
+import dev.devce.rocketnautics.api.peripherals.IPeripheral;
+
+public interface IThruster extends IPeripheral {
     boolean isActive();
     boolean isRemoved();
     BlockPos getBlockPos();
@@ -14,4 +16,30 @@ public interface IThruster {
     void setThrottle(float throttle);
     void setGimbal(double pitch, double yaw);
     float getFlow();
+
+    @Override
+    default String getPeripheralType() {
+        return "engine";
+    }
+
+    @Override
+    default double readValue(String key) {
+        if (key.equals("thrust")) return getFlow() * 100.0;
+        return 0;
+    }
+
+    @Override
+    default void writeValue(String key, double value) {
+        if (key.equals("thrust")) {
+            setActive(value > 0);
+            setThrottle((float) value);
+        }
+    }
+
+    @Override
+    default void writeValues(String key, double... values) {
+        if (key.equals("gimbal") && values.length >= 2) {
+            setGimbal(values[0], values[1]);
+        }
+    }
 }

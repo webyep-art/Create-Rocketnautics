@@ -64,6 +64,7 @@ public class RocketNautics {
         RocketBlockEntities.register(modEventBus);
         RocketParticles.register(modEventBus);
         RocketSounds.register(modEventBus);
+        dev.devce.rocketnautics.api.nodes.NodeRegistry.register(modEventBus);
         RocketSimulatedTab.init();
 
         // Register mod-bus event subscribers manually to avoid deprecated bus() parameter

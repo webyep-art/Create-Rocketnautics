@@ -4,7 +4,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import dev.devce.rocketnautics.content.blocks.nodes.Node;
 import dev.devce.rocketnautics.content.blocks.nodes.NodeConnection;
 import dev.devce.rocketnautics.content.blocks.nodes.NodeGraph;
-import dev.devce.rocketnautics.content.blocks.nodes.NodeType;
+import dev.devce.rocketnautics.api.nodes.NodeHandler;
+import dev.devce.rocketnautics.api.nodes.NodeRegistry;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -49,7 +51,7 @@ public class NodeScreen extends Screen {
     private boolean isSearching = false;
     private String searchQuery = "";
     private int menuX, menuY;
-    private final List<NodeType> filteredTypes = new ArrayList<>();
+    private final List<NodeHandler> filteredHandlers = new ArrayList<>();
     private int searchScroll = 0;
 
     // Item Search state
@@ -67,6 +69,18 @@ public class NodeScreen extends Screen {
     // Peripheral Selection
     private boolean isSelectingEngine = false;
     private Node selectingForNode = null;
+
+    // Value Editing
+    private boolean isEditingValue = false;
+    private String valueBuffer = "";
+
+    // Tabs
+    public enum ScreenTab { EDITOR, PERIPHERALS }
+    private ScreenTab activeTab = ScreenTab.EDITOR;
+
+    // Node Documentation
+    private boolean isNodeDocsOpen = false;
+    private Node docsNode = null;
 
     // Visual Effects
     private float screenAnimation = 0.0f;
@@ -134,8 +148,8 @@ public class NodeScreen extends Screen {
         if (minecraft.level.getGameTime() % 20 == 0 && isSearching) {
             updateSearch();
         }
-        for (dev.devce.rocketnautics.content.blocks.nodes.Node node : graph.nodes) {
-            if (node.type == dev.devce.rocketnautics.content.blocks.nodes.NodeType.LINK_OUTPUT) {
+        for (Node node : graph.nodes) {
+            if (node.typeId.toString().endsWith("link_output")) {
                 double val = graph.evaluate(node, sputnik);
                 dev.devce.rocketnautics.content.blocks.nodes.LinkedSignalHandler.setSignal(sputnik.getLevel(), node.freqStack1, node.freqStack2, sputnik.getBlockPos(), val);
             }
@@ -143,6 +157,64 @@ public class NodeScreen extends Screen {
         
         graphics.fill(0, 0, width, height, 0xFF121212);
         
+        // Tab Bar
+        graphics.fill(0, 0, width, 24, 0xFF121212); // Slightly darker top bar
+        graphics.fill(0, 23, width, 24, 0xFF2A2A2A); // Subtle separator
+
+        // --- Left Side: Tabs ---
+        // Editor Tab
+        int editorTabX = 15;
+        int editorTabW = font.width("EDITOR");
+        boolean hoverEditor = mouseX >= editorTabX && mouseX <= editorTabX + editorTabW && mouseY >= 4 && mouseY <= 20;
+        int editorColor = activeTab == ScreenTab.EDITOR ? 0xFF00FF88 : (hoverEditor ? 0xFFFFFFFF : 0xFF888888);
+        graphics.drawString(font, "§lEDITOR", editorTabX, 8, editorColor);
+        if (activeTab == ScreenTab.EDITOR) graphics.fill(editorTabX - 2, 22, editorTabX + editorTabW + 2, 24, 0xFF00FF88);
+
+        // Peripherals Tab
+        int periTabX = editorTabX + editorTabW + 25;
+        int periTabW = font.width("PERIPHERALS");
+        boolean hoverPeri = mouseX >= periTabX && mouseX <= periTabX + periTabW && mouseY >= 4 && mouseY <= 20;
+        int periColor = activeTab == ScreenTab.PERIPHERALS ? 0xFF00FF88 : (hoverPeri ? 0xFFFFFFFF : 0xFF888888);
+        graphics.drawString(font, "§lPERIPHERALS", periTabX, 8, periColor);
+        if (activeTab == ScreenTab.PERIPHERALS) graphics.fill(periTabX - 2, 22, periTabX + periTabW + 2, 24, 0xFF00FF88);
+
+        if (activeTab == ScreenTab.EDITOR) {
+            renderEditor(graphics, mouseX, mouseY, deltaTime);
+        } else {
+            renderPeripheralsTab(graphics, mouseX, mouseY);
+        }
+        
+        graphics.pose().popPose(); // End of intro scale
+
+        // --- Right Side: Action Buttons (Matching Tab Style) ---
+        int rightX = width - 15;
+
+        // Docs button
+        String docsText = "DOCS";
+        int docsW = font.width(docsText);
+        int docsX = rightX - docsW;
+        boolean hoverDocs = mouseX >= docsX && mouseX <= docsX + docsW && mouseY >= 4 && mouseY <= 20;
+        graphics.drawString(font, "§l" + docsText, docsX, 8, hoverDocs ? 0xFF00FF88 : 0xFF44AA66);
+        if (hoverDocs) graphics.fill(docsX - 2, 22, docsX + docsW + 2, 24, 0xFF00FF88);
+
+        // Copy button
+        String copyText = "COPY";
+        int copyW = font.width(copyText);
+        int copyX = docsX - copyW - 20;
+        boolean hoverCopy = mouseX >= copyX && mouseX <= copyX + copyW && mouseY >= 4 && mouseY <= 20;
+        graphics.drawString(font, "§l" + copyText, copyX, 8, hoverCopy ? 0xFF55AAFF : 0xFF3366BB);
+        if (hoverCopy) graphics.fill(copyX - 2, 22, copyX + copyW + 2, 24, 0xFF55AAFF);
+
+        // Paste button
+        String pasteText = "PASTE";
+        int pasteW = font.width(pasteText);
+        int pasteX = copyX - pasteW - 20;
+        boolean hoverPaste = mouseX >= pasteX && mouseX <= pasteX + pasteW && mouseY >= 4 && mouseY <= 20;
+        graphics.drawString(font, "§l" + pasteText, pasteX, 8, hoverPaste ? 0xFFFFAA00 : 0xFFBB7700);
+        if (hoverPaste) graphics.fill(pasteX - 2, 22, pasteX + pasteW + 2, 24, 0xFFFFAA00);
+    }
+
+    private void renderEditor(GuiGraphics graphics, double mouseX, double mouseY, float deltaTime) {
         // Render Grid
         int gridSize = 20;
         int offsetX = (int) (panX % gridSize);
@@ -168,14 +240,12 @@ public class NodeScreen extends Screen {
             Node to = graph.getNode(conn.targetNode);
             if (from == null || to == null) continue;
 
-            // Connection color depends on the OUTPUT of the source node
-            int color = getOutputColor(from.type);
+            NodeHandler hFrom = from.getHandler();
+            int color = hFrom != null ? hFrom.getHeaderColor() : 0xFFAAAAAA;
             double value = graph.evaluate(from, sputnik);
             boolean active = value > 0.5;
             
-            // If active, use a glowing version of the color
             if (active) {
-                // Mix with white to brighten
                 int r = (color >> 16) & 0xFF;
                 int g = (color >> 8) & 0xFF;
                 int b = color & 0xFF;
@@ -183,13 +253,15 @@ public class NodeScreen extends Screen {
             }
 
             int x1 = from.x + 100;
-            int y1 = from.y + 18; // Output pin center
+            int y1 = from.y + 18;
             int x2 = to.x;
-            int y2 = to.y + (to.type == NodeType.GIMBAL_SET ? (conn.targetPin == 0 ? 30 : 44) : (conn.targetPin == 0 ? 18 : 28));
-            if (to.type == NodeType.LINK_INPUT || to.type == NodeType.LINK_OUTPUT) if (conn.targetPin == 1) y2 = to.y + 36;
-            if (to.type == NodeType.MEMORY && conn.targetPin == 2) y2 = to.y + 32;
+            
+            NodeHandler toHandler = to.getHandler();
+            int y2 = to.y + 18;
+            if (toHandler != null) {
+                y2 = to.y + 18 + conn.targetPin * 12;
+            }
 
-            // Highlight if pin is hovered
             boolean highlighted = false;
             int wx = (int)(mouseX - panX);
             int wy = (int)(mouseY - panY);
@@ -197,14 +269,12 @@ public class NodeScreen extends Screen {
                 highlighted = true;
             }
 
-            // Draw shadow/glow first
             if (active || highlighted) {
-                drawSmoothCurve(graphics, x1, y1, x2, y2, color, highlighted ? 4.0f : 3.0f); // Thick glow
+                drawSmoothCurve(graphics, x1, y1, x2, y2, color, highlighted ? 4.0f : 3.0f);
             }
-            drawSmoothCurve(graphics, x1, y1, x2, y2, color, 1.0f); // Core line
+            drawSmoothCurve(graphics, x1, y1, x2, y2, color, 1.0f);
         }
 
-        // Draw actively linking connection (with SNAP logic)
         if (linkingNode != null) {
             int sx = linkingNode.x + 100;
             int sy = linkingNode.y + 18;
@@ -213,7 +283,6 @@ public class NodeScreen extends Screen {
             drawSmoothCurve(graphics, sx, sy, tx, ty, 0xAAFFFFFF, 1.0f);
         }
 
-        // Draw Nodes with proper Z-layering
         int zLevel = 0;
         for (Node node : graph.nodes) {
             if (node != selectedNode) {
@@ -223,15 +292,13 @@ public class NodeScreen extends Screen {
                 graphics.pose().popPose();
             }
         }
-        // Selected node on top of everything
         if (selectedNode != null) {
             graphics.pose().pushPose();
-            graphics.pose().translate(0, 0, 1000); // Very high Z
+            graphics.pose().translate(0, 0, 1000);
             drawNode(graphics, selectedNode);
             graphics.pose().popPose();
         }
 
-        // Update and draw particles (within pan context)
         for (int i = editorParticles.size() - 1; i >= 0; i--) {
             NodeParticle p = editorParticles.get(i);
             p.x += p.vx * deltaTime * 60.0;
@@ -267,6 +334,10 @@ public class NodeScreen extends Screen {
             renderHelpOverlay(graphics);
         }
 
+        if (isNodeDocsOpen && docsNode != null) {
+            renderNodeDocs(graphics);
+        }
+
         if (isSelectingEngine) {
             renderPeripheralList(graphics);
         }
@@ -278,31 +349,65 @@ public class NodeScreen extends Screen {
             int overlayAlpha = (int)((1.0f - screenAnimation) * 255);
             graphics.fill(0, 0, width, height, (overlayAlpha << 24) | 0x121212);
         }
-        
-        graphics.pose().popPose(); // End of intro scale
-
-        // Docs button (Top Right)
-        int docsX = width - 40;
-        int docsY = 10;
-        boolean hoverDocs = mouseX >= docsX && mouseX <= docsX + 30 && mouseY >= docsY && mouseY <= docsY + 14;
-        graphics.fill(docsX, docsY, docsX + 30, docsY + 14, hoverDocs ? 0xFF555555 : 0xFF333333);
-        graphics.renderOutline(docsX, docsY, 30, 14, 0xFF777777);
-        graphics.drawCenteredString(font, "DOCS", docsX + 15, docsY + 3, 0xFF00FF88);
-
-        // Copy button
-        int copyX = docsX - 40;
-        boolean hoverCopy = mouseX >= copyX && mouseX <= copyX + 35 && mouseY >= docsY && mouseY <= docsY + 14;
-        graphics.fill(copyX, docsY, copyX + 35, docsY + 14, hoverCopy ? 0xFF555555 : 0xFF333333);
-        graphics.renderOutline(copyX, docsY, 35, 14, 0xFF777777);
-        graphics.drawCenteredString(font, "COPY", copyX + 17, docsY + 3, 0xFF00AAFF);
-
-        // Paste button
-        int pasteX = copyX - 45;
-        boolean hoverPaste = mouseX >= pasteX && mouseX <= pasteX + 40 && mouseY >= docsY && mouseY <= docsY + 14;
-        graphics.fill(pasteX, docsY, pasteX + 40, docsY + 14, hoverPaste ? 0xFF555555 : 0xFF333333);
-        graphics.renderOutline(pasteX, docsY, 40, 14, 0xFF777777);
-        graphics.drawCenteredString(font, "PASTE", pasteX + 20, docsY + 3, 0xFFFFAA00);
     }
+
+    private void renderPeripheralsTab(GuiGraphics graphics, double mouseX, double mouseY) {
+        int x = 20;
+        int y = 40;
+        graphics.drawString(font, "§lSYSTEM DIAGNOSTICS - PERIPHERALS", x, y, 0xFF00FF88);
+        graphics.fill(x, y + 12, x + 250, y + 13, 0xFF00FF88);
+        y += 25;
+
+        List<dev.devce.rocketnautics.api.peripherals.IPeripheral> peripherals = sputnik.getPeripherals();
+        graphics.drawString(font, "Active Modules: " + peripherals.size(), x, y, 0xFFAAAAAA);
+        y += 20;
+
+        for (int i = 0; i < peripherals.size(); i++) {
+            dev.devce.rocketnautics.api.peripherals.IPeripheral p = peripherals.get(i);
+            String type = p.getPeripheralType();
+            double thrust = p.readValue("thrust") / 100.0;
+            
+            int color = thrust > 0.01 ? 0xFF00FF88 : 0xFFFFAA00;
+            String typeLabel = switch(type) {
+                case "booster" -> "§6[BOOSTER]";
+                case "vector_engine" -> "§b[VECTOR]";
+                case "rcs" -> "§d[RCS]";
+                default -> "§7[ENGINE]";
+            };
+
+            // Background
+            graphics.fill(x, y, x + 250, y + 30, 0x11FFFFFF);
+            graphics.renderOutline(x, y, 250, 30, 0x33FFFFFF);
+
+            // ID and Type
+            graphics.drawString(font, "ID:" + i + " " + typeLabel, x + 5, y + 5, 0xFFFFFFFF);
+            
+            // Thrust/Status
+            String status = String.format("%.0f%% Thrust", thrust * 100);
+            if (type.equals("booster")) {
+                double fuel = p.readValue("fuel");
+                status = fuel > 0 ? String.format("§e%.0fs Burn", fuel / 20.0) : "§cSPENT";
+            }
+            graphics.drawString(font, status, x + 180, y + 5, color);
+
+            // Additional Data
+            if (type.equals("vector_engine")) {
+                double gx = p.readValue("gimbal_x");
+                double gz = p.readValue("gimbal_z");
+                graphics.drawString(font, String.format("Gimbal: X:%.2f Z:%.2f", gx, gz), x + 10, y + 18, 0xFF888888);
+            } else if (type.equals("booster")) {
+                boolean ignited = p.readValue("ignited") > 0.5;
+                graphics.drawString(font, ignited ? "§aIGNITED" : "§7READY", x + 10, y + 18, 0xFFAAAAAA);
+            } else {
+                graphics.drawString(font, "Pos: " + p.getBlockPos().toShortString(), x + 10, y + 18, 0xFF888888);
+            }
+
+            y += 35;
+            if (y > height - 40) break;
+        }
+    }
+        
+
 
     private void renderPeripheralList(GuiGraphics graphics) {
         int w = 150;
@@ -390,6 +495,61 @@ public class NodeScreen extends Screen {
         graphics.drawCenteredString(font, "[ Click anywhere to close ]", x + w / 2, y + h - 15, 0xFF555555);
     }
 
+    private void renderNodeDocs(GuiGraphics graphics) {
+        if (docsNode == null) return;
+        NodeHandler h = docsNode.getHandler();
+        if (h == null) return;
+
+        int w = 220;
+        int h_box = 140;
+        int x = width / 2 - w / 2;
+        int y = height / 2 - h_box / 2;
+
+        graphics.fill(x, y, x + w, y + h_box, 0xEE121212);
+        graphics.renderOutline(x, y, w, h_box, h.getHeaderColor());
+        
+        graphics.drawString(font, "§8CATEGORY: " + h.getCategory().toUpperCase(), x + 10, y + 10, 0xFFFFFFFF);
+        graphics.drawString(font, "§6" + h.getDisplayName().getString(), x + 10, y + 22, 0xFFFFFFFF);
+        graphics.fill(x + 10, y + 34, x + w - 10, y + 35, 0x33FFFFFF);
+        
+        String desc = h.getDescription().getString();
+        int ty = y + 40;
+        
+        // Simple line wrapping
+        String[] words = desc.split(" ");
+        StringBuilder line = new StringBuilder();
+        for (String word : words) {
+            if (word.contains("\n")) {
+                String[] parts = word.split("\n", -1);
+                for (int i = 0; i < parts.length; i++) {
+                    if (i > 0) {
+                        graphics.drawString(font, line.toString(), x + 10, ty, 0xFFAAAAAA);
+                        line = new StringBuilder();
+                        ty += 10;
+                    }
+                    if (font.width(line + " " + parts[i]) > w - 20) {
+                        graphics.drawString(font, line.toString(), x + 10, ty, 0xFFAAAAAA);
+                        line = new StringBuilder(parts[i]);
+                        ty += 10;
+                    } else {
+                        if (line.length() > 0) line.append(" ");
+                        line.append(parts[i]);
+                    }
+                }
+            } else if (font.width(line + " " + word) > w - 20) {
+                graphics.drawString(font, line.toString(), x + 10, ty, 0xFFAAAAAA);
+                line = new StringBuilder(word);
+                ty += 10;
+            } else {
+                if (line.length() > 0) line.append(" ");
+                line.append(word);
+            }
+        }
+        graphics.drawString(font, line.toString(), x + 10, ty, 0xFFAAAAAA);
+
+        graphics.drawCenteredString(font, "§8[ Click anywhere to close ]", x + w / 2, y + h_box - 12, 0xFFFFFFFF);
+    }
+
     private void renderSearchMenu(GuiGraphics graphics) {
         graphics.pose().pushPose();
         graphics.pose().translate(0, 0, 2000);
@@ -397,10 +557,10 @@ public class NodeScreen extends Screen {
         int menuWidth = 120;
         int itemHeight = 14;
         int maxVisibleItems = 10;
-        int visibleHeight = 20 + Math.min(filteredTypes.size(), maxVisibleItems) * itemHeight;
+        int visibleHeight = 20 + Math.min(filteredHandlers.size(), maxVisibleItems) * itemHeight;
 
         // Ensure scroll is within bounds
-        int maxScroll = Math.max(0, filteredTypes.size() - maxVisibleItems);
+        int maxScroll = Math.max(0, filteredHandlers.size() - maxVisibleItems);
         if (searchScroll > maxScroll) searchScroll = maxScroll;
         if (searchScroll < 0) searchScroll = 0;
 
@@ -409,19 +569,15 @@ public class NodeScreen extends Screen {
         
         graphics.drawString(font, "> " + searchQuery + "_", menuX + 5, menuY + 5, 0xFF00FF88);
         
-        // Content with Scissor
-        int scissorY = (int) ((height - (menuY + visibleHeight)) * (double) minecraft.getWindow().getGuiScaledHeight() / height); // This is complex due to screen scaling
-        // Easier way: use GuiGraphics.enableScissor (NeoForge/Minecraft 1.21.1)
         graphics.enableScissor(menuX, menuY + 18, menuX + menuWidth, menuY + visibleHeight - 2);
 
-        for (int i = 0; i < filteredTypes.size(); i++) {
-            NodeType type = filteredTypes.get(i);
+        for (int i = 0; i < filteredHandlers.size(); i++) {
+            NodeHandler handler = filteredHandlers.get(i);
             int ty = menuY + 20 + (i - searchScroll) * itemHeight;
             
-            // Only render if within visible area
             if (ty + itemHeight > menuY + 18 && ty < menuY + visibleHeight) {
                 boolean hover = mouseX >= menuX && mouseX <= menuX + menuWidth && mouseY >= ty && mouseY <= ty + itemHeight;
-                graphics.drawString(font, type.getDisplayName(), menuX + 5, ty + 2, hover ? 0xFFFFFFFF : 0xFFAAAAAA);
+                graphics.drawString(font, handler.getDisplayName().getString(), menuX + 5, ty + 2, hover ? 0xFFFFFFFF : 0xFFAAAAAA);
             }
         }
         
@@ -471,18 +627,13 @@ public class NodeScreen extends Screen {
     }
 
     private void updateSearch() {
-        sputnik.refreshEngines();
-        filteredTypes.clear();
+        sputnik.refreshPeripherals();
+        filteredHandlers.clear();
         String q = searchQuery.toLowerCase();
-        for (NodeType type : NodeType.values()) {
-            if (type.getDisplayName().toLowerCase().contains(q)) {
-                // Only show peripheral nodes if engines are found
-                if (type == NodeType.THRUST_GET || type == NodeType.THRUST_SET || type == NodeType.GIMBAL_SET || type == NodeType.ENGINE_ID || type == NodeType.PERIPHERAL_LIST) {
-                    if (sputnik.getEngineCount() > 0) {
-                        filteredTypes.add(type);
-                    }
-                } else {
-                    filteredTypes.add(type);
+        for (NodeHandler handler : NodeRegistry.REGISTRY) {
+            if (handler.getDisplayName().getString().toLowerCase().contains(q)) {
+                if (handler.isAvailable(sputnik)) {
+                    filteredHandlers.add(handler);
                 }
             }
         }
@@ -499,21 +650,20 @@ public class NodeScreen extends Screen {
     }
 
     private void drawNode(GuiGraphics graphics, Node node) {
-        if (node.type == NodeType.COMMENT) {
-            int bgColor = 0xFF444422; // Dark yellow/orange
-            int borderColor = 0xFFCCCC33;
-            if (node == selectedNode) borderColor = 0xFFFFFFFF;
+        NodeHandler handler = node.getHandler();
+        
+        if (node.typeId.toString().endsWith("comment")) {
+            // ... (comment rendering logic remains similar but uses typeId)
+            int bgColor = 0xFF444422;
+            int borderColor = (node == selectedNode) ? 0xFFFFFFFF : 0xFFCCCC33;
             if (node == focusedCommentNode) borderColor = 0xFF00FF88;
 
             graphics.fill(node.x, node.y, node.x + 120, node.y + 60, bgColor);
             graphics.renderOutline(node.x, node.y, 120, 60, borderColor);
             graphics.drawString(font, "§6[ COMMENT ]", node.x + 5, node.y + 5, 0xFFFFFFFF);
             
-            // Render text with simple wrapping
             String text = node.commentText;
-            if (node == focusedCommentNode && (System.currentTimeMillis() / 500) % 2 == 0) {
-                text += "_";
-            }
+            if (node == focusedCommentNode && (System.currentTimeMillis() / 500) % 2 == 0) text += "_";
             
             int ty = node.y + 20;
             String[] words = text.split(" ");
@@ -529,197 +679,123 @@ public class NodeScreen extends Screen {
                     line.append(word);
                 }
             }
-            if (ty <= node.y + 50) {
-                graphics.drawString(font, line.toString(), node.x + 5, ty, 0xFFAAAAAA);
-            }
+            if (ty <= node.y + 50) graphics.drawString(font, line.toString(), node.x + 5, ty, 0xFFAAAAAA);
             return;
         }
 
-        int width = (node.type == NodeType.PERIPHERAL_LIST) ? 140 : 
-                     (node.type.name().contains("THRUST") || node.type == NodeType.GIMBAL_SET || node.type == NodeType.ENGINE_ID || node.type == NodeType.OUTPUT || node.type.name().contains("LINK")) ? 130 : 100;
-        int height = (node.type == NodeType.LINK_INPUT || node.type == NodeType.LINK_OUTPUT) ? 55 : 
-                     (node.type == NodeType.GIMBAL_SET ? 85 : 
-                     (node.type == NodeType.PERIPHERAL_LIST ? 40 + Math.min(12, sputnik.getEngineCount()) * 10 : 40));
-        boolean isSelected = node == selectedNode;
+        if (handler == null) return;
+
+        int width = getNodeWidth(node);
+        int baseHeight = 40 + (Math.max(handler.getInputCount(), handler.getOutputCount()) - 1) * 12;
+        
         double currentVal = graph.evaluate(node, sputnik);
+        
+        int customHeight = getCustomUIHeight(node);
+        int height = baseHeight + customHeight;
+
+        boolean isSelected = node == selectedNode;
         boolean isActiveOutput = Math.abs(currentVal) > 0.001;
 
-        // 1. Shadow
         graphics.fill(node.x + 2, node.y + 2, node.x + width + 2, node.y + height + 2, 0xAA000000);
+        graphics.fill(node.x, node.y, node.x + width, node.y + height, isSelected ? 0xEE252525 : 0xDD1A1A1A);
         
-        // 2. Glassmorphic Body (Semi-transparent with deep color)
-        int bodyColor = isSelected ? 0xEE252525 : 0xDD1A1A1A;
-        graphics.fill(node.x, node.y, node.x + width, node.y + height, bodyColor);
-        
-        // 3. Header Accent (Top gradient-like line)
-        int accentColor = getHeaderColor(node.type);
+        int accentColor = handler.getHeaderColor();
         graphics.fill(node.x, node.y, node.x + width, node.y + 1, accentColor);
+        graphics.renderOutline(node.x, node.y, width, height, isSelected ? 0xFFFFFFFF : 0xFF444444);
         
-        // 4. Border (Techy look)
-        int borderColor = isSelected ? 0xFFFFFFFF : 0xFF444444;
-        graphics.renderOutline(node.x, node.y, width, height, borderColor);
-        
-        // 5. Header Section
         graphics.fill(node.x + 1, node.y + 1, node.x + width - 1, node.y + 13, 0x44000000);
-        String title = getNodeIcon(node.type) + " " + node.type.getDisplayName();
+        String title = handler.getIcon() + " " + handler.getDisplayName().getString();
         graphics.drawString(font, title, node.x + 5, node.y + 3, 0xFFE0E0E0);
-        
-        // 6. "Active" Status LED (Top Right) with pulse effect
-        if (isActiveOutput) {
-            float pulse = (float) (0.5 + 0.5 * Math.sin(System.currentTimeMillis() / 200.0));
-            int pulsedColor = (accentColor & 0xFFFFFF) | ((int)(pulse * 255) << 24);
-            graphics.fill(node.x + width - 8, node.y + 4, node.x + width - 4, node.y + 8, pulsedColor);
-            graphics.fill(node.x + width - 9, node.y + 5, node.x + width - 3, node.y + 7, (accentColor & 0x44FFFFFF));
-        } else {
-            graphics.fill(node.x + width - 8, node.y + 4, node.x + width - 4, node.y + 8, 0xFF333333);
-        }
 
-        // Display Value/Config
-        String info = "";
-        switch (node.type) {
-            case NUMBER_INPUT -> info = String.format("%.2f", node.value);
-            case ALTITUDE -> info = String.format("%.1f m", sputnik.getAltitude());
-            case VELOCITY -> info = String.format("%.1f m/s", sputnik.getVelocity());
-            case PITCH -> info = String.format("%.1f" + (char)176, sputnik.getPitch());
-            case YAW -> info = String.format("%.1f" + (char)176, sputnik.getYaw());
-            case ROLL -> info = String.format("%.1f" + (char)176, sputnik.getRoll());
-            case POS_X -> info = String.format("X: %.1f", sputnik.getX());
-            case POS_Y -> info = String.format("Y: %.1f", sputnik.getY());
-            case POS_Z -> info = String.format("Z: %.1f", sputnik.getZ());
-            case THRUST_GET -> {
-                double val = graph.evaluate(node, sputnik);
-                info = String.format("ID:%d (%.0f%%)", node.engineIndex, val);
-                graphics.drawString(font, "[L]", node.x + width - 20, node.y + 16, 0xFF00AAFF);
-                int barW = width - 20;
-                graphics.fill(node.x + 10, node.y + 30, node.x + 10 + barW, node.y + 33, 0xFF222222);
-                graphics.fill(node.x + 10, node.y + 30, node.x + 10 + (int)(barW * Math.min(100.0, val) / 100.0), node.y + 33, 0xFF00FF88);
-            }
-            case THRUST_SET -> {
-                info = String.format("ID:%d [THRUST]", node.engineIndex);
-                graphics.drawString(font, "[L]", node.x + width - 20, node.y + 16, 0xFF00AAFF);
-                double val = graph.getInputValue(node.id, 0, sputnik);
-                int barW = width - 20;
-                graphics.fill(node.x + 10, node.y + 30, node.x + 10 + barW, node.y + 33, 0xFF222222);
-                graphics.fill(node.x + 10, node.y + 30, node.x + 10 + (int)(barW * Math.min(100.0, val) / 100.0), node.y + 33, 0xFF00AAFF);
-            }
-            case GIMBAL_SET -> {
-                info = String.format("ID:%d [GIMBAL]", node.engineIndex);
-                graphics.drawString(font, "[L]", node.x + width - 20, node.y + 16, 0xFF00AAFF);
-                // Enhanced Crosshair Visual
-                int cx = node.x + width / 2;
-                int cy = node.y + 54;
-                int size = 16;
-                // Background grid
-                graphics.fill(cx - size, cy - size, cx + size, cy + size, 0xFF111111);
-                graphics.renderOutline(cx - size, cy - size, size * 2, size * 2, 0xFF333333);
-                graphics.fill(cx - size, cy, cx + size, cy + 1, 0xFF222222);
-                graphics.fill(cx, cy - size, cx + 1, cy + size, 0xFF222222);
-                
-                double gx = graph.getInputValue(node.id, 0, sputnik);
-                double gz = graph.getInputValue(node.id, 1, sputnik);
-                
-                // Clamp visual within bounds
-                int vx = (int)Math.max(-size+2, Math.min(size-2, gx / 5.0)); // 1 unit = 5 degrees for visual
-                int vz = (int)Math.max(-size+2, Math.min(size-2, gz / 5.0));
-                
-                graphics.fill(cx + vx - 1, cy + vz - 1, cx + vx + 2, cy + vz + 2, 0xFF00FFFF);
-                graphics.renderOutline(cx + vx - 2, cy + vz - 2, 5, 5, 0xFFFFFFFF);
-            }
-            case ENGINE_ID -> {
-                info = String.format("INDEX: %d", node.engineIndex);
-                graphics.drawString(font, "[L]", node.x + width - 20, node.y + 22, 0xFF00AAFF);
-            }
-            case COMPARE, LOGIC, MATH, ADVANCED -> {
-                String valStr = Math.abs(currentVal) < 1000 ? String.format("%.2f", currentVal) : String.format("%.0f", currentVal);
-                info = node.operation + " [" + valStr + "]";
-            }
-            case MEMORY -> info = String.format("VAL: %.2f", node.value);
-            case LINK_INPUT, LINK_OUTPUT -> info = String.format("VAL: %.1f", currentVal);
-            case OUTPUT -> {
-                int strength = (currentVal == 1.0) ? 15 : (int) Math.max(0, Math.min(15, currentVal));
-                info = node.selectedSide.toUpperCase() + " [" + strength + "]";
-            }
-        }
+        // Help Icon
+        int hx = node.x + width - 10;
+        int hy = node.y + 3;
+        graphics.drawString(font, "§7?", hx, hy, 0xFFFFFFFF);
+
+        // Render Custom UI if present
+        handler.renderCustomUI(graphics, node, node.x, node.y + baseHeight - 5, width, currentVal, 0);
         
-        if (!info.isEmpty() && node.type != NodeType.GIMBAL_SET) {
-            graphics.drawCenteredString(font, info, node.x + width / 2, node.y + 22, 0xFFAAAAAA);
-        } else if (node.type == NodeType.GIMBAL_SET) {
-            graphics.drawCenteredString(font, info, node.x + width / 2, node.y + 16, 0xFFAAAAAA);
+        // Value Display
+        String info = String.format("%.2f", currentVal);
+        if (node.typeId.toString().endsWith("constant")) {
+            if (isEditingValue && node == selectedNode) {
+                info = "> " + valueBuffer + ((System.currentTimeMillis() / 500) % 2 == 0 ? "_" : "");
+            } else {
+                info = node.value == (long)node.value ? String.valueOf((long)node.value) : String.format("%.2f", node.value);
+            }
+        } else if (node.typeId.toString().contains("thruster") || 
+                   node.typeId.toString().contains("booster") || 
+                   node.typeId.toString().contains("vector") || 
+                   node.typeId.toString().contains("rcs")) {
+            if (isEditingValue && node == selectedNode) {
+                info = "IDX: " + valueBuffer + ((System.currentTimeMillis() / 500) % 2 == 0 ? "_" : "");
+            } else {
+                info = "IDX: " + node.engineIndex;
+            }
+        } else if (node.typeId.toString().endsWith("math")) {
+            info = "§6" + node.operation;
         }
+        graphics.drawCenteredString(font, info, node.x + width / 2, node.y + 22, isSelected ? 0xFFFFFFFF : 0xFFAAAAAA);
 
         // Input pins (left)
-        if (node.type.name().contains("SET") || node.type == NodeType.COMPARE || node.type == NodeType.LOGIC || node.type == NodeType.MATH || node.type == NodeType.ADVANCED || node.type == NodeType.MEMORY || node.type == NodeType.LINK_OUTPUT || node.type == NodeType.OUTPUT) {
-            int inColor = getInputColor(node.type);
-            if (node.type == NodeType.GIMBAL_SET) {
-                renderPin(graphics, node.x - 4, node.y + 30, inColor, isInputConnected(node.id, 0));
-                renderPin(graphics, node.x - 4, node.y + 44, inColor, isInputConnected(node.id, 1));
-                graphics.drawString(font, "X", node.x + 4, node.y + 28, 0xAAFFFFFF);
-                graphics.drawString(font, "Z", node.x + 4, node.y + 42, 0xAAFFFFFF);
-            } else {
-                renderPin(graphics, node.x - 4, node.y + 16, inColor, isInputConnected(node.id, 0));
-                if (node.type == NodeType.COMPARE || node.type == NodeType.LOGIC || node.type == NodeType.MATH || node.type == NodeType.MEMORY) {
-                    renderPin(graphics, node.x - 4, node.y + 28, inColor, isInputConnected(node.id, 1));
-                }
-            }
-            if (node.type == NodeType.MEMORY) {
-                renderPin(graphics, node.x - 4, node.y + 32, inColor, isInputConnected(node.id, 2));
+        int inCount = handler.getInputCount();
+        java.util.List<net.minecraft.network.chat.Component> inNames = handler.getInputNames();
+        for (int i = 0; i < inCount; i++) {
+            int py = node.y + 16 + i * 12;
+            renderPin(graphics, node.x - 4, py, handler.getPinColor(i), isInputConnected(node.id, i));
+            
+            // Render label if available
+            if (i < inNames.size()) {
+                graphics.drawString(font, "§8" + inNames.get(i).getString(), node.x + 4, py - 2, 0xFFFFFFFF);
             }
         }
         
-        // Frequency Slots
-        if (node.type == NodeType.LINK_INPUT || node.type == NodeType.LINK_OUTPUT) {
-            int sx1 = node.x + width / 2 - 20;
-            int sx2 = node.x + width / 2 + 2;
-            int sy = node.y + 34;
-            graphics.renderOutline(sx1, sy, 18, 18, 0xFF00AAFF);
-            if (!node.freqStack1.isEmpty()) graphics.renderFakeItem(node.freqStack1, sx1 + 1, sy + 1);
-            graphics.renderOutline(sx2, sy, 18, 18, 0xFFFF4444);
-            if (!node.freqStack2.isEmpty()) graphics.renderFakeItem(node.freqStack2, sx2 + 1, sy + 1);
-        }
-        
-        // Peripheral List content
-        if (node.type == NodeType.PERIPHERAL_LIST) {
-            int count = sputnik.getEngineCount();
-            float scanPulse = (float) (0.6 + 0.4 * Math.sin(System.currentTimeMillis() / 300.0));
-            int scanColor = (0x00FF88 & 0xFFFFFF) | ((int)(scanPulse * 255) << 24);
-            graphics.drawString(font, "ENGINES: " + count, node.x + 5, node.y + 18, 0xFF00FF88);
-            graphics.drawString(font, "SCANNING...", node.x + 65, node.y + 18, scanColor);
-
-            for (int i = 0; i < count && i < 12; i++) {
-                net.minecraft.core.BlockPos p = sputnik.getEnginePos(i);
-                if (p != null) {
-                    graphics.drawString(font, String.format("ID:%d [%d,%d,%d]", i, p.getX(), p.getY(), p.getZ()), node.x + 5, node.y + 30 + i * 10, 0xFFAAAAAA);
-                }
+        // Output pins (right)
+        int outCount = handler.getOutputCount();
+        java.util.List<net.minecraft.network.chat.Component> outNames = handler.getOutputNames();
+        for (int i = 0; i < outCount; i++) {
+            int py = node.y + 16 + i * 12;
+            renderPin(graphics, node.x + width - 1, py, accentColor, isOutputConnected(node.id));
+            
+            // Render label if available (right aligned)
+            if (i < outNames.size()) {
+                String label = outNames.get(i).getString();
+                graphics.drawString(font, "§8" + label, node.x + width - font.width(label) - 6, py - 2, 0xFFFFFFFF);
             }
         }
-        
-        // Output Pin (Right)
-        if (node.type != NodeType.OUTPUT && node.type != NodeType.LINK_OUTPUT && node.type != NodeType.THRUST_SET && node.type != NodeType.GIMBAL_SET) {
-            renderPin(graphics, node.x + width - 1, node.y + 16, getOutputColor(node.type), isOutputConnected(node.id));
-        }
-    }
-
-    private int getHeaderColor(NodeType type) {
-        return switch (type) {
-            case NUMBER_INPUT, ALTITUDE, VELOCITY, PITCH, YAW, ROLL, POS_X, POS_Y, POS_Z -> 0xFF00AAFF;
-            case COMPARE, LOGIC -> 0xFF00FF88;
-            case MATH, ADVANCED -> 0xFFFFAA00;
-            case MEMORY -> 0xFFFF00FF;
-            case LINK_INPUT, LINK_OUTPUT -> 0xFFFFFF00;
-            case THRUST_GET, THRUST_SET, GIMBAL_SET, ENGINE_ID -> 0xFF00FFFF;
-            case OUTPUT -> 0xFFFF4444;
-            default -> 0xFFFFFFFF;
-        };
     }
 
     private boolean isInputConnected(UUID nodeId, int pin) {
         for (NodeConnection c : graph.connections) if (c.targetNode.equals(nodeId) && c.targetPin == pin) return true;
         return false;
     }
-
     private boolean isOutputConnected(UUID nodeId) {
         for (NodeConnection c : graph.connections) if (c.sourceNode.equals(nodeId)) return true;
         return false;
+    }
+
+    /** Compute node display width based on title and pin label text widths. */
+    private int getNodeWidth(Node node) {
+        NodeHandler h = node.getHandler();
+        if (h == null) return 100;
+        String title = h.getIcon() + " " + h.getDisplayName().getString();
+        int w = font.width(title) + 30; // Extra padding for help icon and icons
+        // Also ensure pin labels fit
+        for (Component c : h.getInputNames())  w = Math.max(w, font.width(c.getString()) * 2 + 40);
+        for (Component c : h.getOutputNames()) w = Math.max(w, font.width(c.getString()) * 2 + 40);
+        return Math.max(w, 100);
+    }
+
+    /** Custom UI extra height below base node area. */
+    private int getCustomUIHeight(Node node) {
+        NodeHandler h = node.getHandler();
+        if (h == null) return 0;
+        if (node.typeId.toString().contains("vector_control")) return 50;
+        if (node.typeId.toString().contains("booster"))        return 25;
+        if (node.typeId.toString().contains("link_"))           return 30;
+        if (h.getCategory().equals("Sensors"))                 return 30;
+        if (node.typeId.toString().contains("attitude"))       return 95;
+        return 0;
     }
 
     private void renderPin(GuiGraphics graphics, int x, int y, int color, boolean active) {
@@ -734,51 +810,6 @@ public class NodeScreen extends Screen {
             graphics.fill(x, y - 2, x + 4, y - 1, color & 0x44FFFFFF);
             graphics.fill(x, y + 5, x + 4, y + 6, color & 0x44FFFFFF);
         }
-    }
-
-    private int getInputColor(NodeType type) {
-        return switch (type) {
-            case COMPARE, MATH, ADVANCED, MEMORY, LINK_INPUT, LINK_OUTPUT, THRUST_SET, GIMBAL_SET -> 0xFF00AAFF; // Expects Numbers
-            case LOGIC, OUTPUT -> 0xFF00FF88; // Expects Signal
-            default -> 0xFFAAAAAA;
-        };
-    }
-
-    private int getOutputColor(NodeType type) {
-        return switch (type) {
-            case NUMBER_INPUT, ALTITUDE, VELOCITY, PITCH, YAW, MATH, ADVANCED, MEMORY, LINK_INPUT, LINK_OUTPUT, POS_X, POS_Y, POS_Z -> 0xFF00AAFF; // Outputs Numbers
-            case COMPARE, LOGIC -> 0xFF00FF88; // Outputs Signal
-            default -> 0xFFAAAAAA;
-        };
-    }
-
-    private String getNodeIcon(NodeType type) {
-        return switch (type) {
-            case NUMBER_INPUT -> "[#]";
-            case ALTITUDE -> "[H]";
-            case VELOCITY -> "[V]";
-            case PITCH -> "[P]";
-            case YAW -> "[Y]";
-            case ROLL -> "[R]";
-            case MATH -> "[M]";
-            case ADVANCED -> "[F]";
-            case LOGIC -> "[L]";
-            case COMPARE -> "[C]";
-            case MEMORY -> "[M]";
-            case LINK_INPUT -> "[W]";
-            case LINK_OUTPUT -> "[W]";
-            case THRUST_GET -> "[T]";
-            case THRUST_SET -> "[T]";
-            case GIMBAL_SET -> "[G]";
-            case ENGINE_ID -> "[ID]";
-            case PERIPHERAL_LIST -> "[P]";
-            case POS_X -> "[X]";
-            case POS_Y -> "[Y]";
-            case POS_Z -> "[Z]";
-            case OUTPUT -> "[O]";
-            case COMMENT -> "//";
-            default -> "[ ]";
-        };
     }
 
     private void drawSmoothCurve(GuiGraphics graphics, int x1, int y1, int x2, int y2, int color, float thickness) {
@@ -830,6 +861,22 @@ public class NodeScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // Tab switching
+        if (mouseY >= 0 && mouseY <= 24) {
+            if (mouseX >= 10 && mouseX <= 80) {
+                activeTab = ScreenTab.EDITOR;
+                minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                return true;
+            }
+            if (mouseX >= 90 && mouseX <= 180) {
+                activeTab = ScreenTab.PERIPHERALS;
+                minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.2F));
+                return true;
+            }
+        }
+
+        if (activeTab == ScreenTab.PERIPHERALS) return false;
+
         if (isHelpOpen) {
             isHelpOpen = false;
             return true;
@@ -897,14 +944,14 @@ public class NodeScreen extends Screen {
             int menuWidth = 120;
             int itemHeight = 14;
             int maxVisibleItems = 10;
-            int visibleHeight = 20 + Math.min(filteredTypes.size(), maxVisibleItems) * itemHeight;
+            int visibleHeight = 20 + Math.min(filteredHandlers.size(), maxVisibleItems) * itemHeight;
 
             if (mouseX >= menuX && mouseX <= menuX + menuWidth && mouseY >= menuY + 20 && mouseY <= menuY + visibleHeight) {
                 int idx = (int) ((mouseY - menuY - 20) / itemHeight) + searchScroll;
-                if (idx >= 0 && idx < filteredTypes.size()) {
-                    NodeType type = filteredTypes.get(idx);
+                if (idx >= 0 && idx < filteredHandlers.size()) {
+                    NodeHandler handler = filteredHandlers.get(idx);
                     int[] pos = findFreePosition((int) (menuX - panX), (int) (menuY - panY));
-                    graph.nodes.add(new Node(type, pos[0], pos[1]));
+                    graph.nodes.add(new Node(NodeRegistry.getId(handler), pos[0], pos[1]));
                     isSearching = false;
                     return true;
                 }
@@ -914,124 +961,135 @@ public class NodeScreen extends Screen {
         }
 
         if (button == 0) { // Left click
+            if (isNodeDocsOpen) {
+                isNodeDocsOpen = false;
+                return true;
+            }
             selectedNode = null;
-            // Check pins
+            // Check pins and node bodies
             for (Node node : graph.nodes) {
-                // Output pin click
-                if (node.type != NodeType.OUTPUT && node.type != NodeType.COMMENT && node.type != NodeType.PERIPHERAL_LIST && node.type != NodeType.THRUST_SET && node.type != NodeType.GIMBAL_SET && worldX >= node.x + 96 && worldX <= node.x + 104 && worldY >= node.y + 16 && worldY <= node.y + 24) {
-                    linkingNode = node;
-                    linkingPin = 0;
+                NodeHandler h = node.getHandler();
+                if (h == null) continue;
+
+                int nodeW = getNodeWidth(node);
+                int nodeH = 40 + (Math.max(h.getInputCount(), h.getOutputCount()) - 1) * 12 + getCustomUIHeight(node);
+
+                // Help Icon Check
+                if (worldX >= node.x + nodeW - 12 && worldX <= node.x + nodeW && worldY >= node.y && worldY <= node.y + 12) {
+                    isNodeDocsOpen = true;
+                    docsNode = node;
                     return true;
+                }
+
+                // Output pin click to start connection
+                int outCount = h.getOutputCount();
+                for (int i = 0; i < outCount; i++) {
+                    int px = node.x + getNodeWidth(node) - 1;
+                    int py = node.y + 16 + i * 12;
+                    if (worldX >= px - 4 && worldX <= px + 4 && worldY >= py - 4 && worldY <= py + 4) {
+                        linkingNode = node;
+                        linkingPin = i;
+                        return true;
+                    }
                 }
                 
                 // Input pin click to finish connection
                 if (linkingNode != null && linkingNode != node) {
                     int targetPin = -1;
-                    if (node.type == NodeType.GIMBAL_SET) {
-                        if (worldX >= node.x - 6 && worldX <= node.x + 6) {
-                            if (worldY >= node.y + 26 && worldY <= node.y + 34) targetPin = 0;
-                            else if (worldY >= node.y + 40 && worldY <= node.y + 48) targetPin = 1;
-                        }
-                    } else {
-                        // Standard nodes (Pin 0 at 16, Pin 1 at 28)
-                        if (worldX >= node.x - 6 && worldX <= node.x + 6) {
-                            if (worldY >= node.y + 12 && worldY <= node.y + 20) targetPin = 0;
-                            else {
-                                int py = node.y + (node.type == NodeType.LINK_INPUT || node.type == NodeType.LINK_OUTPUT ? 36 : 28);
-                                if (node.type != NodeType.OUTPUT && node.type != NodeType.ADVANCED && node.type != NodeType.LINK_INPUT && node.type != NodeType.THRUST_SET && worldY >= py - 4 && worldY <= py + 4) targetPin = 1;
-                                else if (node.type == NodeType.MEMORY && worldY >= node.y + 28 && worldY <= node.y + 36) targetPin = 2;
-                            }
+                    int inCount = h.getInputCount();
+                    for (int i = 0; i < inCount; i++) {
+                        int px = node.x - 4;
+                        int py = node.y + 16 + i * 12;
+                        if (worldX >= px - 4 && worldX <= px + 4 && worldY >= py - 4 && worldY <= py + 4) {
+                            targetPin = i;
+                            break;
                         }
                     }
                     
                     if (targetPin != -1) {
-                        graph.connections.add(new NodeConnection(linkingNode.id, 0, node.id, targetPin));
-                        spawnSparks((int)worldX, (int)worldY, getOutputColor(linkingNode.type));
+                        graph.connections.add(new NodeConnection(linkingNode.id, linkingPin, node.id, targetPin));
+                        spawnSparks((int)worldX, (int)worldY, linkingNode.getHandler().getHeaderColor());
                         syncWithServer();
                         linkingNode = null;
                         return true;
                     }
                 }
 
-                // Node drag and cycle settings
-                int nodeW = node.type == NodeType.COMMENT ? 120 : (node.type == NodeType.PERIPHERAL_LIST ? 150 : 100);
-                int nodeH = (node.type == NodeType.LINK_INPUT || node.type == NodeType.LINK_OUTPUT) ? 55 : (node.type == NodeType.GIMBAL_SET ? 40 : (node.type == NodeType.COMMENT ? 60 : (node.type == NodeType.PERIPHERAL_LIST ? 120 : 40)));
-                
-                if (worldX >= node.x && worldX <= node.x + nodeW && worldY >= node.y && worldY <= node.y + nodeH) {
-                    // Check for frequency slot clicks
-                    if (node.type == NodeType.LINK_INPUT || node.type == NodeType.LINK_OUTPUT) {
-                        int sx1 = node.x + 50 - 20;
-                        int sx2 = node.x + 50 + 2;
-                        int sy = node.y + 32;
-                        if (worldX >= sx1 && worldX <= sx1 + 18 && worldY >= sy && worldY <= sy + 18) {
+                // Node header drag zone (top 14 pixels)
+                if (worldX >= node.x && worldX <= node.x + nodeW && worldY >= node.y && worldY <= node.y + 14) {
+                    selectedNode = node;
+                    draggingNode = node;
+                    dragOffsetX = (int) (worldX - node.x);
+                    dragOffsetY = (int) (worldY - node.y);
+                    return true;
+                }
+
+                // Node body click (interaction)
+                if (worldX >= node.x && worldX <= node.x + nodeW && worldY >= node.y + 14 && worldY <= node.y + nodeH) {
+                    if (node.typeId.toString().endsWith("comment")) {
+                        isTypingComment = true;
+                        focusedCommentNode = node;
+                        return true;
+                    }
+                    
+                    if (node.typeId.toString().endsWith("constant")) {
+                        isEditingValue = true;
+                        valueBuffer = node.value == (long)node.value ? String.valueOf((long)node.value) : String.valueOf(node.value);
+                        selectedNode = node;
+                        return true;
+                    }
+
+                    if (node.typeId.toString().endsWith("math")) {
+                        node.operation = switch (node.operation) {
+                            case "+" -> "-";
+                            case "-" -> "*";
+                            case "*" -> "/";
+                            case "/" -> "%";
+                            case "%" -> "^";
+                            case "^" -> ">";
+                            case ">" -> "<";
+                            case "<" -> "==";
+                            case "==" -> "!=";
+                            case "!=" -> ">=";
+                            case ">=" -> "<=";
+                            default -> "+";
+                        };
+                        spawnSparks((int)worldX, (int)worldY, 0xFFAAAAFF);
+                        syncWithServer();
+                        return true;
+                    }
+
+                    // Peripheral ID selection (Thruster, Booster, Vector, RCS)
+                    String type = node.typeId.toString();
+                    if (type.contains("thruster") || type.contains("booster") || type.contains("vector") || type.contains("rcs")) {
+                        // Detect click on the "IDX: X" area (usually top middle area)
+                        isEditingValue = true;
+                        valueBuffer = String.valueOf(node.engineIndex);
+                        selectedNode = node;
+                        return true;
+                    }
+
+                    // Linked Frequency Slots
+                    if (type.contains("link_")) {
+                        int baseH = 40 + (Math.max(h.getInputCount(), h.getOutputCount()) - 1) * 12;
+                        int slotSize = 18;
+                        int padding = 5;
+                        int startX = node.x + nodeW / 2 - slotSize - padding / 2;
+                        int startY = node.y + baseH - 5 + 5; // Custom UI starts at baseHeight - 5
+                        
+                        if (worldX >= startX && worldX <= startX + slotSize && worldY >= startY && worldY <= startY + slotSize) {
                             startItemSearch(node, 1);
                             return true;
                         }
-                        if (worldX >= sx2 && worldX <= sx2 + 18 && worldY >= sy && worldY <= sy + 18) {
+                        
+                        int startX2 = startX + slotSize + padding;
+                        if (worldX >= startX2 && worldX <= startX2 + slotSize && worldY >= startY && worldY <= startY + slotSize) {
                             startItemSearch(node, 2);
                             return true;
                         }
                     }
 
-                    if (node.type == NodeType.COMMENT) {
-                        isTypingComment = true;
-                        focusedCommentNode = node;
-                    }
-
                     selectedNode = node;
-                    if (worldY > node.y + 14) { // Clicked body, cycle settings
-                        boolean shift = hasShiftDown();
-                        switch (node.type) {
-                            case NUMBER_INPUT -> {
-                                double step = shift ? 100.0 : 1.0;
-                                node.value = node.value + (button == 0 ? step : -step);
-                            }
-                            case COMPARE -> node.operation = switch (node.operation) {
-                                case ">" -> shift ? "==" : "<";
-                                case "<" -> shift ? ">" : "==";
-                                default -> shift ? "<" : ">";
-                            };
-                            case LOGIC -> node.operation = node.operation.equals("AND") ? "OR" : "AND";
-                            case MATH -> {
-                                String[] ops = {"+", "-", "*", "/", "%", "POW", "MIN", "MAX"};
-                                int idx = 0;
-                                for(int i=0; i<ops.length; i++) if(ops[i].equals(node.operation)) idx = i;
-                                int next = (idx + (shift ? -1 : 1)) % ops.length;
-                                if (next < 0) next = ops.length - 1;
-                                node.operation = ops[next];
-                            }
-                            case ADVANCED -> {
-                                String[] ops = {"SIN", "COS", "ABS", "SQRT", "ROUND", "FLOOR", "CEIL"};
-                                int idx = 0;
-                                for(int i=0; i<ops.length; i++) if(ops[i].equals(node.operation)) idx = i;
-                                int next = (idx + (shift ? -1 : 1)) % ops.length;
-                                if (next < 0) next = ops.length - 1;
-                                node.operation = ops[next];
-                            }
-                            case MEMORY -> node.operation = "LATCH";
-                            case THRUST_GET, THRUST_SET, GIMBAL_SET, ENGINE_ID -> {
-                                // Check for [L] button click
-                                if (worldX >= node.x + width - 30 && worldX <= node.x + width - 5) {
-                                    isSelectingEngine = true;
-                                    selectingForNode = node;
-                                    return true;
-                                }
-                                node.engineIndex = Math.max(0, node.engineIndex + (shift ? -1 : 1));
-                                if (node.engineIndex > 100) node.engineIndex = 0; // Wrap if too high
-                            }
-                            case OUTPUT -> {
-                                String[] sides = {"down", "up", "north", "south", "west", "east", "all"};
-                                int idx = 0;
-                                for(int i=0; i<7; i++) if(sides[i].equalsIgnoreCase(node.selectedSide)) idx = i;
-                                int next = (idx + (shift ? -1 : 1)) % 7;
-                                if (next < 0) next = 6;
-                                node.selectedSide = sides[next];
-                            }
-                        }
-                        syncWithServer();
-                        return true;
-                    }
-                    
                     draggingNode = node;
                     dragOffsetX = (int) (worldX - node.x);
                     dragOffsetY = (int) (worldY - node.y);
@@ -1041,32 +1099,32 @@ public class NodeScreen extends Screen {
             linkingNode = null;
         } else if (button == 1) { // Right click
             for (Node node : graph.nodes) {
-                // Check input pins to clear them
-                int targetPin = -1;
-                if (worldX >= node.x - 6 && worldX <= node.x + 4 && worldY >= node.y + 14 && worldY <= node.y + 22) targetPin = 0;
-                else {
-                    int py = node.y + (node.type == NodeType.GIMBAL_SET ? 30 : (node.type == NodeType.LINK_INPUT || node.type == NodeType.LINK_OUTPUT ? 36 : 28));
-                    if (node.type != NodeType.OUTPUT && worldX >= node.x - 6 && worldX <= node.x + 4 && worldY >= py - 2 && worldY <= py + 6) targetPin = 1;
-                    else if (node.type == NodeType.MEMORY) {
-                        int pcy = node.y + 32;
-                        if (worldX >= node.x - 6 && worldX <= node.x + 4 && worldY >= pcy - 2 && worldY <= pcy + 6) targetPin = 2;
+                NodeHandler h = node.getHandler();
+                if (h == null) continue;
+
+                // Input pins deletion
+                for (int i = 0; i < h.getInputCount(); i++) {
+                    int px = node.x - 4;
+                    int py = node.y + 16 + i * 12;
+                    if (worldX >= px - 4 && worldX <= px + 4 && worldY >= py - 4 && worldY <= py + 4) {
+                        final int tp = i;
+                        spawnSparks((int)worldX, (int)worldY, 0xFFFF5555);
+                        graph.connections.removeIf(c -> c.targetNode.equals(node.id) && c.targetPin == tp);
+                        syncWithServer();
+                        return true;
                     }
                 }
-                
-                if (targetPin != -1) {
-                    final int tp = targetPin;
-                    spawnSparks((int)worldX, (int)worldY, 0xFFFF5555); // Red deletion sparks
-                    graph.connections.removeIf(c -> c.targetNode.equals(node.id) && c.targetPin == tp);
-                    syncWithServer();
-                    return true;
-                }
-                
-                // Check output pin to clear all outgoing connections
-                if (node.type != NodeType.OUTPUT && node.type != NodeType.COMMENT && node.type != NodeType.PERIPHERAL_LIST && node.type != NodeType.THRUST_SET && node.type != NodeType.GIMBAL_SET && worldX >= node.x + 96 && worldX <= node.x + 104 && worldY >= node.y + 16 && worldY <= node.y + 24) {
-                    spawnSparks((int)worldX, (int)worldY, 0xFFFF5555);
-                    graph.connections.removeIf(c -> c.sourceNode.equals(node.id));
-                    syncWithServer();
-                    return true;
+                // Output pins deletion
+                for (int i = 0; i < h.getOutputCount(); i++) {
+                    int px = node.x + getNodeWidth(node) - 1;
+                    int py = node.y + 16 + i * 12;
+                    if (worldX >= px - 4 && worldX <= px + 4 && worldY >= py - 4 && worldY <= py + 4) {
+                        spawnSparks((int)worldX, (int)worldY, 0xFFFF5555);
+                        final int sp = i;
+                        graph.connections.removeIf(c -> c.sourceNode.equals(node.id) && c.sourcePin == sp);
+                        syncWithServer();
+                        return true;
+                    }
                 }
             }
 
@@ -1076,12 +1134,10 @@ public class NodeScreen extends Screen {
             searchQuery = "";
             updateSearch();
             return true;
-        } else if (button == 2) { // Middle click pan or delete
+        } else if (button == 2) { // Middle click delete
             Node toRemove = null;
             for (Node node : graph.nodes) {
-                int nodeW = node.type == NodeType.COMMENT ? 120 : (node.type == NodeType.PERIPHERAL_LIST ? 150 : 100);
-                int nodeH = (node.type == NodeType.LINK_INPUT || node.type == NodeType.LINK_OUTPUT) ? 55 : (node.type == NodeType.GIMBAL_SET ? 85 : (node.type == NodeType.COMMENT ? 60 : (node.type == NodeType.PERIPHERAL_LIST ? 120 : 40)));
-                if (worldX >= node.x && worldX <= node.x + nodeW && worldY >= node.y && worldY <= node.y + nodeH) {
+                if (worldX >= node.x && worldX <= node.x + getNodeWidth(node) && worldY >= node.y && worldY <= node.y + 40 + getCustomUIHeight(node)) {
                     spawnDeletionSparks(node);
                     toRemove = node;
                     break;
@@ -1111,9 +1167,11 @@ public class NodeScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (activeTab == ScreenTab.PERIPHERALS) return false;
         if (draggingNode != null) {
-            draggingNode.x = (int) (mouseX - panX - dragOffsetX);
-            draggingNode.y = (int) (mouseY - panY - dragOffsetY);
+            int grid = 10;
+            draggingNode.x = (int) (Math.round((mouseX - panX - dragOffsetX) / grid) * grid);
+            draggingNode.y = (int) (Math.round((mouseY - panY - dragOffsetY) / grid) * grid);
             return true;
         }
         if (isPanning) {
@@ -1126,6 +1184,7 @@ public class NodeScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (activeTab == ScreenTab.PERIPHERALS) return false;
         if (isSearching) {
             searchScroll = Math.max(0, searchScroll - (int) scrollY);
             return true;
@@ -1135,15 +1194,21 @@ public class NodeScreen extends Screen {
         int worldY = (int) (mouseY - panY);
 
         for (Node node : graph.nodes) {
-            if (node.type == NodeType.NUMBER_INPUT || node.type == NodeType.THRUST_GET || node.type == NodeType.THRUST_SET || node.type == NodeType.GIMBAL_SET || node.type == NodeType.ENGINE_ID) {
-                int nodeW = 100;
-                int nodeH = (node.type == NodeType.GIMBAL_SET) ? 55 : 40;
+            NodeHandler h = node.getHandler();
+            if (h == null) continue;
+            
+            // Interaction for numeric and ID nodes
+            if (node.typeId.toString().contains("constant") || node.typeId.toString().contains("throttle")) {
+                int nodeW = getNodeWidth(node);
+                int nodeH = 40 + getCustomUIHeight(node);
+                
                 if (worldX >= node.x && worldX <= node.x + nodeW && worldY >= node.y && worldY <= node.y + nodeH) {
-                    if (node.type == NodeType.NUMBER_INPUT) {
-                        double step = hasShiftDown() ? 100.0 : 1.0;
+                    if (node.typeId.toString().contains("constant")) {
+                        double step = hasShiftDown() ? 1000.0 : 10.0;
                         node.value = node.value + (scrollY > 0 ? step : -step);
-                    } else {
-                        node.engineIndex = Math.max(0, node.engineIndex + (scrollY > 0 ? 1 : -1));
+                    } else if (node.typeId.toString().contains("throttle")) {
+                        int step = hasShiftDown() ? 10 : 1; 
+                        node.engineIndex = Math.max(0, node.engineIndex + (scrollY > 0 ? step : -step));
                     }
                     syncWithServer();
                     return true;
@@ -1155,6 +1220,32 @@ public class NodeScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (isEditingValue && selectedNode != null) {
+            if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
+                if (!valueBuffer.isEmpty()) {
+                    valueBuffer = valueBuffer.substring(0, valueBuffer.length() - 1);
+                }
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+                try {
+                    if (selectedNode.typeId.toString().endsWith("throttle")) {
+                        selectedNode.engineIndex = Integer.parseInt(valueBuffer);
+                    } else {
+                        selectedNode.value = Double.parseDouble(valueBuffer);
+                    }
+                } catch (NumberFormatException e) {
+                    // Invalid input, ignore
+                }
+                isEditingValue = false;
+                syncWithServer();
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                isEditingValue = false;
+                return true;
+            }
+        }
         if (isTypingComment && focusedCommentNode != null) {
             if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
                 if (focusedCommentNode.commentText.length() > 0) {
@@ -1183,10 +1274,10 @@ public class NodeScreen extends Screen {
         }
         if (isSearching) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_ENTER) {
-                if (keyCode == GLFW.GLFW_KEY_ENTER && !filteredTypes.isEmpty()) {
-                    NodeType type = filteredTypes.get(0);
+                if (keyCode == GLFW.GLFW_KEY_ENTER && !filteredHandlers.isEmpty()) {
+                    NodeHandler handler = filteredHandlers.get(0);
                     int[] pos = findFreePosition((int) (menuX - panX), (int) (menuY - panY));
-                    graph.nodes.add(new Node(type, pos[0], pos[1]));
+                    graph.nodes.add(new Node(NodeRegistry.getId(handler), pos[0], pos[1]));
                     syncWithServer();
                 }
                 isSearching = false;
@@ -1214,7 +1305,7 @@ public class NodeScreen extends Screen {
         // Duplication (Shift+D)
         if (selectedNode != null && keyCode == GLFW.GLFW_KEY_D && hasShiftDown()) {
             int[] pos = findFreePosition(selectedNode.x + 10, selectedNode.y + 10);
-            Node copy = new Node(selectedNode.type, pos[0], pos[1]);
+            Node copy = new Node(selectedNode.typeId, pos[0], pos[1]);
             copy.value = selectedNode.value;
             copy.operation = selectedNode.operation;
             copy.selectedSide = selectedNode.selectedSide;
@@ -1255,8 +1346,8 @@ public class NodeScreen extends Screen {
 
     private void spawnDeletionSparks(Node node) {
         java.util.Random rand = new java.util.Random();
-        int width = (node.type == NodeType.PERIPHERAL_LIST) ? 140 : 100;
-        int height = 40;
+        int width = getNodeWidth(node);
+        int height = 40 + getCustomUIHeight(node);
         for (int i = 0; i < 30; i++) {
             NodeParticle p = new NodeParticle();
             p.x = node.x + rand.nextInt(width);
@@ -1291,6 +1382,12 @@ public class NodeScreen extends Screen {
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
+        if (isEditingValue) {
+            if (Character.isDigit(codePoint) || codePoint == '.' || codePoint == '-') {
+                valueBuffer += codePoint;
+            }
+            return true;
+        }
         if (isTypingComment && focusedCommentNode != null) {
             if (focusedCommentNode.commentText.length() < 100) {
                 focusedCommentNode.commentText += codePoint;

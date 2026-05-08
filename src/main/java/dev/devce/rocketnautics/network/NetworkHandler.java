@@ -105,7 +105,7 @@ public class NetworkHandler {
                 dev.devce.rocketnautics.RocketNautics.LOGGER.info("Sputnik at {} (level {}) SYNCED. Nodes: {}, Connections: {}, Engines Found: {}", 
                     pos, foundLevel.dimension().location(), sputnik.graph.nodes.size(), sputnik.graph.connections.size(), sputnik.getEngineCount());
                 for (var node : sputnik.graph.nodes) {
-                    dev.devce.rocketnautics.RocketNautics.LOGGER.info("  Node: {} type={} idx={}", node.id, node.type, node.engineIndex);
+                    dev.devce.rocketnautics.RocketNautics.LOGGER.info("  Node: {} type={} idx={}", node.id, node.typeId, node.engineIndex);
                 }
             }
         } else {

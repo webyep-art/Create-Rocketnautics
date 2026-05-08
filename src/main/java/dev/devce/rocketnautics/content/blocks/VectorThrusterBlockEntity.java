@@ -12,6 +12,18 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3d;
 
 public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
+    @Override
+    public String getPeripheralType() {
+        return "vector_engine";
+    }
+
+    @Override
+    public double readValue(String key) {
+        if (key.equals("thrust")) return getFlow() * 100.0;
+        if (key.equals("gimbal_x")) return gimbalX;
+        if (key.equals("gimbal_z")) return gimbalZ;
+        return 0;
+    }
     private static final Direction[] DIRECTIONS = Direction.values();
 
     private float gimbalX = 0;
