@@ -21,7 +21,12 @@ public class ThrusterNodeHandler implements NodeHandler {
     }
 
     @Override
-    public int getInputCount() { return 1; }
+    public int getInputCount() { return 2; }
+
+    @Override
+    public java.util.List<net.minecraft.network.chat.Component> getInputNames() {
+        return java.util.List.of(net.minecraft.network.chat.Component.literal("THROTTLE"), net.minecraft.network.chat.Component.literal("ENGINE ID"));
+    }
 
     @Override
     public boolean isTrigger() { return true; }
@@ -29,10 +34,13 @@ public class ThrusterNodeHandler implements NodeHandler {
     @Override
     public double evaluate(Node node, NodeContext context) {
         double throttle = context.evaluateInput(node.id, 0);
+        double idVal = context.evaluateInput(node.id, 1);
+        int engineIdx = (int) idVal;
+        
         var peripherals = context.getPeripherals();
         
-        if (node.engineIndex >= 0 && node.engineIndex < peripherals.size()) {
-            IPeripheral p = peripherals.get(node.engineIndex);
+        if (engineIdx >= 0 && engineIdx < peripherals.size()) {
+            IPeripheral p = peripherals.get(engineIdx);
             p.writeValue("throttle", throttle);
         }
         

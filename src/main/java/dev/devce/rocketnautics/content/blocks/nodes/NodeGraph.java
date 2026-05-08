@@ -97,6 +97,7 @@ public class NodeGraph {
             result = fallbackEvaluate(node, context);
         }
 
+        node.value = result; // Persist result for syncing/display
         cache.put(node.id, result);
         return result;
     }

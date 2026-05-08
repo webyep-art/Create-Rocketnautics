@@ -86,12 +86,18 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
         // Reset/Update peripherals if needed
         for (IPeripheral peripheral : discoveredPeripherals) {
             if (peripheral instanceof IThruster thruster && !thruster.isRemoved()) {
-                thruster.setThrottle(0);
+                thruster.setThrottle(1.0f);
+                thruster.setActive(true);
                 thruster.setGimbal(0, 0);
             }
         }
 
         graph.tick(this);
+        
+        // Sync graph values to client periodically for UI display
+        if (level.getGameTime() % 5 == 0) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     public void refreshPeripherals() {
@@ -399,12 +405,27 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
             }
         }
         if (tag.contains("NodeGraph")) {
-            // Load nodes manually or replace graph contents.
-            graph.nodes.clear();
-            graph.connections.clear();
-            NodeGraph loaded = new NodeGraph(tag.getCompound("NodeGraph"), registries);
-            graph.nodes.addAll(loaded.nodes);
-            graph.connections.addAll(loaded.connections);
+            CompoundTag graphTag = tag.getCompound("NodeGraph");
+            if (level != null && level.isClientSide && !graph.nodes.isEmpty()) {
+                // Client-side periodic sync: update values ONLY to prevent race conditions with placement
+                net.minecraft.nbt.ListTag nodesTag = graphTag.getList("Nodes", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                for (int i = 0; i < nodesTag.size(); i++) {
+                    CompoundTag nTag = nodesTag.getCompound(i);
+                    java.util.UUID id = nTag.getUUID("Id");
+                    Node localNode = graph.getNode(id);
+                    if (localNode != null) {
+                        localNode.value = nTag.getDouble("Value");
+                    }
+                }
+            } else {
+                // Full load/overwrite
+                graph.nodes.clear();
+                graph.connections.clear();
+                NodeGraph loaded = new NodeGraph(graphTag, registries);
+                graph.nodes.addAll(loaded.nodes);
+                graph.connections.addAll(loaded.connections);
+                graph.clearCache();
+            }
         }
     }
 }

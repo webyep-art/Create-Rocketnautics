@@ -13,6 +13,8 @@ import dev.devce.rocketnautics.content.blocks.nodes.handlers.GraphNodeHandler;
 import dev.devce.rocketnautics.content.blocks.nodes.handlers.AttitudeNodeHandler;
 import dev.devce.rocketnautics.content.blocks.nodes.handlers.LinkedInputNodeHandler;
 import dev.devce.rocketnautics.content.blocks.nodes.handlers.LinkedOutputNodeHandler;
+import dev.devce.rocketnautics.content.blocks.nodes.handlers.DataTransmitterNodeHandler;
+import dev.devce.rocketnautics.content.blocks.nodes.handlers.DataReceiverNodeHandler;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 public class RocketNodes {
@@ -56,6 +58,12 @@ public class RocketNodes {
 
     public static final DeferredHolder<NodeHandler, LinkedOutputNodeHandler> LINK_OUTPUT = NodeRegistry.NODE_HANDLERS.register("link_output",
         LinkedOutputNodeHandler::new);
+
+    public static final DeferredHolder<NodeHandler, DataTransmitterNodeHandler> DATA_TRANSMITTER = NodeRegistry.NODE_HANDLERS.register("data_transmitter",
+        DataTransmitterNodeHandler::new);
+
+    public static final DeferredHolder<NodeHandler, DataReceiverNodeHandler> DATA_RECEIVER = NodeRegistry.NODE_HANDLERS.register("data_receiver",
+        DataReceiverNodeHandler::new);
 
     // Utility
     public static final DeferredHolder<NodeHandler, GraphNodeHandler> OSCILLOSCOPE = NodeRegistry.NODE_HANDLERS.register("oscilloscope",

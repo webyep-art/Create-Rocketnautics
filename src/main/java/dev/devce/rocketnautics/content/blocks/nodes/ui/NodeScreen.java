@@ -688,7 +688,7 @@ public class NodeScreen extends Screen {
         int width = getNodeWidth(node);
         int baseHeight = 40 + (Math.max(handler.getInputCount(), handler.getOutputCount()) - 1) * 12;
         
-        double currentVal = graph.evaluate(node, sputnik);
+        double currentVal = (handler.getCategory().equals("Wireless")) ? node.value : graph.evaluate(node, sputnik);
         
         int customHeight = getCustomUIHeight(node);
         int height = baseHeight + customHeight;
@@ -793,6 +793,7 @@ public class NodeScreen extends Screen {
         if (node.typeId.toString().contains("vector_control")) return 50;
         if (node.typeId.toString().contains("booster"))        return 25;
         if (node.typeId.toString().contains("link_"))           return 30;
+        if (node.typeId.toString().contains("data_"))           return 20;
         if (h.getCategory().equals("Sensors"))                 return 30;
         if (node.typeId.toString().contains("attitude"))       return 95;
         return 0;
@@ -1026,7 +1027,7 @@ public class NodeScreen extends Screen {
 
                 // Node body click (interaction)
                 if (worldX >= node.x && worldX <= node.x + nodeW && worldY >= node.y + 14 && worldY <= node.y + nodeH) {
-                    if (node.typeId.toString().endsWith("comment")) {
+                    if (node.typeId.toString().contains("comment") || node.typeId.toString().contains("data_")) {
                         isTypingComment = true;
                         focusedCommentNode = node;
                         return true;

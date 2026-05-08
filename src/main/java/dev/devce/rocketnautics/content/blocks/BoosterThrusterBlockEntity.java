@@ -282,7 +282,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
     private BlockPos cachedFuelPos = null;
     private long cachedFuelPosTick = Long.MIN_VALUE;
     private boolean fuelCacheValid = false;
-    private boolean computerActive = false;
+    private boolean computerActive = true;
 
     public boolean isActive() {
         if (level != null && level.isClientSide) return currentlyBurning;
@@ -469,12 +469,21 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
 
     @Override
     public void setThrottle(float throttle) {
-        // Solid fuel boosters cannot be throttled once ignited.
     }
 
     @Override
     public void setGimbal(double pitch, double yaw) {
-        // Solid fuel boosters typically do not have gimbaled nozzles.
+    }
+
+    @Override
+    public void writeValue(String key, double value) {
+        if ("throttle".equals(key) || "thrust".equals(key)) {
+            setActive(value > 0);
+        }
+    }
+
+    @Override
+    public void writeValues(String key, double... values) {
     }
 
     @Override

@@ -23,11 +23,11 @@ public class VectorNodeHandler implements NodeHandler {
     }
 
     @Override
-    public int getInputCount() { return 3; }
+    public int getInputCount() { return 4; }
 
     @Override
     public List<Component> getInputNames() {
-        return List.of(Component.literal("THROTTLE"), Component.literal("GIMBAL X"), Component.literal("GIMBAL Z"));
+        return List.of(Component.literal("THROTTLE"), Component.literal("GIMBAL X"), Component.literal("GIMBAL Z"), Component.literal("ENGINE ID"));
     }
 
     @Override
@@ -47,9 +47,8 @@ public class VectorNodeHandler implements NodeHandler {
         graphics.fill(cx - size / 2 + 2, cy, cx + size / 2 - 2, cy + 1, 0x22FFFFFF);
         graphics.fill(cx, cy - size / 2 + 2, cx + 1, cy + size / 2 - 2, 0x22FFFFFF);
 
-        // Current Gimbal Point (evaluate input pins 1 and 2 for X and Z)
-        // We use evaluateInput to get the REAL-TIME values being sent
-        double gx = node.lastGimbalX; // We'll need to store this or calculate it
+        // Current Gimbal Point
+        double gx = node.lastGimbalX;
         double gz = node.lastGimbalZ;
         
         int px = cx + (int)(gx * (size / 2 - 4));
@@ -65,13 +64,15 @@ public class VectorNodeHandler implements NodeHandler {
         double thrust = context.evaluateInput(node.id, 0);
         double gx = context.evaluateInput(node.id, 1);
         double gz = context.evaluateInput(node.id, 2);
+        double idVal = context.evaluateInput(node.id, 3);
+        int engineIdx = (int) idVal;
         
         node.lastGimbalX = gx;
         node.lastGimbalZ = gz;
         
         var peripherals = context.getPeripherals();
-        if (node.engineIndex >= 0 && node.engineIndex < peripherals.size()) {
-            IPeripheral p = peripherals.get(node.engineIndex);
+        if (engineIdx >= 0 && engineIdx < peripherals.size()) {
+            IPeripheral p = peripherals.get(engineIdx);
             if (p.getPeripheralType().equals("vector_engine")) {
                 p.writeValue("thrust", thrust);
                 p.writeValues("gimbal", gx * 180.0, gz * 180.0);

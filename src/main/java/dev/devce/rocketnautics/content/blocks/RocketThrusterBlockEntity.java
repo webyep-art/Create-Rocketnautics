@@ -66,7 +66,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
     public boolean currentlyBurning = false;
     public float fuelThrottle = 0.0f;
     private float internalFlow = 0.0f;
-    private boolean targetActive = false; // Added: Control for activation
+    private boolean targetActive = true; // Default to ON
     private int startupTicks = 0; 
     public int currentFuelUsage = 0;
     private int totalAvailableFuel = 0;
@@ -74,7 +74,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
     private float currentEfficiencyMultiplier = 1.0f;
     private int burnoutDelay = 0;
     private boolean steamMode = false;
-    private float targetThrottle = 1.0f; // Added: Control for throttle
+    private float targetThrottle = 1.0f; // Default to Full Throttle
     
     // Gimbal state
     public Vector3d gimbalOffset = new Vector3d(0, 0, 0);
@@ -607,6 +607,19 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         this.targetThrottle = Math.max(0.0f, Math.min(1.0f, throttle));
         setChanged();
         sendData();
+    }
+
+    @Override
+    public void writeValue(String key, double value) {
+        if ("throttle".equals(key) || "thrust".equals(key)) {
+            setThrottle((float) value);
+            setActive(value > 0);
+        }
+    }
+
+    @Override
+    public void writeValues(String key, double... values) {
+        // Thruster doesn't have multi-value keys yet, but could add gimbal here if needed
     }
 
     @Override

@@ -167,6 +167,21 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
         ccGimbalZ = tag.getFloat("CCGimbalZ");
     }
 
+    @Override
+    public void writeValue(String key, double value) {
+        if ("thrust".equals(key) || "throttle".equals(key)) {
+            setThrottle((float) value);
+            setActive(value > 0);
+        }
+    }
+
+    @Override
+    public void writeValues(String key, double... values) {
+        if ("gimbal".equals(key) && values.length >= 2) {
+            setGimbal(values[0], values[1]);
+        }
+    }
+
     public float getPrevGimbalX() {
         return prevGimbalX;
     }
