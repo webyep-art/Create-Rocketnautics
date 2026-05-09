@@ -1,28 +1,27 @@
 package dev.devce.rocketnautics;
 
-import dev.devce.rocketnautics.registry.RocketBlocks;
-import dev.devce.rocketnautics.registry.RocketBlockEntities;
-import dev.devce.rocketnautics.registry.RocketParticles;
-import dev.devce.rocketnautics.registry.RocketSounds;
-import dev.devce.rocketnautics.registry.RocketSimulatedTab;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import com.mojang.logging.LogUtils;
+import com.tterrag.registrate.util.nullness.NonNullSupplier;
+import dev.devce.rocketnautics.content.blocks.nodes.LinkedSignalHandler;
 import dev.devce.rocketnautics.content.commands.GravityCommand;
 import dev.devce.rocketnautics.content.commands.JetpackCommand;
 import dev.devce.rocketnautics.content.commands.ShipCopyPasteCommand;
-import net.neoforged.fml.common.Mod;
-import dev.devce.rocketnautics.network.NetworkHandler;
 import dev.devce.rocketnautics.content.physics.GlobalSpacePhysicsHandler;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
-
+import dev.devce.rocketnautics.network.NetworkHandler;
+import dev.devce.rocketnautics.registry.*;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.CreativeModeTab;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
-import dev.devce.rocketnautics.content.blocks.nodes.LinkedSignalHandler;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import org.slf4j.Logger;
 
 /**
  * Main class for the Cosmonautics (RocketNautics) mod.
@@ -36,6 +35,8 @@ public class RocketNautics {
     /** Global logger instance for this mod. */
     public static final Logger LOGGER = LogUtils.getLogger();
 
+    private static final NonNullSupplier<RocketRegistrate> REGISTRATE = NonNullSupplier.lazy(() ->
+            (RocketRegistrate) new RocketRegistrate(path(MODID), MODID).defaultCreativeTab((ResourceKey<CreativeModeTab>) null));
     /**
      * Constructor for the mod. Performs initial registration of configs, blocks, and handlers.
      * 
@@ -59,13 +60,15 @@ public class RocketNautics {
         }
 
         // Register registries
-        RocketBlocks.register(modEventBus);
-        dev.devce.rocketnautics.registry.RocketTabs.register(modEventBus);
+        getRegistrate().registerEventListeners(modEventBus);
+
+        RocketItems.init();
+        RocketBlocks.init();
+        RocketTabs.register(modEventBus);
         RocketBlockEntities.register(modEventBus);
         RocketParticles.register(modEventBus);
         RocketSounds.register(modEventBus);
         dev.devce.rocketnautics.api.nodes.NodeRegistry.register(modEventBus);
-        RocketSimulatedTab.init();
 
         // Register mod-bus event subscribers manually to avoid deprecated bus() parameter
         modEventBus.register(NetworkHandler.class);
@@ -82,6 +85,14 @@ public class RocketNautics {
         GlobalSpacePhysicsHandler.init();
         dev.devce.rocketnautics.content.physics.AsteroidSpawner.init();
         dev.devce.rocketnautics.content.physics.SpaceTransitionHandler.init();
+    }
+
+    public static ResourceLocation path(final String path) {
+        return ResourceLocation.tryBuild(MODID, path);
+    }
+
+    public static RocketRegistrate getRegistrate() {
+        return REGISTRATE.get();
     }
 
     /**

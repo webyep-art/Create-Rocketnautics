@@ -2,7 +2,6 @@ package dev.devce.rocketnautics.content.blocks;
 
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
-import dev.devce.rocketnautics.registry.RocketBlockEntities;
 import dev.devce.rocketnautics.registry.RocketParticles;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
@@ -12,6 +11,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3d;
 
@@ -23,8 +23,8 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
         return "rcs";
     }
 
-    public RCSThrusterBlockEntity(BlockPos pos, BlockState state) {
-        super(RocketBlockEntities.RCS_THRUSTER.get(), pos, state);
+    public RCSThrusterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
     }
 
     @Override
