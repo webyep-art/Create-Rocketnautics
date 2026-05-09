@@ -19,12 +19,14 @@ public class RocketItems {
     private static final SimulatedRegistrate REGISTRATE = RocketNautics.getRegistrate();
 
     public static final ItemEntry<RocketItem> MUSIC_DISC_SPACE = REGISTRATE.item("music_disc_space", RocketItem::new)
-        .properties(p -> p.stacksTo(1).rarity(Rarity.RARE)
-                .jukeboxPlayable(ResourceKey.create(Registries.JUKEBOX_SONG, ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "brittle_rille"))))
-        .register();
+            .properties(p -> p.stacksTo(1).rarity(Rarity.RARE)
+                    .jukeboxPlayable(ResourceKey.create(Registries.JUKEBOX_SONG, ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "brittle_rille"))))
+            .tag(Tags.Items.MUSIC_DISCS)
+            .register();
 
     public static final ItemEntry<CreditsBookItem> CREDITS_BOOK = REGISTRATE.item("credits_book", CreditsBookItem::new)
             .properties(p -> p.stacksTo(1))
+            .model((ctx, prov) -> {})
             .register();
 
     public static final ItemEntry<JetpackItem> JETPACK = REGISTRATE.item("jetpack", JetpackItem::new)
