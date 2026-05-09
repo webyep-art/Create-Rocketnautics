@@ -7,7 +7,7 @@
   "block.rocketnautics.separator": "分离器",
   "block.rocketnautics.sputnik": "斯普特尼克 1 号",
   "block.rocketnautics.sputnik.tooltip.shift": "一枚小巧金属探测球，仅有两项核心机能：\n保持满载，实时反馈生物群系。\n简约设计，稳定可靠。",
-  "rocketnautics.tooltip.sputnik.extra": "Acts as a permanent Chunk Loader. Integrated CC Peripheral for cartography.",
+  "rocketnautics.tooltip.sputnik.extra": "可作为永久区块加载器。同时内置了开放式计算机（CC）外设的可视化编辑器",
   "rocketnautics.simulated_section.rocketnautics": "宇航学",
   "itemGroup.rocketnautics.tab": "宇航学",
   "gui.rocketnautics.min_thrust": "最小推力 (0 信号)",
