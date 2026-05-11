@@ -222,11 +222,10 @@ public class WNodeScreen extends Screen {
                 
                 // AI FIX/ADD START
                 if (renamingNode == node) {
-                    graphics.fill(node.getX(), node.getY(), node.getX() + node.getWidth(), node.getY() + 15, 0xFF1A1A1A); // Dark bg to cover original title
-                    graphics.fill(node.getX(), node.getY() + 14, node.getX() + node.getWidth(), node.getY() + 15, 0xFF00FF88);
+                    graphics.fill(node.getX() + 1, node.getY() + 1, node.getX() + node.getWidth() - 1, node.getY() + 14, 0xFF1A1A1A); // Dark bg to cover original title
                     String display = renameField.getValue();
                     if ((System.currentTimeMillis() / 500) % 2 == 0) display += "_";
-                    graphics.drawString(font, display, node.getX() + 5, node.getY() + 3, 0xFFFFFFFF, false);
+                    graphics.drawString(font, display, node.getX() + 5, node.getY() + 3, 0xFF00FF88, false);
                 }
                 // AI FIX/ADD STOP
 
