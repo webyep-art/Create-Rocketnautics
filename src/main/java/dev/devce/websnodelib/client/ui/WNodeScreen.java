@@ -233,8 +233,43 @@ public class WNodeScreen extends Screen {
         if (activeItemPicker != null) {
             renderItemPickerOverlay(graphics);
         }
+        
+        // AI FIX/ADD START
+        renderBreadcrumbs(graphics);
+        // AI FIX/ADD STOP
+        
         renderMinimap(graphics);
     }
+
+    // AI FIX/ADD START
+    private void renderBreadcrumbs(GuiGraphics graphics) {
+        java.util.List<String> path = new java.util.ArrayList<>();
+        WNodeScreen current = this;
+        while (current != null) {
+            if (current.parentScreen == null) {
+                path.add(0, "~");
+            } else {
+                path.add(0, current.getTitle().getString());
+            }
+            current = current.parentScreen;
+        }
+
+        int x = 20;
+        int y = 20;
+        for (int i = 0; i < path.size(); i++) {
+            String text = path.get(i);
+            boolean isLast = (i == path.size() - 1);
+            int color = isLast ? 0xFF00FF88 : 0xFFAAAAAA;
+            graphics.drawString(font, text, x, y, color, true);
+            x += font.width(text);
+            
+            if (!isLast) {
+                graphics.drawString(font, " / ", x, y, 0xFFAAAAAA, true);
+                x += font.width(" / ");
+            }
+        }
+    }
+    // AI FIX/ADD STOP
 
     private double getGraphX(double mouseX) {
         return (mouseX - width / 2.0) / zoom + width / 2.0 - panX;
@@ -689,7 +724,7 @@ public class WNodeScreen extends Screen {
                         renameField.handleMouseClick(0, 0, 0); // Force focus
                         return true;
                     } else if (node.getTypeId().getPath().equals("function")) {
-                        minecraft.setScreen(new WNodeScreen(Component.literal("Sub-Graph Editor"), node.getInternalGraph(), (tag) -> {
+                        minecraft.setScreen(new WNodeScreen(Component.literal(node.getTitle()), node.getInternalGraph(), (tag) -> {
                             node.getInternalGraph().load(tag);
                             if (this.onSave != null) this.onSave.accept(this.graph.save());
                         }, this));
@@ -1171,7 +1206,7 @@ public class WNodeScreen extends Screen {
                 WNode node = graph.getNodes().stream().filter(WNode::isSelected).findFirst().orElse(null);
                 if (node != null && node.getTypeId().getPath().equals("function")) {
                     currentActions.add(new ContextAction("§eOpen Graph", () -> {
-                        minecraft.setScreen(new WNodeScreen(Component.literal("Sub-Graph Editor"), node.getInternalGraph(), (tag) -> {
+                        minecraft.setScreen(new WNodeScreen(Component.literal(node.getTitle()), node.getInternalGraph(), (tag) -> {
                             node.getInternalGraph().load(tag);
                             // Important: Propagate save to parent screen/server
                             if (this.onSave != null) this.onSave.accept(this.graph.save());
