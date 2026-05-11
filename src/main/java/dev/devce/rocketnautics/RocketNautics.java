@@ -7,11 +7,13 @@ import dev.devce.rocketnautics.content.commands.GravityCommand;
 import dev.devce.rocketnautics.content.commands.JetpackCommand;
 import dev.devce.rocketnautics.content.commands.ShipCopyPasteCommand;
 import dev.devce.rocketnautics.content.physics.GlobalSpacePhysicsHandler;
+import dev.devce.rocketnautics.data.RocketDatagen;
 import dev.devce.rocketnautics.network.NetworkHandler;
 import dev.devce.rocketnautics.registry.*;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
@@ -59,6 +61,7 @@ public class RocketNautics {
         } catch (Exception e) {
             LOGGER.error("Failed to override SableConfig: {}", e.getMessage());
         }
+        modEventBus.addListener(RocketDatagen::gatherData);
 
         // Register registries
         getRegistrate().registerEventListeners(modEventBus);

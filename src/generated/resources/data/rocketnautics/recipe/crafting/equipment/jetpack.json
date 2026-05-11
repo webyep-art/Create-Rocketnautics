@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": {
+      "item": "create:netherite_backtank"
+    },
+    "N": {
+      "item": "rocketnautics:titanium_nozzle"
+    },
+    "P": {
+      "item": "create:precision_mechanism"
+    },
+    "T": {
+      "tag": "c:plates/titanium"
+    }
+  },
+  "pattern": [
+    " P ",
+    "TBT",
+    "N N"
+  ],
+  "result": {
+    "count": 1,
+    "id": "rocketnautics:jetpack"
+  }
+}
