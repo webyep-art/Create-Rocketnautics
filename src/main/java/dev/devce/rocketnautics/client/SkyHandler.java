@@ -30,7 +30,7 @@ import org.joml.Quaternionf;
  * This includes atmospheric fog color adjustments, procedural planet rendering,
  * and dynamic planet map texture management.
  */
-@EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = RocketNautics.MODID, value = Dist.CLIENT)
 public class SkyHandler {
 
     /**
@@ -262,9 +262,10 @@ public class SkyHandler {
             }
 
             DynamicTexture tex = new DynamicTexture(image);
-            ResourceLocation id = mc.getTextureManager().register("rocketnautics_planet", tex);
+            ResourceLocation id = mc.getTextureManager().register("rocketnautics_planet_main", tex);
             tex.setFilter(true, false);
             PLANET_TEXTURE_OBJ = new PlanetRenderInfo(id, tex);
+            image.close();
         }
         if (PLANET_TEXTURE_OBJ_LAST == null) {
             Minecraft mc = Minecraft.getInstance();
@@ -280,9 +281,10 @@ public class SkyHandler {
             }
 
             DynamicTexture tex = new DynamicTexture(image);
-            ResourceLocation id = mc.getTextureManager().register("rocketnautics_planet", tex);
+            ResourceLocation id = mc.getTextureManager().register("rocketnautics_planet_last", tex);
             tex.setFilter(true, false);
             PLANET_TEXTURE_OBJ_LAST = new PlanetRenderInfo(id, tex);
+            image.close();
         }
     }
 
@@ -362,6 +364,7 @@ public class SkyHandler {
             PLANET_TEXTURE_OBJ.getTexture().setPixels(image);
             PLANET_TEXTURE_OBJ.getTexture().upload();
             PLANET_TEXTURE_OBJ.getTexture().setFilter(false, false);
+            image.close();
             awaitUpdate = false;
         });
     }        
@@ -398,6 +401,7 @@ public class SkyHandler {
         CLOUD_TEXTURE_OBJ = new DynamicTexture(image);
         CLOUD_TEXTURE_ID = mc.getTextureManager().register("rocketnautics_clouds", CLOUD_TEXTURE_OBJ);
         CLOUD_TEXTURE_OBJ.setFilter(false, false);
+        image.close();
     }
 
     private static ResourceLocation HALO_TEXTURE_ID = null;
@@ -447,5 +451,6 @@ public class SkyHandler {
         DynamicTexture dynamicTexture = new DynamicTexture(image);
         HALO_TEXTURE_ID = mc.getTextureManager().register("rocketnautics_halo_v5", dynamicTexture);
         haloV5 = true;
+        image.close();
     }
 }

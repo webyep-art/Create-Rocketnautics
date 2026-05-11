@@ -41,6 +41,7 @@ public class GlobalSpacePhysicsHandler {
     private static final double REENTRY_HEAT_END_Y = 2500.0;
     private static final double REENTRY_SPEED_THRESHOLD = 60.0;
     private static final double REENTRY_FRICTION_COEFF = 0.3;
+    private static final double MAX_Q_STRESS_THRESHOLD = 625.0; // density * speed^2
     private static final double DEFAULT_CALIBRATION = 0.99895;
 
     private static final ResourceLocation SPACE_GRAVITY_ID = ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "space_gravity");
@@ -92,6 +93,8 @@ public class GlobalSpacePhysicsHandler {
 
         applyZeroGravity(subLevel, handle, level, worldPos, timeStep);
         applyReentryHeat(subLevel, handle, level, worldPos, timeStep);
+        applyMaxQStress(subLevel, handle, level, worldPos, timeStep);
+        applyGlobalSpeedLimit(subLevel, handle, timeStep);
         applySpaceDragRemoval(subLevel, handle, level, worldPos);
     }
 
@@ -150,6 +153,104 @@ public class GlobalSpacePhysicsHandler {
         // Overworld transition logic: starts at 2000m, full at 5000m
         if (y <= SPACE_GRAVITY_START_Y) return 0.0;
         return Math.clamp((y - SPACE_GRAVITY_START_Y) / (SPACE_GRAVITY_FULL_Y - SPACE_GRAVITY_START_Y), 0.0, 1.0);
+    }
+
+    /**
+     * Enforces a global speed limit of 50m/s by applying braking force.
+     */
+    private static void applyGlobalSpeedLimit(ServerSubLevel subLevel, RigidBodyHandle handle, double timeStep) {
+        Vector3d velocity = new Vector3d(handle.getLinearVelocity());
+        double speed = velocity.length();
+        double limit = 50.0;
+
+        if (speed > limit) {
+            double mass = subLevel.getMassTracker().getMass();
+            // Apply a counter-impulse to bleed off excess speed
+            // Using 0.1 factor for smooth but firm braking
+            Vector3d brakingDir = new Vector3d(velocity).normalize().mul(-1.0);
+            double excessSpeed = speed - limit;
+            Vector3d brakingImpulse = brakingDir.mul(excessSpeed * mass * 0.1);
+            
+            handle.applyLinearImpulse(brakingImpulse);
+        }
+    }
+
+    /**
+     * Applies structural damage to ships moving too fast in dense atmosphere.
+     */
+    private static void applyMaxQStress(ServerSubLevel subLevel, RigidBodyHandle handle, ServerLevel level, Vector3d worldPos, double timeStep) {
+        double altitude = worldPos.y();
+        if (altitude > 10000.0) return; // Expanded limit for testing
+
+        double density = 1.0 - calculateGravityFactor(level, altitude);
+        if (density < 0.05) return; // Too thin to cause stress
+
+        Vector3d velocity = new Vector3d(handle.getLinearVelocity());
+        double speedSq = velocity.lengthSquared();
+        double stress = density * speedSq;
+
+        if (stress > MAX_Q_STRESS_THRESHOLD) {
+            double intensity = (stress - MAX_Q_STRESS_THRESHOLD) / MAX_Q_STRESS_THRESHOLD;
+            
+            // Random block damage - much more aggressive
+            if (level.random.nextFloat() < Math.min(0.9f, intensity * 0.5f)) {
+                damageRandomShipBlock(subLevel, level);
+            }
+
+            // Damage entities inside
+            if (intensity > 0.5 && level.getGameTime() % 10 == 0) {
+                AABB area = new AABB(worldPos.x - 5, worldPos.y - 5, worldPos.z - 5, worldPos.x + 5, worldPos.y + 5, worldPos.z + 5);
+                level.getEntitiesOfClass(LivingEntity.class, area).forEach(e -> {
+                    e.hurt(level.damageSources().generic(), (float)intensity * 2.0f);
+                });
+            }
+
+            // Visual feedback (reuse reentry heat with higher intensity or dedicated effect)
+            if (level.getGameTime() % 15 == 0) {
+                for (ServerPlayer player : level.players()) {
+                    PacketDistributor.sendToPlayer(player, new ReentryHeatPayload(worldPos.x, worldPos.y, worldPos.z, (float)intensity));
+                }
+            }
+        }
+    }
+
+    private static void damageRandomShipBlock(ServerSubLevel subLevel, ServerLevel level) {
+        var plot = subLevel.getPlot();
+        var minChunk = plot.getChunkMin();
+        var maxChunk = plot.getChunkMax();
+
+        int minX = minChunk.x * 16;
+        int maxX = maxChunk.x * 16 + 15;
+        int minZ = minChunk.z * 16;
+        int maxZ = maxChunk.z * 16 + 15;
+        int minY = level.getMinBuildHeight();
+        int maxY = level.getMaxBuildHeight();
+
+        // Target the actual blocks in the PLOT area
+        for (int i = 0; i < 40; i++) { // More attempts
+            int x = minX + level.random.nextInt(maxX - minX + 1);
+            int z = minZ + level.random.nextInt(maxZ - minZ + 1);
+            int y = minY + level.random.nextInt(maxY - minY + 1);
+            
+            net.minecraft.core.BlockPos pos = new net.minecraft.core.BlockPos(x, y, z);
+            net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+            
+            if (!state.isAir()) {
+                // Break the real block in the plot
+                level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                level.levelEvent(2001, pos, net.minecraft.world.level.block.Block.getId(state));
+                
+                // Add explosion at the plot location
+                level.explode(null, x + 0.5, y + 0.5, z + 0.5, 2.0f, ServerLevel.ExplosionInteraction.BLOCK);
+                
+                // Also spawn particles at the projected world position of the ship for visual feedback
+                Vector3d shipWorldPos = subLevel.logicalPose().position();
+                for (ServerPlayer player : level.players()) {
+                    PacketDistributor.sendToPlayer(player, new ReentryHeatPayload(shipWorldPos.x, shipWorldPos.y, shipWorldPos.z, 1.0f));
+                }
+                return;
+            }
+        }
     }
 
     /**

@@ -35,6 +35,7 @@ public class RocketConfig {
         public final ModConfigSpec.IntValue ignitionFlow;
         public final ModConfigSpec.IntValue steamMinFlow;
         public final ModConfigSpec.BooleanValue enableEngineDebugLogging;
+        public final ModConfigSpec.BooleanValue brokenBarrier;
 
         public Server(ModConfigSpec.Builder builder) {
             builder.push("Thrusters");
@@ -50,6 +51,9 @@ public class RocketConfig {
             enableEngineDebugLogging = builder
                     .comment("Enable debug logging for engine fuel and thrust (can cause spam)")
                     .define("enableEngineDebugLogging", false);
+            brokenBarrier = builder
+                    .comment("Allow engine thrust to exceed standard limits (up to 5000N)")
+                    .define("brokenBarrier", false);
             builder.pop();
 
             builder.push("Jetpack");

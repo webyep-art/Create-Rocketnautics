@@ -3,34 +3,19 @@
   "pools": [
     {
       "bonus_rolls": 0.0,
-<<<<<<< HEAD:src/main/resources/data/rocketnautics/loot_table/blocks/sputnik.json
-=======
       "conditions": [
         {
           "condition": "minecraft:survives_explosion"
         }
       ],
->>>>>>> pr-12:src/generated/resources/data/rocketnautics/loot_table/blocks/sputnik.json
       "entries": [
         {
           "type": "minecraft:item",
           "name": "rocketnautics:sputnik"
         }
       ],
-<<<<<<< HEAD:src/main/resources/data/rocketnautics/loot_table/blocks/sputnik.json
-      "conditions": [
-        {
-          "condition": "minecraft:survives_explosion"
-        }
-      ],
-      "rolls": 1.0
-    }
-  ]
-}
-=======
       "rolls": 1.0
     }
   ],
   "random_sequence": "rocketnautics:blocks/sputnik"
 }
->>>>>>> pr-12:src/generated/resources/data/rocketnautics/loot_table/blocks/sputnik.json

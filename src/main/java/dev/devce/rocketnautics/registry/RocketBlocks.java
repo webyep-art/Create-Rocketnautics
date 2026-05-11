@@ -2,6 +2,7 @@ package dev.devce.rocketnautics.registry;
 
 import com.tterrag.registrate.util.entry.BlockEntry;
 import dev.devce.rocketnautics.RocketNautics;
+import dev.devce.rocketnautics.content.RocketBlockItem;
 import dev.devce.rocketnautics.content.blocks.*;
 import dev.simulated_team.simulated.registrate.SimulatedRegistrate;
 import net.minecraft.core.HolderLookup;
@@ -31,46 +32,40 @@ public class RocketBlocks {
             .properties(BlockBehaviour.Properties::noOcclusion)
             .transform(pickaxeOnly())
             .tag(RocketTags.BlockTags.THRUSTERS.tag)
-            .item().build()
-            .register();
+            .item(RocketBlockItem::new).build().register();
 
     public static final BlockEntry<VectorThrusterBlock> VECTOR_THRUSTER = REGISTRATE.block("vector_thruster", VectorThrusterBlock::new)
             .initialProperties(() -> Blocks.IRON_BLOCK)
             .properties(BlockBehaviour.Properties::noOcclusion)
             .transform(pickaxeOnly())
             .tag(RocketTags.BlockTags.THRUSTERS.tag)
-            .item().build()
-            .register();
+            .item(RocketBlockItem::new).build().register();
 
     public static final BlockEntry<BoosterThrusterBlock> BOOSTER_THRUSTER = REGISTRATE.block("booster_thruster", BoosterThrusterBlock::new)
             .initialProperties(() -> Blocks.IRON_BLOCK)
             .properties(BlockBehaviour.Properties::noOcclusion)
             .transform(pickaxeOnly())
             .tag(RocketTags.BlockTags.THRUSTERS.tag)
-            .item().build()
-            .register();
+            .item(RocketBlockItem::new).build().register();
 
     public static final BlockEntry<RCSThrusterBlock> RCS_THRUSTER = REGISTRATE.block("rcs_thruster", RCSThrusterBlock::new)
             .initialProperties(() -> Blocks.IRON_BLOCK)
             .properties(BlockBehaviour.Properties::noOcclusion)
             .transform(pickaxeOnly())
             .tag(RocketTags.BlockTags.THRUSTERS.tag)
-            .item().build()
-            .register();
+            .item(RocketBlockItem::new).build().register();
 
     public static final BlockEntry<SeparatorBlock> SEPARATOR = REGISTRATE.block("separator", SeparatorBlock::new)
             .initialProperties(() -> Blocks.IRON_BLOCK)
             .properties(BlockBehaviour.Properties::noOcclusion)
             .transform(pickaxeOnly())
-            .item().build()
-            .register();
+            .item(RocketBlockItem::new).build().register();
 
     public static final BlockEntry<SputnikBlock> SPUTNIK = REGISTRATE.block("sputnik", SputnikBlock::new)
             .initialProperties(() -> Blocks.IRON_BLOCK)
             .properties(BlockBehaviour.Properties::noOcclusion)
             .transform(pickaxeOnly())
-            .item().build()
-            .register();
+            .item(RocketBlockItem::new).build().register();
 
     static { REGISTRATE.setCreativeTab(RocketTabs.WORLD_TAB); }
 

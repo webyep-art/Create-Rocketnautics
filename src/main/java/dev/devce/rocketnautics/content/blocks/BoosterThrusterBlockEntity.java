@@ -4,6 +4,7 @@ import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.foundation.blockEntity.behaviour.CenteredSideValueBoxTransform;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
+import dev.devce.rocketnautics.RocketConfig;
 import dev.devce.rocketnautics.registry.RocketParticles;
 import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
@@ -71,14 +72,23 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
                 this, 
                 new CenteredSideValueBoxTransform((state, direction) -> direction != state.getValue(RocketThrusterBlock.FACING))
         );
-        thrustPower.between(1, 50);
-        thrustPower.withFormatter(v -> (v * 10) + " N");
-        thrustPower.setValue(50);
+        int limit = RocketConfig.SERVER.brokenBarrier.get() ? 100 : 20;
+        thrustPower.between(1, limit);
+        thrustPower.withFormatter(v -> (v * 50) + " N");
+        thrustPower.setValue(limit);
         
         behaviours.add(thrustPower);
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, BoosterThrusterBlockEntity blockEntity) {
+        // Runtime limit update for "Break Barrier" command
+        int targetMax = RocketConfig.SERVER.brokenBarrier.get() ? 500 : 100;
+        // Since 'max' is protected, we'll use a local check or just apply it if needed.
+        // Actually, we can use the value itself to see if it's out of bounds
+        if (blockEntity.thrustPower.getValue() > targetMax || (targetMax == 500 && blockEntity.thrustPower.getValue() <= 100 && level.getGameTime() % 20 == 0)) {
+             blockEntity.thrustPower.between(1, targetMax);
+        }
+
         boolean active = blockEntity.isActive();
         if (!level.isClientSide) {
             if (active != blockEntity.currentlyBurning) {
@@ -110,7 +120,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
 
                 RandomSource random = level.getRandom();
                 int power = blockEntity.thrustPower.getValue();
-                int visualPower = (int)(power * 2.85f);
+                int visualPower = (int)(power * 14.25f);
 
                 net.minecraft.world.phys.Vec3 start = new net.minecraft.world.phys.Vec3(x, y, z);
                 double maxSearchDist = 64.0;
@@ -221,7 +231,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
         if (!isActive()) return;
         Direction facing = getThrustDirection();
         Direction pushDirection = facing.getOpposite();
-        double currentThrust = thrustPower.getValue() * 10.0;
+        double currentThrust = thrustPower.getValue() * 50.0;
         Vector3d thrustVector = new Vector3d(pushDirection.getStepX() * currentThrust, pushDirection.getStepY() * currentThrust, pushDirection.getStepZ() * currentThrust);
         
         Vector3d blockCenter = new Vector3d(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5);

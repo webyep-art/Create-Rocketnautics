@@ -2,7 +2,7 @@ package dev.devce.rocketnautics;
 
 import com.mojang.logging.LogUtils;
 import com.tterrag.registrate.util.nullness.NonNullSupplier;
-import dev.devce.rocketnautics.content.blocks.nodes.LinkedSignalHandler;
+import dev.devce.rocketnautics.content.blocks.LinkedSignalHandler;
 import dev.devce.rocketnautics.content.commands.GravityCommand;
 import dev.devce.rocketnautics.content.commands.JetpackCommand;
 import dev.devce.rocketnautics.content.commands.ShipCopyPasteCommand;
@@ -71,7 +71,7 @@ public class RocketNautics {
         RocketSounds.register(modEventBus);
         InternalNodes.register();
         dev.devce.rocketnautics.registry.RocketNodes.register();
-        RocketSimulatedTab.init();
+
 
         // Register mod-bus event subscribers manually to avoid deprecated bus() parameter
         modEventBus.register(NetworkHandler.class);
@@ -124,6 +124,7 @@ public class RocketNautics {
         ShipCopyPasteCommand.register(event.getDispatcher());
         JetpackCommand.register(event.getDispatcher());
         dev.devce.rocketnautics.content.commands.AsteroidCommand.register(event.getDispatcher());
+        dev.devce.rocketnautics.content.commands.BreakBarrierCommand.register(event.getDispatcher());
     }
     @SubscribeEvent
     public void onLevelTick(LevelTickEvent.Post event) {

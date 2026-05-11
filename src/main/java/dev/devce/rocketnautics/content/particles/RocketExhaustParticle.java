@@ -15,7 +15,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         this.yd = ySpeed;
         this.zd = zSpeed;
         this.setAlpha(0.4F + this.random.nextFloat() * 0.3F);
-        this.lifetime = 40 + this.random.nextInt(30);
+        this.lifetime = 6 + this.random.nextInt(6);
         this.baseScale = 0.4F + this.random.nextFloat() * 0.6F; 
         this.quadSize = this.baseScale;
         
@@ -26,7 +26,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         }
         
         this.hasPhysics = true; 
-        this.friction = 0.99F;  
+        this.friction = 0.90F;  
         this.gravity = 0.01F;   
         
         
@@ -176,6 +176,26 @@ public class RocketExhaustParticle extends TextureSheetParticle {
             }
             
             particle.gravity = 0.0F; 
+            
+            if (name.contains("plasma")) {
+                particle.setLifetime(6 + level.random.nextInt(6));
+                particle.scale(0.7f);
+                particle.setColor(1.0F, 1.0F, 1.0F); 
+                particle.setCoolingColor(1.0F, 0.8F, 0.4F);
+                particle.setShrinking(true);
+            } else if (name.contains("plume")) {
+                particle.setLifetime(10 + level.random.nextInt(8));
+                particle.scale(0.85f);
+                particle.setColor(1.0F, 0.7F, 0.2F);
+                particle.setCoolingColor(0.25F, 0.25F, 0.25F); 
+                particle.setShrinking(true);
+            } else if (name.contains("blue_flame")) {
+                particle.setLifetime(4 + level.random.nextInt(4));
+                particle.scale(0.2f);
+                particle.setAlpha(0.9f);
+                particle.setShrinking(true);
+            }
+            
             return particle;
         }
     }
@@ -190,11 +210,23 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         @Override
         public Particle createParticle(@NotNull SimpleParticleType type, @NotNull ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
             RocketExhaustParticle particle = new RocketExhaustParticle(level, x, y, z, xSpeed, ySpeed, zSpeed, this.sprites);
-            particle.setLifetime(20 + level.random.nextInt(15)); 
+            
+            double speed = Math.sqrt(xSpeed * xSpeed + ySpeed * ySpeed + zSpeed * zSpeed);
+            if (speed > 0.1) {
+                // Ground impact smoke - short lived (1 second)
+                particle.setLifetime(15 + level.random.nextInt(10)); 
+            } else {
+                // Contrail smoke - long lived (15 seconds)
+                particle.setLifetime(280 + level.random.nextInt(40)); 
+            }
             particle.scale(1.2f + level.random.nextFloat() * 0.8f);
+            particle.setShrinking(false); 
+            particle.friction = 0.98F; 
+            particle.setMaxAlpha(0.5F);
+            particle.gravity = 0.0F; // Stop it from falling
             
-            
-            particle.setColor(1.0F, 1.0F, 1.0F);
+            particle.setColor(1.0F, 1.0F, 1.0F); // Pure white
+            particle.setCoolingColor(0.9F, 0.9F, 0.9F);
             return particle;
         }
     }
@@ -209,7 +241,7 @@ public class RocketExhaustParticle extends TextureSheetParticle {
         @Override
         public Particle createParticle(@NotNull SimpleParticleType type, @NotNull ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
             RocketExhaustParticle particle = new RocketExhaustParticle(level, x, y, z, xSpeed, ySpeed, zSpeed, this.sprites);
-            particle.setLifetime(15 + level.random.nextInt(10)); 
+            particle.setLifetime(6 + level.random.nextInt(6)); 
             particle.scale(0.4f + level.random.nextFloat() * 0.4f); 
             particle.friction = 0.98F; 
             particle.setShrinking(true);

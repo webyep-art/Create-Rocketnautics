@@ -1,35 +1,42 @@
 {
   "block.rocketnautics.rocket_thruster": "Rocket Thruster",
+  "block.rocketnautics.rocket_thruster.funny": "Turns fuel into noise and hope. High-performance, low-survival.",
+  "block.rocketnautics.rocket_thruster.summary": "The core of any liquid-fueled rocket. Requires a constant supply of propellant (Lava) to generate thrust. Throttling is controlled via pump RPM. Extremely hot exhaust!",
+  
   "block.rocketnautics.vector_thruster": "Vector Thruster",
+  "block.rocketnautics.vector_thruster.funny": "Engineers discovered that if you wiggle the engine, the rocket goes a different way. Revolutionary.",
+  "block.rocketnautics.vector_thruster.summary": "A steerable liquid engine. Tilt is controlled by Redstone signals on its sides. Perfect for steering your ship without separate RCS thrusters.",
+  
   "block.rocketnautics.booster_thruster": "Booster Thruster",
+  "block.rocketnautics.booster_thruster.funny": "For those who want to reach the Moon by yesterday. Side effects may include rapid unplanned disassembly.",
+  "block.rocketnautics.booster_thruster.summary": "Solid fuel booster. Provides immense initial thrust but cannot be throttled or turned off once ignited. Uses Coal blocks as fuel.",
+  
   "block.rocketnautics.rcs_thruster": "RCS Thruster",
-  "block.rocketnautics.gyroscope": "Gyroscope (SAS)",
+  "block.rocketnautics.rcs_thruster.funny": "Shoots air. We all know it's just sucking the oxygen out of the cabin.",
+  "block.rocketnautics.rcs_thruster.summary": "Small maneuvering thruster. Essential for attitude control and translation in vacuum. Uses compressed gas to nudge your ship with high precision.",
+  
+
   "block.rocketnautics.separator": "Stage Separator",
+  "block.rocketnautics.separator.funny": "Essentially a controlled explosion. Hopefully, only the parts you want will fall off.",
+  "block.rocketnautics.separator.summary": "Explosive bolts designed to separate rocket stages. Vital for shedding dead weight during ascent. Triggered by a Redstone pulse.",
+  
   "block.rocketnautics.sputnik": "Sputnik Probe",
-  "block.rocketnautics.sputnik.tooltip.shift": "A small metal sphere that does two things: stays loaded and reports biome colors. Simple but effective.",
-  "rocketnautics.tooltip.sputnik.extra": "Acts as a permanent Chunk Loader. Integrated CC Peripheral for cartography.",
+  "block.rocketnautics.sputnik.funny": "Beep... Beep... Beep... A metal potato in the void.",
+  "block.rocketnautics.sputnik.summary": "An early artificial satellite. Acts as a permanent Chunk Loader and reports biome colors. Can be integrated with ComputerCraft for advanced cartography.",
+  
+  "rocketnautics.tooltip.summary_title": "Technical Summary",
   "rocketnautics.simulated_section.rocketnautics": "Cosmonautics",
   "itemGroup.rocketnautics.tab.resource": "Cosmonautics Resources",
   "itemGroup.rocketnautics.tab.world": "Cosmonautics World",
   "gui.rocketnautics.min_thrust": "Min Thrust (0 Signal)",
   "gui.rocketnautics.max_thrust": "Max Thrust (15 Signal)",
   "gui.rocketnautics.thrust_power": "Thrust Power",
-  "rocketnautics.tooltip.hold_shift": "Hold [Shift] for Summary",
-  "block.rocketnautics.rocket_thruster.tooltip.shift": "Found in a dumpster behind the VAB. It theoretically provides thrust, but mostly just turns Lava into noise.",
-  "rocketnautics.tooltip.rocket_thruster.extra": "Requires Lava. Controlled by Pump RPM. Explosions are statistically probable.",
-  "block.rocketnautics.vector_thruster.tooltip.shift": "Engineers discovered that if you wiggle the engine, the rocket goes a different way. Revolutionary.",
-  "rocketnautics.tooltip.vector_thruster.extra": "Steerable. Tilt controlled by Redstone on its sides. Wiggling intensely may cause motion sickness.",
-  "block.rocketnautics.booster_thruster.tooltip.shift": "A metal tube filled with 'safety-tested' chemicals. Jeb's favorite seat.",
-  "rocketnautics.tooltip.booster_thruster.extra": "Needs Coal blocks. Redstone activated. Do not use as a desk lamp.",
-  "block.rocketnautics.separator.tooltip.shift": "Essentially a controlled explosion. Hopefully, only the parts you want will fall off.",
-  "rocketnautics.tooltip.separator.extra": "Instantly disappears with Redstone. Warranty void if used as a structural support.",
-  "block.rocketnautics.rcs_thruster.tooltip.shift": "Shoots air. Engineers call it compressed gas, but we all know it's just sucking the oxygen out of the cabin.",
-  "rocketnautics.tooltip.rcs_thruster.extra": "Requires no fuel. 100N fixed thrust. Redstone activated. High precision, low power.",
-  "block.rocketnautics.gyroscope.tooltip.shift": "A rapidly spinning wheel that hates change. Keeps your rocket pointed where it should be.",
-  "rocketnautics.tooltip.gyroscope.extra": "Stability Augmentation System (SAS). Dampens angular velocity when powered by Redstone.",
+  
   "item.rocketnautics.music_disc_space": "Music Disc",
   "item.rocketnautics.music_disc_space.desc": "Kevin MacLeod - Brittle Rille",
-  "item.rocketnautics.music_disc_space.tooltip.shift": "We noticed our employee playing some game. We fired him, but we liked the music.",
+  "item.rocketnautics.music_disc_space.funny": "We noticed that one of our employees was playing some game instead of working. We fired him, but we really liked the soundtrack.",
+  "item.rocketnautics.music_disc_space.summary": "A high-quality recording from a distant world. Plays a relaxing space-themed track in any Jukebox.",
+  
   "item.rocketnautics.credits_book": "Credits",
   "rocketnautics.goggles.status": "Status",
   "rocketnautics.goggles.active": "Active",
@@ -39,42 +46,63 @@
   "rocketnautics.goggles.fuel": "Fuel Buffer",
   "rocketnautics.goggles.burn_time": "Time Remaining",
   "rocketnautics.goggles.fuel_usage": "Fuel Flow Rate",
-  "rocketnautics.ponder.rocket_thruster.header": "Rocket Thruster",
-  "rocketnautics.ponder.rocket_thruster.text_1": "Rocket Thrusters provide powerful propulsion for your crafts.",
-  "rocketnautics.ponder.rocket_thruster.text_2": "You can adjust the thrust power using the value slider.",
-  "rocketnautics.ponder.rocket_thruster.text_3": "The engine activates when fuel is pumped into it. Adjust pump RPM to control thrust.",
-  "rocketnautics.ponder.rocket_thruster.text_4": "Warning: The exhaust is extremely hot! It will melt blocks and damage entities.",
-  "rocketnautics.ponder.rocket_thruster.text_5": "The engine must be attached to a Fluid Tank to function.",
-  "rocketnautics.ponder.rocket_thruster.text_6": "Fill the tank with Lava to provide fuel for the thruster.",
+  
   "item.rocketnautics.jetpack": "Cosmonautics Jetpack",
-  "item.rocketnautics.jetpack.tooltip.desc": "For those who find gravity a bit too clingy.",
-  "item.rocketnautics.jetpack.tooltip.control": "Press [G] to toggle systems. Hold [Space] to defy physics.",
+  "item.rocketnautics.jetpack.funny": "For those who find gravity a bit too clingy. Warning: Do not use as a personal heater.",
+  "item.rocketnautics.jetpack.summary": "Wearable flight system. Press [G] to toggle systems. Uses fuel to provide vertical thrust. Hold [Space] to defy physics (briefly).",
+  
   "block.rocketnautics.titanium_ore": "Titanium Ore",
-  "block.rocketnautics.titanium_ore.tooltip.shift": "The backbone of your future failed space missions.",
+  "block.rocketnautics.titanium_ore.funny": "The backbone of your future failed space missions.",
+  "block.rocketnautics.titanium_ore.summary": "Rare ore found in high altitudes or deep underground. Essential for building strong, lightweight aerospace components.",
+  
   "block.rocketnautics.deepslate_titanium_ore": "Deepslate Titanium Ore",
-  "block.rocketnautics.deepslate_titanium_ore.tooltip.shift": "Deep, dark, and slightly harder to mine. Just like my existential dread.",
+  "block.rocketnautics.deepslate_titanium_ore.funny": "Deep, dark, and slightly harder to mine. Just like my existential dread.",
+  "block.rocketnautics.deepslate_titanium_ore.summary": "Titanium ore embedded in tough deepslate. Requires a diamond pickaxe or better to extract.",
+  
   "block.rocketnautics.raw_titanium_block": "Block of Raw Titanium",
-  "block.rocketnautics.raw_titanium_block.tooltip.shift": "A pile of metal potatoes. Heavy metal potatoes.",
+  "block.rocketnautics.raw_titanium_block.funny": "A pile of metal potatoes. Heavy metal potatoes.",
+  "block.rocketnautics.raw_titanium_block.summary": "A dense storage block for raw titanium. Can be uncrafted back into raw chunks.",
+  
   "block.rocketnautics.titanium_block": "Block of Titanium",
-  "block.rocketnautics.titanium_block.tooltip.shift": "Light as a feather, strong as a... really strong feather.",
+  "block.rocketnautics.titanium_block.funny": "Light as a feather, strong as a... really strong feather.",
+  "block.rocketnautics.titanium_block.summary": "A solid block of refined titanium. Resistant to high temperatures and vacuum stress.",
+  
   "block.rocketnautics.titanium_alloy_block": "Block of Titanium Alloy",
-  "block.rocketnautics.titanium_alloy_block.tooltip.shift": "Titanium, but with more attitude.",
+  "block.rocketnautics.titanium_alloy_block.funny": "Titanium, but with more attitude.",
+  "block.rocketnautics.titanium_alloy_block.summary": "Advanced alloy for extreme conditions. Perfect for engines and structural supports of heavy rockets.",
+  
   "item.rocketnautics.titanium_ingot": "Titanium Ingot",
-  "item.rocketnautics.titanium_ingot.tooltip.shift": "Standard aerospace grade. Tastes like science.",
+  "item.rocketnautics.titanium_ingot.funny": "Standard aerospace grade. Tastes like science.",
+  "item.rocketnautics.titanium_ingot.summary": "Basic refined titanium. Used in most rocketry recipes.",
+  
   "item.rocketnautics.raw_titanium": "Raw Titanium",
-  "item.rocketnautics.raw_titanium.tooltip.shift": "Looks like a potato, but it's actually metal. Don't eat it.",
+  "item.rocketnautics.raw_titanium.funny": "Looks like a potato, but it's actually metal. Don't eat it.",
+  "item.rocketnautics.raw_titanium.summary": "Unrefined titanium ore. Must be smelted or processed in a blast furnace.",
+  
   "item.rocketnautics.titanium_alloy": "Titanium Alloy",
-  "item.rocketnautics.titanium_alloy.tooltip.shift": "Double the toughness, double the weight, double the insurance cost.",
+  "item.rocketnautics.titanium_alloy.funny": "Double the toughness, double the weight, double the insurance cost.",
+  "item.rocketnautics.titanium_alloy.summary": "Refined alloy of titanium and other metals. Superior strength and heat resistance.",
+  
   "item.rocketnautics.titanium_nugget": "Titanium Nugget",
-  "item.rocketnautics.titanium_nugget.tooltip.shift": "Smells like victory. Or pennies.",
+  "item.rocketnautics.titanium_nugget.funny": "Smells like victory. Or pennies.",
+  "item.rocketnautics.titanium_nugget.summary": "Small piece of titanium. 9 nuggets make one ingot.",
+  
   "item.rocketnautics.titanium_alloy_nugget": "Titanium Alloy Nugget",
-  "item.rocketnautics.titanium_alloy_nugget.tooltip.shift": "Even smaller, even tougher.",
+  "item.rocketnautics.titanium_alloy_nugget.funny": "Even smaller, even tougher.",
+  "item.rocketnautics.titanium_alloy_nugget.summary": "Small piece of titanium alloy. Used for precision components.",
+  
   "item.rocketnautics.titanium_sheet": "Titanium Sheet",
-  "item.rocketnautics.titanium_sheet.tooltip.shift": "Perfect for wrapping leftovers, if your leftovers are rocket engines.",
+  "item.rocketnautics.titanium_sheet.funny": "Perfect for wrapping leftovers, if your leftovers are rocket engines.",
+  "item.rocketnautics.titanium_sheet.summary": "Pressed titanium plate. Essential for hulls and fuel tanks.",
+  
   "item.rocketnautics.titanium_alloy_sheet": "Titanium Alloy Sheet",
-  "item.rocketnautics.titanium_alloy_sheet.tooltip.shift": "NASA-grade foil. For very expensive sandwiches.",
+  "item.rocketnautics.titanium_alloy_sheet.funny": "NASA-grade foil. For very expensive sandwiches.",
+  "item.rocketnautics.titanium_alloy_sheet.summary": "High-strength alloy sheet. Used in the most critical parts of the spacecraft.",
+  
   "item.rocketnautics.titanium_nozzle": "Titanium Nozzle",
-  "item.rocketnautics.titanium_nozzle.tooltip.shift": "The business end of a rocket. Hot stuff coming through.",
+  "item.rocketnautics.titanium_nozzle.funny": "The business end of a rocket. Hot stuff coming through.",
+  "item.rocketnautics.titanium_nozzle.summary": "Precision-engineered nozzle for liquid engines. Directs exhaust to provide thrust.",
+  
   "key.rocketnautics.toggle_jetpack": "Toggle Jetpack Mode",
   "key.categories.rocketnautics": "Cosmonautics"
 }
