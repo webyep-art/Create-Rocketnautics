@@ -32,16 +32,19 @@ public class VectorThrusterRenderer extends SafeBlockEntityRenderer<VectorThrust
         float gY = Mth.lerp(partialTicks, be.getPrevGimbalY(), be.getGimbalY());
         float gZ = Mth.lerp(partialTicks, be.getPrevGimbalZ(), be.getGimbalZ());
         
-        // Convert facing direction to a base rotation quaternion
-        Quaternionf q = facing.getRotation();
+        // Calculate the world-space target direction vector
+        Vector3f baseDir = new Vector3f(facing.getStepX(), facing.getStepY(), facing.getStepZ());
+        Vector3f targetDir = new Vector3f(
+            facing.getStepX() + gX,
+            facing.getStepY() + gY,
+            facing.getStepZ() + gZ
+        ).normalize();
         
-        // Apply gimbal rotations locally. 
-        // A deviation in X (gX) requires a rotation around the Z axis.
-        // A deviation in Z (gZ) requires a rotation around the X axis.
-        // We use Math.asin to roughly convert the linear deviation into an angle.
-        if (gZ != 0) q.rotateX((float) -Math.asin(Mth.clamp(gZ, -1, 1)));
-        if (gX != 0) q.rotateZ((float) Math.asin(Mth.clamp(gX, -1, 1)));
-        if (gY != 0) q.rotateY((float) Math.asin(Mth.clamp(gY, -1, 1)));
+        // Create a rotation that tilts the neutral 'facing' direction towards our 'targetDir'
+        Quaternionf tilt = new Quaternionf().rotationTo(baseDir, targetDir);
+        
+        // Apply tilt on top of the base facing rotation
+        Quaternionf q = new Quaternionf(tilt).mul(facing.getRotation());
         
         ms.mulPose(q);
         

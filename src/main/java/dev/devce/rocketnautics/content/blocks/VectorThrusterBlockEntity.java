@@ -51,9 +51,9 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
     public Vector3d getParticleDirection() {
         Direction nozzle = getThrustDirection();
         return new Vector3d(
-                nozzle.getStepX() - gimbalX,
-                nozzle.getStepY() - gimbalY,
-                nozzle.getStepZ() - gimbalZ).normalize();
+                nozzle.getStepX() + gimbalX,
+                nozzle.getStepY() + gimbalY,
+                nozzle.getStepZ() + gimbalZ).normalize();
     }
 
     private int ccGimbalTimeout = 0;
@@ -141,9 +141,9 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
         Direction facing = getThrustDirection();
         Direction pushDirection = facing.getOpposite();
 
-        double vx = pushDirection.getStepX() + gimbalX;
-        double vy = pushDirection.getStepY() + gimbalY;
-        double vz = pushDirection.getStepZ() + gimbalZ;
+        double vx = pushDirection.getStepX() - gimbalX;
+        double vy = pushDirection.getStepY() - gimbalY;
+        double vz = pushDirection.getStepZ() - gimbalZ;
 
         double length = Math.sqrt(vx * vx + vy * vy + vz * vz);
         if (length < 0.001)

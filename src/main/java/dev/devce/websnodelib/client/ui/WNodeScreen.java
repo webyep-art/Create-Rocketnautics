@@ -63,9 +63,11 @@ public class WNodeScreen extends Screen {
     private boolean isSearching = false;
     private String searchQuery = "";
     private int menuX, menuY;
-    private List<ResourceLocation> filteredTypes = new ArrayList<>();
+    private List<SearchItem> filteredItemsList = new ArrayList<>();
     private int searchScrollOffset = 0;
     private Consumer<CompoundTag> onSave;
+
+    private record SearchItem(ResourceLocation type, String category, boolean isHeader) {}
 
     // Item Picker Overlay State
     private dev.devce.websnodelib.api.elements.WItemPicker activeItemPicker = null;
@@ -73,6 +75,28 @@ public class WNodeScreen extends Screen {
     private List<net.minecraft.world.item.Item> filteredItems = new ArrayList<>();
     private int itemScrollOffset = 0;
     private int itemMenuX, itemMenuY;
+    
+    // Context Menu State
+    private boolean isContextMenuOpen = false;
+    private List<ContextAction> currentActions = new ArrayList<>();
+    private int ctxMenuX, ctxMenuY;
+
+    private record ContextAction(String label, Runnable action, boolean important) {}
+    
+    // Renaming State
+    private WNode renamingNode = null;
+    private dev.devce.websnodelib.api.elements.WTextField renameField = null;
+    
+    // Resizing State
+    private boolean isResizing = false;
+    private WNode resizingNode = null;
+
+    // Undo/Redo State
+    private final java.util.LinkedList<CompoundTag> undoStack = new java.util.LinkedList<>();
+    private final java.util.LinkedList<CompoundTag> redoStack = new java.util.LinkedList<>();
+    
+    // Favorites
+    private static final java.util.Set<ResourceLocation> FAVORITES = new java.util.HashSet<>();
 
     public WNodeScreen(Component title, WGraph graph, java.util.function.Consumer<net.minecraft.nbt.CompoundTag> onSave) {
         super(title);
@@ -109,11 +133,14 @@ public class WNodeScreen extends Screen {
         this.mouseX = mouseX;
         this.mouseY = mouseY;
         
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, -2000);
         graphics.fill(0, 0, width, height, 0xFF121212);
         
         for (int i = 0; i < height; i += 2) {
             graphics.fill(0, i, width, i + 1, 0x0A000000);
         }
+        graphics.pose().popPose();
 
         graphics.pose().pushPose();
         float sOut = (0.98f + 0.02f * screenAnimation) * zoom;
@@ -125,8 +152,30 @@ public class WNodeScreen extends Screen {
 
         graphics.pose().translate(panX, panY, 0);
 
+        // 1. Render Frames (Background layer)
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, -500); // Push frames to the very back
+        for (WNode node : graph.getNodes()) {
+            if (node.getTypeId().getPath().equals("frame")) {
+                renderFrame(graphics, node, mouseX, mouseY);
+            }
+        }
+        graphics.pose().popPose();
+
+        // 2. Render Connections
         for (WConnection conn : graph.getConnections()) {
             drawConnection(graphics, conn, partialTick);
+        }
+        
+        // 3. Render Nodes (Foreground layer)
+        int z = 0;
+        for (WNode node : graph.getNodes()) {
+            if (!node.getTypeId().getPath().equals("frame")) {
+                graphics.pose().pushPose();
+                graphics.pose().translate(0, 0, z++ * 5); 
+                node.render(graphics, (int)((mouseX - width / 2f) / zoom + width / 2f - panX), (int)((mouseY - height / 2f) / zoom + height / 2f - panY), partialTick);
+                graphics.pose().popPose();
+            }
         }
 
         if (linkingNode != null) {
@@ -137,13 +186,6 @@ public class WNodeScreen extends Screen {
             drawSmoothCurve(graphics, sx, sy, tx, ty, 0xAAFFFFFF, 1.5f);
         }
 
-        int z = 0;
-        for (WNode node : graph.getNodes()) {
-            graphics.pose().pushPose();
-            graphics.pose().translate(0, 0, z++ * 10); 
-            node.render(graphics, (int)((mouseX - width / 2f) / zoom + width / 2f - panX), (int)((mouseY - height / 2f) / zoom + height / 2f - panY), partialTick);
-            graphics.pose().popPose();
-        }
 
         if (isSelecting) {
             float x1 = (float)Math.min(selStartX, selEndX);
@@ -169,16 +211,135 @@ public class WNodeScreen extends Screen {
         if (isSearching) {
             renderSearchMenu(graphics);
         }
+        if (isContextMenuOpen) {
+            renderContextMenu(graphics);
+        }
+        if (renamingNode != null) {
+            renderRenameOverlay(graphics);
+        }
         if (activeItemPicker != null) {
             renderItemPickerOverlay(graphics);
         }
+        renderMinimap(graphics);
+    }
+
+    private void renderMinimap(GuiGraphics graphics) {
+        int mw = 100;
+        int mh = 70;
+        int mx = width - mw - 10;
+        int my = height - mh - 10;
+        
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 8000);
+        graphics.fill(mx - 1, my - 1, mx + mw + 1, my + mh + 1, 0xFF00FF88);
+        graphics.fill(mx, my, mx + mw, my + mh, 0xCC1A1A1A);
+        
+        float scale = 0.05f; // Minimap zoom
+        
+        for (WNode node : graph.getNodes()) {
+            int nx = mx + mw/2 + (int)((node.getX() + panX - width/2) * scale);
+            int ny = my + mh/2 + (int)((node.getY() + panY - height/2) * scale);
+            int nw = (int)(node.getWidth() * scale);
+            int nh = (int)(node.getHeight() * scale);
+            
+            if (nx >= mx && nx + nw <= mx + mw && ny >= my && ny + nh <= my + mh) {
+                graphics.fill(nx, ny, nx + nw, ny + nh, 0xAA00FF88);
+            }
+        }
+        
+        // Connections on minimap
+        for (dev.devce.websnodelib.api.WConnection conn : graph.getConnections()) {
+            WNode src = findNode(conn.sourceNode());
+            WNode tgt = findNode(conn.targetNode());
+            if (src != null && tgt != null) {
+                int sx = mx + mw/2 + (int)((src.getX() + src.getWidth() + panX - width/2) * scale);
+                int sy = my + mh/2 + (int)((src.getY() + 18 + conn.sourcePin() * 12 + panY - height/2) * scale);
+                int tx = mx + mw/2 + (int)((tgt.getX() + panX - width/2) * scale);
+                int ty = my + mh/2 + (int)((tgt.getY() + 18 + conn.targetPin() * 12 + panY - height/2) * scale);
+                
+                if (sx >= mx && sx <= mx + mw && sy >= my && sy <= my + mh && tx >= mx && tx <= mx + mw && ty >= my && ty <= my + mh) {
+                    drawMinimapLine(graphics, sx, sy, tx, ty, 0xAA00FF88);
+                }
+            }
+        }
+        
+        // Render viewport box
+        int vpx = mx + mw/2 + (int)((-width/2) * scale);
+        int vpy = my + mh/2 + (int)((-height/2) * scale);
+        int vpw = (int)(width * scale);
+        int vph = (int)(height * scale);
+        graphics.renderOutline(vpx, vpy, vpw, vph, 0xFFFFFFFF);
+        
+        graphics.pose().popPose();
+    }
+
+    private void drawMinimapLine(GuiGraphics graphics, int x1, int y1, int x2, int y2, int color) {
+        int dx = Math.abs(x2 - x1);
+        int dy = Math.abs(y2 - y1);
+        if (dx > dy) {
+            graphics.fill(Math.min(x1, x2), y1, Math.max(x1, x2) + 1, y1 + 1, color);
+            graphics.fill(x2, Math.min(y1, y2), x2 + 1, Math.max(y1, y2) + 1, color);
+        } else {
+            graphics.fill(x1, Math.min(y1, y2), x1 + 1, Math.max(y1, y2) + 1, color);
+            graphics.fill(Math.min(x1, x2), y2, Math.max(x1, x2) + 1, y2 + 1, color);
+        }
+    }
+
+
+    private void renderContextMenu(GuiGraphics graphics) {
+        int mw = 120;
+        int itemH = 14;
+        int mh = currentActions.size() * itemH + 4;
+        
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 9000);
+        graphics.fill(ctxMenuX + 2, ctxMenuY + 2, ctxMenuX + mw + 2, ctxMenuY + mh + 2, 0x55000000);
+        graphics.fill(ctxMenuX, ctxMenuY, ctxMenuX + mw, ctxMenuY + mh, 0xEE1A1A1A);
+        graphics.renderOutline(ctxMenuX, ctxMenuY, mw, mh, 0xFF00FF88);
+
+        for (int i = 0; i < currentActions.size(); i++) {
+            ContextAction act = currentActions.get(i);
+            int iy = ctxMenuY + 2 + i * itemH;
+            boolean hovered = mouseX >= ctxMenuX && mouseX <= ctxMenuX + mw && mouseY >= iy && mouseY < iy + itemH;
+            
+            if (hovered) graphics.fill(ctxMenuX + 1, iy, ctxMenuX + mw - 1, iy + itemH, 0x3300FF88);
+            graphics.drawString(font, act.label, ctxMenuX + 6, iy + 3, act.important ? 0xFFFF5555 : (hovered ? 0xFFFFFFFF : 0xFFAAAAAA), false);
+        }
+        graphics.pose().popPose();
+    }
+
+    private void renderFrame(GuiGraphics graphics, WNode node, int mouseX, int mouseY) {
+        int x = node.getX();
+        int y = node.getY();
+        int w = node.getWidth();
+        int h = node.getHeight();
+        
+        int color = node.isSelected() ? 0x6600FF88 : 0x3300FF88;
+        graphics.fill(x, y, x + w, y + h, color);
+        graphics.renderOutline(x, y, w, h, 0xFF00FF88);
+        graphics.drawString(font, "§l" + node.getTitle(), x + 5, y + 5, 0xFFFFFFFF, false);
+        
+        // Resize handle
+        graphics.fill(x + w - 8, y + h - 8, x + w, y + h, 0xFF00FF88);
+    }
+
+    private void renderRenameOverlay(GuiGraphics graphics) {
+        int rx = (int)((renamingNode.getX() + panX - width / 2f) * zoom + width / 2f);
+        int ry = (int)((renamingNode.getY() + panY - height / 2f) * zoom + height / 2f) - 20;
+        
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 9500);
+        graphics.fill(rx - 2, ry - 2, rx + 102, ry + 16, 0xEE1A1A1A);
+        graphics.renderOutline(rx - 2, ry - 2, 104, 18, 0xFF00FF88);
+        renameField.render(graphics, rx, ry, mouseX, mouseY, 0);
+        graphics.pose().popPose();
     }
 
     private void renderSearchMenu(GuiGraphics graphics) {
         int mw = 140;
         int itemH = 12;
         int maxVisible = 12;
-        int visibleCount = Math.min(maxVisible, filteredTypes.size());
+        int visibleCount = Math.min(maxVisible, filteredItemsList.size());
         int mh = 15 + visibleCount * itemH;
         
         graphics.pose().pushPose();
@@ -190,24 +351,32 @@ public class WNodeScreen extends Screen {
         
         for (int i = 0; i < visibleCount; i++) {
             int idx = i + searchScrollOffset;
-            if (idx >= filteredTypes.size()) break;
+            if (idx >= filteredItemsList.size()) break;
             
-            net.minecraft.resources.ResourceLocation type = filteredTypes.get(idx);
-            // Try to get a friendly name
+            SearchItem item = filteredItemsList.get(idx);
+            
+            if (item.isHeader) {
+                graphics.fill(menuX + 1, menuY + 15 + i * itemH, menuX + mw - 1, menuY + 15 + (i + 1) * itemH, 0x22FFFFFF);
+                graphics.drawString(font, "§7[" + item.category + "]", menuX + 4, menuY + 16 + i * itemH, 0xFFAAAAAA, false);
+                continue;
+            }
+
+            ResourceLocation type = item.type;
             String displayName = type.getPath().replace("_", " ");
             displayName = displayName.substring(0, 1).toUpperCase() + displayName.substring(1);
             
+            boolean isFav = FAVORITES.contains(type);
             boolean hovered = mouseY >= menuY + 15 + i * itemH && mouseY < menuY + 15 + (i + 1) * itemH && mouseX >= menuX && mouseX <= menuX + mw;
-            int color = (idx == 0 || hovered) ? 0xFFFFFFFF : 0xFF888888;
-            if (idx == 0 || hovered) {
+            
+            if (hovered) {
                 graphics.fill(menuX + 1, menuY + 15 + i * itemH, menuX + mw - 1, menuY + 15 + (i + 1) * itemH, 0x4400FF88);
             }
-            graphics.drawString(font, displayName, menuX + 6, menuY + 16 + i * itemH, color, false);
+            graphics.drawString(font, (isFav ? "§e★ " : "  ") + displayName, menuX + 6, menuY + 16 + i * itemH, hovered ? 0xFFFFFFFF : 0xFF888888, false);
         }
         
         // Scroll indicator
-        if (filteredTypes.size() > maxVisible) {
-            float progress = (float) searchScrollOffset / (filteredTypes.size() - maxVisible);
+        if (filteredItemsList.size() > maxVisible) {
+            float progress = (float) searchScrollOffset / (filteredItemsList.size() - maxVisible);
             int barY = menuY + 15 + (int)(progress * (mh - 25));
             graphics.fill(menuX + mw - 3, menuY + 15, menuX + mw - 1, menuY + mh - 1, 0x22FFFFFF);
             graphics.fill(menuX + mw - 3, barY, menuX + mw - 1, barY + 10, 0xFF00FF88);
@@ -218,7 +387,7 @@ public class WNodeScreen extends Screen {
 
     private void drawGrid(GuiGraphics graphics) {
         graphics.pose().pushPose();
-        graphics.pose().translate(panX, panY, 0);
+        graphics.pose().translate(panX, panY, -1000);
         int gridSize = 20;
         int startX = (int)(-panX - (width / 2f) / zoom - 20);
         int startY = (int)(-panY - (height / 2f) / zoom - 20);
@@ -319,36 +488,81 @@ public class WNodeScreen extends Screen {
             return true;
         }
 
+        if (isContextMenuOpen) {
+            int mw = 120;
+            int itemH = 14;
+            int mh = currentActions.size() * itemH + 4;
+            if (mouseX >= ctxMenuX && mouseX <= ctxMenuX + mw && mouseY >= ctxMenuY && mouseY <= ctxMenuY + mh) {
+                int index = (int)((mouseY - (ctxMenuY + 2)) / itemH);
+                if (index >= 0 && index < currentActions.size()) {
+                    currentActions.get(index).action().run();
+                    isContextMenuOpen = false;
+                    return true;
+                }
+            }
+            isContextMenuOpen = false;
+            if (button == 0) return true; // Consume click to just close menu
+        }
+
         int nx = (int)((mouseX - width / 2f) / zoom + width / 2f - panX);
         int ny = (int)((mouseY - height / 2f) / zoom + height / 2f - panY);
+
+        if (button == 0) {
+            for (WNode node : graph.getNodes()) {
+                if (node.getTypeId().getPath().equals("frame")) {
+                    int handleX = node.getX() + node.getWidth() - 8;
+                    int handleY = node.getY() + node.getHeight() - 8;
+                    if (nx >= handleX && nx <= handleX + 8 && ny >= handleY && ny <= handleY + 8) {
+                        pushUndo();
+                        isResizing = true;
+                        resizingNode = node;
+                        return true;
+                    }
+                }
+            }
+        }
+
         if (isSearching) {
             int itemH = 12;
             int mw = 140;
             int maxVisible = 12;
-            int visibleCount = Math.min(maxVisible, filteredTypes.size());
+            int visibleCount = Math.min(maxVisible, filteredItemsList.size());
             if (mouseX >= menuX && mouseX <= menuX + mw && mouseY >= menuY + 15 && mouseY <= menuY + 15 + visibleCount * itemH) {
                 int index = (int)((mouseY - (menuY + 15)) / itemH) + searchScrollOffset;
-                if (index >= 0 && index < filteredTypes.size()) {
-                    addNodeAt(filteredTypes.get(index), nx, ny); isSearching = false; return true;
+                if (index >= 0 && index < filteredItemsList.size()) {
+                    SearchItem item = filteredItemsList.get(index);
+                    if (!item.isHeader) {
+                        if (button == 1) { // Right click to toggle favorite
+                            if (FAVORITES.contains(item.type)) FAVORITES.remove(item.type);
+                            else FAVORITES.add(item.type);
+                            updateSearch();
+                            return true;
+                        }
+                        pushUndo();
+                        addNodeAt(item.type, nx, ny); isSearching = false; return true;
+                    }
                 }
             }
             isSearching = false; return true;
         }
         if (button == 1) {
-            boolean hitAnything = false;
+            boolean overNode = false;
             for (WNode node : graph.getNodes()) {
-                if (node.getPinAt(nx - node.getX(), ny - node.getY(), true) != -1 || node.getPinAt(nx - node.getX(), ny - node.getY(), false) != -1 || (nx >= node.getX() && nx <= node.getX() + node.getWidth() && ny >= node.getY() && ny <= node.getY() + node.getHeight())) {
-                    hitAnything = true; break;
+                if (nx >= node.getX() && nx <= node.getX() + node.getWidth() && ny >= node.getY() && ny <= node.getY() + node.getHeight()) {
+                    overNode = true;
+                    if (!node.isSelected()) {
+                        graph.getNodes().forEach(n -> n.setSelected(false));
+                        node.setSelected(true);
+                    }
+                    break;
                 }
             }
-            if (!hitAnything) { isSearching = true; searchQuery = ""; menuX = (int)mouseX; menuY = (int)mouseY; updateSearch(); return true; }
-        }
-        if (button == 1) {
-            for (WNode node : graph.getNodes()) {
-                int inPin = node.getPinAt(nx - node.getX(), ny - node.getY(), true);
-                int outPin = node.getPinAt(nx - node.getX(), ny - node.getY(), false);
-                if (inPin != -1) { graph.getConnections().removeIf(c -> c.targetNode().equals(node.getId()) && c.targetPin() == inPin); graph.updateTopology(); return true; }
-                if (outPin != -1) { graph.getConnections().removeIf(c -> c.sourceNode().equals(node.getId()) && c.sourcePin() == outPin); graph.updateTopology(); return true; }
+
+            if (overNode) {
+                openContextMenu((int)mouseX, (int)mouseY);
+                return true;
+            } else {
+                isSearching = true; searchQuery = ""; menuX = (int)mouseX; menuY = (int)mouseY; updateSearch(); return true;
             }
         }
         if (button == 2 || (button == 1 && Screen.hasShiftDown())) { isPanning = true; return true; }
@@ -378,6 +592,10 @@ public class WNodeScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (isResizing) {
+            pushUndo();
+            isResizing = false; resizingNode = null;
+        }
         int nx = (int)((mouseX - width / 2f) / zoom + width / 2f - panX);
         int ny = (int)((mouseY - height / 2f) / zoom + height / 2f - panY);
         if (isSelecting) {
@@ -391,7 +609,7 @@ public class WNodeScreen extends Screen {
         if (linkingNode != null) {
             for (WNode node : graph.getNodes()) {
                 int inPin = node.getPinAt(nx - node.getX(), ny - node.getY(), true);
-                if (inPin != -1) { graph.connect(linkingNode.getId(), linkingPin, node.getId(), inPin); break; }
+                if (inPin != -1) { pushUndo(); graph.connect(linkingNode.getId(), linkingPin, node.getId(), inPin); break; }
             }
         }
         if (selectedNode != null) selectedNode.mouseReleased(nx, ny, button);
@@ -401,6 +619,13 @@ public class WNodeScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (isResizing && resizingNode != null) {
+            int nx = (int)((mouseX - width / 2f) / zoom + width / 2f - panX);
+            int ny = (int)((mouseY - height / 2f) / zoom + height / 2f - panY);
+            resizingNode.setWidth(Math.max(40, nx - resizingNode.getX()));
+            resizingNode.setHeight(Math.max(40, ny - resizingNode.getY()));
+            return true;
+        }
         if (isSelecting) {
             float mx = (float)((mouseX - width / 2f) / zoom + width / 2f - panX); float my = (float)((mouseY - height / 2f) / zoom + height / 2f - panY);
             selEndX = mx; selEndY = my; return true;
@@ -423,7 +648,7 @@ public class WNodeScreen extends Screen {
         }
         if (isSearching) {
             if (scrollY > 0 && searchScrollOffset > 0) searchScrollOffset--;
-            if (scrollY < 0 && searchScrollOffset + 12 < filteredTypes.size()) searchScrollOffset++;
+            if (scrollY < 0 && searchScrollOffset + 12 < filteredItemsList.size()) searchScrollOffset++;
             return true;
         }
         zoom = (float) Math.max(0.1, Math.min(3.0, zoom + scrollY * 0.1)); return true;
@@ -431,6 +656,44 @@ public class WNodeScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (renamingNode != null) {
+            if (keyCode == 256) { renamingNode = null; return true; } // ESC
+            if (keyCode == 257 || keyCode == 335) { // Enter
+                renamingNode.setTitle(renameField.getValue());
+                renamingNode = null;
+                return true;
+            }
+            return renameField.handleKeyPress(keyCode, scanCode, modifiers);
+        }
+        
+        if (Screen.hasControlDown()) {
+            if (keyCode == 90) { undo(); return true; } // Ctrl+Z
+            if (keyCode == 89) { redo(); return true; } // Ctrl+Y
+        }
+        
+        if (keyCode == 67 && renamingNode == null && !isSearching) { // 'C' key for Comment Frame
+            List<WNode> selected = graph.getNodes().stream().filter(WNode::isSelected).toList();
+            if (!selected.isEmpty()) {
+                pushUndo();
+                int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+                int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
+                for (WNode n : selected) {
+                    minX = Math.min(minX, n.getX());
+                    minY = Math.min(minY, n.getY());
+                    maxX = Math.max(maxX, n.getX() + n.getWidth());
+                    maxY = Math.max(maxY, n.getY() + n.getHeight());
+                }
+                int padding = 20;
+                WNode frame = dev.devce.websnodelib.api.NodeRegistry.createNode(ResourceLocation.fromNamespaceAndPath("rocketnautics", "frame"), minX - padding, minY - padding - 15);
+                if (frame != null) {
+                    frame.setWidth(maxX - minX + padding * 2);
+                    frame.setHeight(maxY - minY + padding * 2 + 15);
+                    graph.addNode(frame);
+                    return true;
+                }
+            }
+        }
+
         if (activeItemPicker != null) {
             if (keyCode == 256) { activeItemPicker = null; return true; } // ESC
             if (keyCode == 259) { // BACKSPACE
@@ -444,7 +707,15 @@ public class WNodeScreen extends Screen {
         }
         if (isSearching) {
             if (keyCode == 256) { isSearching = false; return true; }
-            if (keyCode == 257 || keyCode == 335) { if (!filteredTypes.isEmpty()) addNodeAt(filteredTypes.get(0), (int)(menuX - panX), (int)(menuY - panY)); isSearching = false; return true; }
+            if (keyCode == 257 || keyCode == 335) { 
+                for (SearchItem item : filteredItemsList) {
+                    if (!item.isHeader) {
+                        addNodeAt(item.type, (int)(menuX - panX), (int)(menuY - panY)); 
+                        isSearching = false; 
+                        return true; 
+                    }
+                }
+            }
             if (keyCode == 259) { if (!searchQuery.isEmpty()) { searchQuery = searchQuery.substring(0, searchQuery.length() - 1); updateSearch(); } return true; }
             return true;
         }
@@ -466,6 +737,7 @@ public class WNodeScreen extends Screen {
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
+        if (renamingNode != null) return renameField.handleCharTyped(codePoint, modifiers);
         if (activeItemPicker != null) {
             itemSearchQuery += codePoint;
             updateItemSearch();
@@ -567,10 +839,11 @@ public class WNodeScreen extends Screen {
     }
 
     private void updateSearch() {
-        filteredTypes.clear();
+        filteredItemsList.clear();
         String query = searchQuery.toLowerCase();
         List<ResourceLocation> all = new ArrayList<>(dev.devce.websnodelib.api.NodeRegistry.getRegisteredTypes());
-        all.sort((a, b) -> a.getPath().compareTo(b.getPath()));
+        
+        java.util.Map<String, List<ResourceLocation>> grouped = new java.util.TreeMap<>();
         
         java.util.Set<String> foundTypes = new java.util.HashSet<>();
         if (graph.getContext() instanceof dev.devce.rocketnautics.content.blocks.SputnikBlockEntity sputnik) {
@@ -583,15 +856,39 @@ public class WNodeScreen extends Screen {
         
         for (net.minecraft.resources.ResourceLocation type : all) {
             String path = type.getPath().toLowerCase();
+            String category = dev.devce.websnodelib.api.NodeRegistry.getCategory(type);
+            String cleanCategory = category.toLowerCase().replaceAll("[^a-z0-9]", "");
             
-            // Context-sensitive filtering for peripheral controls
+            // Context-sensitive filtering
             if (path.equals("vector_control") && !foundTypes.contains("vector_engine")) continue;
             if (path.equals("rcs_control") && !foundTypes.contains("rcs")) continue;
             if (path.equals("booster_control") && !foundTypes.contains("booster")) continue;
             if (path.equals("thruster_control") && !foundTypes.contains("thruster")) continue;
             
-            if (query.isEmpty() || path.contains(query)) {
-                filteredTypes.add(type);
+            if (query.isEmpty() || path.contains(query) || category.toLowerCase().contains(query) || cleanCategory.contains(query)) {
+                grouped.computeIfAbsent(category, k -> new ArrayList<>()).add(type);
+            }
+        }
+        
+        // Favorites group
+        if (!FAVORITES.isEmpty()) {
+            List<ResourceLocation> favs = FAVORITES.stream()
+                .filter(all::contains)
+                .sorted((a, b) -> a.getPath().compareTo(b.getPath()))
+                .toList();
+            if (!favs.isEmpty()) {
+                filteredItemsList.add(0, new SearchItem(null, "Favorites", true));
+                int i = 1;
+                for (ResourceLocation type : favs) {
+                    filteredItemsList.add(i++, new SearchItem(type, "Favorites", false));
+                }
+            }
+        }
+        
+        for (java.util.Map.Entry<String, List<ResourceLocation>> entry : grouped.entrySet()) {
+            filteredItemsList.add(new SearchItem(null, entry.getKey(), true));
+            for (ResourceLocation type : entry.getValue()) {
+                filteredItemsList.add(new SearchItem(type, entry.getKey(), false));
             }
         }
         searchScrollOffset = 0;
@@ -641,5 +938,108 @@ public class WNodeScreen extends Screen {
                 if (newSrc != null && newTgt != null) graph.connect(newSrc, c.getInt("srcP"), newTgt, c.getInt("tgtP"));
             }
         } catch (Exception e) {}
+    }
+
+    private void openContextMenu(int mx, int my) {
+        isContextMenuOpen = true;
+        ctxMenuX = mx;
+        ctxMenuY = my;
+        currentActions.clear();
+        
+        long selectedCount = graph.getNodes().stream().filter(WNode::isSelected).count();
+        
+        if (selectedCount > 0) {
+            if (selectedCount == 1) {
+                WNode node = graph.getNodes().stream().filter(WNode::isSelected).findFirst().orElse(null);
+                if (node != null && node.getTypeId().getPath().equals("function")) {
+                    currentActions.add(new ContextAction("§eOpen Graph", () -> {
+                        minecraft.setScreen(new WNodeScreen(Component.literal("Sub-Graph Editor"), node.getInternalGraph(), (tag) -> {
+                            node.getInternalGraph().load(tag);
+                        }));
+                    }, false));
+                }
+            }
+            
+            currentActions.add(new ContextAction("Copy", this::copySelected, false));
+            currentActions.add(new ContextAction("Rename", () -> {
+                WNode node = graph.getNodes().stream().filter(WNode::isSelected).findFirst().orElse(null);
+                if (node != null) {
+                    pushUndo();
+                    renamingNode = node;
+                    renameField = new dev.devce.websnodelib.api.elements.WTextField(100);
+                    renameField.setValue(node.getTitle());
+                    renameField.handleMouseClick(0, 0, 0); // Force focus
+                }
+            }, false));
+            currentActions.add(new ContextAction("Delete", () -> {
+                pushUndo();
+                graph.getNodes().removeIf(WNode::isSelected);
+                graph.updateTopology();
+            }, true));
+            
+            if (selectedCount > 1) {
+                currentActions.add(new ContextAction("§bZip to Function", this::zipToFunction, false));
+            }
+        }
+    }
+
+    private void pushUndo() {
+        undoStack.addFirst(graph.save());
+        if (undoStack.size() > 50) undoStack.removeLast();
+        redoStack.clear();
+    }
+
+    private void undo() {
+        if (undoStack.isEmpty()) return;
+        redoStack.addFirst(graph.save());
+        graph.load(undoStack.removeFirst());
+        graph.updateTopology();
+    }
+
+    private void redo() {
+        if (redoStack.isEmpty()) return;
+        undoStack.addFirst(graph.save());
+        graph.load(redoStack.removeFirst());
+        graph.updateTopology();
+    }
+
+    private void zipToFunction() {
+        pushUndo();
+        List<WNode> selected = graph.getNodes().stream().filter(WNode::isSelected).toList();
+        if (selected.isEmpty()) return;
+
+        // Find average position
+        int avgX = (int) selected.stream().mapToInt(WNode::getX).average().orElse(0);
+        int avgY = (int) selected.stream().mapToInt(WNode::getY).average().orElse(0);
+
+        // Create the encapsulation node
+        WNode funcNode = dev.devce.websnodelib.api.NodeRegistry.createNode(ResourceLocation.fromNamespaceAndPath("rocketnautics", "function"), avgX, avgY);
+        if (funcNode == null) return;
+        
+        WGraph subGraph = funcNode.getInternalGraph();
+        
+        // Move nodes and their internal connections
+        for (WNode n : selected) {
+            subGraph.addNode(n);
+            graph.getNodes().remove(n);
+        }
+        
+        // Move connections that are entirely within the selection
+        List<WConnection> internalConns = graph.getConnections().stream()
+            .filter(c -> selected.stream().anyMatch(n -> n.getId().equals(c.sourceNode())) && 
+                         selected.stream().anyMatch(n -> n.getId().equals(c.targetNode())))
+            .toList();
+            
+        for (WConnection c : internalConns) {
+            subGraph.connect(c.sourceNode(), c.sourcePin(), c.targetNode(), c.targetPin());
+            graph.getConnections().remove(c);
+        }
+        
+        graph.addNode(funcNode);
+        graph.updateTopology();
+        isContextMenuOpen = false;
+        
+        // Feedback message
+        minecraft.gui.getChat().addMessage(Component.literal("§aSuccessfully zipped " + selected.size() + " nodes into a Function."));
     }
 }

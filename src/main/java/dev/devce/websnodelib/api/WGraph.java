@@ -174,10 +174,13 @@ public class WGraph {
             }
         }
         
-        // BFS to propagate depth
+        // BFS to propagate depth, limited to prevent infinite loops in cycles
+        int maxDepth = nodes.size();
         while (!queue.isEmpty()) {
             WNode current = queue.poll();
             int nextDepth = current.getTopoDepth() + 1;
+            
+            if (nextDepth > maxDepth) continue; // Cycle detected, stop propagating here
             
             for (WConnection conn : connections) {
                 if (conn.sourceNode().equals(current.getId())) {

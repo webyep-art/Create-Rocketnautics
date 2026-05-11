@@ -31,6 +31,7 @@ public class WNode {
     private final List<WPin> inputs = new ArrayList<>();
     private final List<WPin> outputs = new ArrayList<>();
     private Evaluator evaluator = (node) -> {};
+    private WGraph internalGraph;
     private int topoDepth = 0;
     private boolean selected = false;
 
@@ -290,8 +291,8 @@ public class WNode {
 
     public net.minecraft.nbt.CompoundTag save() {
         net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+        tag.putUUID("id", id);
         tag.putString("typeId", typeId.toString());
-        tag.putString("id", id.toString());
         tag.putString("title", title);
         tag.putInt("x", x);
         tag.putInt("y", y);
@@ -308,11 +309,16 @@ public class WNode {
         for (WElement el : elements) elementsTag.add(el.save());
         tag.put("elements", elementsTag);
         
+        if (internalGraph != null) {
+            tag.put("internalGraph", internalGraph.save());
+        }
+        
         return tag;
     }
 
     public void load(net.minecraft.nbt.CompoundTag tag) {
-        if (tag.contains("id")) this.id = UUID.fromString(tag.getString("id"));
+        if (tag.contains("id")) this.id = tag.getUUID("id");
+        if (tag.contains("title")) this.title = tag.getString("title");
         this.x = tag.getInt("x");
         this.y = tag.getInt("y");
         
@@ -324,6 +330,11 @@ public class WNode {
         
         net.minecraft.nbt.ListTag elementsTag = tag.getList("elements", 10);
         for (int i = 0; i < Math.min(elements.size(), elementsTag.size()); i++) elements.get(i).load(elementsTag.getCompound(i));
+        
+        if (tag.contains("internalGraph")) {
+            if (internalGraph == null) internalGraph = new WGraph();
+            internalGraph.load(tag.getCompound("internalGraph"));
+        }
     }
 
     public void setSelected(boolean selected) { this.selected = selected; }
@@ -341,4 +352,13 @@ public class WNode {
     public int getHeight() { return height; }
     public int getTopoDepth() { return topoDepth; }
     public void setTopoDepth(int depth) { this.topoDepth = depth; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public WGraph getInternalGraph() { return internalGraph; }
+    public void setInternalGraph(WGraph graph) { this.internalGraph = graph; }
+
+    public void clearInputs() { inputs.clear(); updateLayout(); }
+    public void clearOutputs() { outputs.clear(); updateLayout(); }
 }

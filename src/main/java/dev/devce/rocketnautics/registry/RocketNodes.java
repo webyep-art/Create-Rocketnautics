@@ -5,13 +5,15 @@ import dev.devce.rocketnautics.content.blocks.SputnikBlockEntity;
 import dev.devce.rocketnautics.api.peripherals.IPeripheral;
 import dev.devce.websnodelib.api.NodeRegistry;
 import dev.devce.websnodelib.api.WNode;
+import dev.devce.websnodelib.api.WGraph;
 import net.minecraft.resources.ResourceLocation;
+import java.util.List;
 
 public class RocketNodes {
     public static void register() {
         // --- Sensors ---
         
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "altitude"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "altitude"), "Sensors", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "altitude"), "Altitude", x, y);
             node.addOutput("m", 0xFF00AAFF);
             node.setEvaluator(n -> {
@@ -22,7 +24,7 @@ public class RocketNodes {
             return node;
         });
 
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "velocity"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "velocity"), "Sensors", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "velocity"), "Velocity", x, y);
             node.addOutput("m/s", 0xFF00AAFF);
             node.setEvaluator(n -> {
@@ -33,7 +35,7 @@ public class RocketNodes {
             return node;
         });
 
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "attitude"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "attitude"), "Sensors", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "attitude"), "Attitude", x, y);
             node.addOutput("Pitch", 0xFFFFAA00);
             node.addOutput("Yaw", 0xFFFFAA00);
@@ -48,7 +50,7 @@ public class RocketNodes {
             return node;
         });
 
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "attitude_display"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "attitude_display"), "Display", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "attitude_display"), "Attitude Display", x, y);
             
             // Add inputs for debugging/wiring
@@ -81,7 +83,7 @@ public class RocketNodes {
 
         // --- Actuators ---
 
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "peripheral_list"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "peripheral_list"), "System", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "peripheral_list"), "Peripheral List", x, y);
             
             // Custom element to draw the list
@@ -136,7 +138,7 @@ public class RocketNodes {
             return node;
         });
 
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "thruster_control"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "thruster_control"), "Actuators", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "thruster_control"), "Rocket Thruster Control", x, y);
             node.addInput("ID", 0xFF888888);
             node.addInput("Power", 0xFFFF5555);
@@ -156,7 +158,7 @@ public class RocketNodes {
             return node;
         });
 
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "vector_control"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "vector_control"), "Actuators", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "vector_control"), "Vector Control", x, y);
             node.addInput("ID", 0xFF888888);
             node.addInput("Pitch", 0xFFFFAA00);
@@ -181,7 +183,7 @@ public class RocketNodes {
             return node;
         });
 
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "rcs_control"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "rcs_control"), "Actuators", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "rcs_control"), "RCS Control", x, y);
             node.addInput("ID", 0xFF888888);
             node.addInput("Power", 0xFFFF5555);
@@ -201,7 +203,7 @@ public class RocketNodes {
             return node;
         });
 
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "booster_control"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "booster_control"), "Actuators", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "booster_control"), "Booster Control", x, y);
             node.addInput("ID", 0xFF888888);
             node.addInput("Power", 0xFFFF5555);
@@ -221,7 +223,7 @@ public class RocketNodes {
             return node;
         });
 
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "redstone_out"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "redstone_out"), "I/O", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "redstone_out"), "Redstone Out", x, y);
             node.addInput("Level", 0xFFFF0000);
             node.setEvaluator(n -> {
@@ -236,7 +238,7 @@ public class RocketNodes {
         // --- Create Integration: Linked Redstone ---
 
         // Transmitter
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "redstone_transmitter"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "redstone_transmitter"), "I/O", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "redstone_transmitter"), "Linked Transmitter", x, y);
             node.addInput("Signal", 0xFFFF5555);
             
@@ -268,7 +270,7 @@ public class RocketNodes {
         });
 
         // Receiver
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "redstone_receiver"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "redstone_receiver"), "I/O", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "redstone_receiver"), "Linked Receiver", x, y);
             node.addOutput("Signal", 0xFFFFAA00);
             
@@ -303,7 +305,7 @@ public class RocketNodes {
         // --- MATH & LOGIC NODES (Turing Complete Set) ---
 
         // Constant Value
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "constant"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "constant"), "Math", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "constant"), "Constant", x, y);
             node.addOutput("Value", 0xFFFFFFFF);
             dev.devce.websnodelib.api.elements.WTextField field = new dev.devce.websnodelib.api.elements.WTextField(40);
@@ -320,23 +322,36 @@ public class RocketNodes {
         });
 
         // Math Operations (Add, Sub, Mul, Div)
-        registerMathNode("add", "Add", (a, b) -> a + b);
-        registerMathNode("sub", "Subtract", (a, b) -> a - b);
-        registerMathNode("mul", "Multiply", (a, b) -> a * b);
-        registerMathNode("div", "Divide", (a, b) -> b != 0 ? a / b : 0);
+        registerMathNode("add", "Add", "Math", Double::sum);
+        registerMathNode("sub", "Subtract", "Math", (a, b) -> a - b);
+        registerMathNode("mul", "Multiply", "Math", (a, b) -> a * b);
+        registerMathNode("div", "Divide", "Math", (a, b) -> b != 0 ? a / b : 0);
+        registerMathNode("min", "Min", "Math", Math::min);
+        registerMathNode("max", "Max", "Math", Math::max);
+        registerMathNode("pow", "Power", "Math", Math::pow);
+
+        // Unary Math (Sin, Cos, Abs, etc.)
+        registerUnaryMathNode("sin", "Sine", "Math", Math::sin);
+        registerUnaryMathNode("cos", "Cosine", "Math", Math::cos);
+        registerUnaryMathNode("tan", "Tangent", "Math", Math::tan);
+        registerUnaryMathNode("abs", "Absolute", "Math", Math::abs);
+        registerUnaryMathNode("sqrt", "Square Root", "Math", Math::sqrt);
+        registerUnaryMathNode("floor", "Floor", "Math", Math::floor);
+        registerUnaryMathNode("ceil", "Ceiling", "Math", Math::ceil);
+        registerUnaryMathNode("round", "Round", "Math", (a) -> (double) Math.round(a));
 
         // Comparison (Greater, Less, Equal)
-        registerMathNode("greater", "Greater Than", (a, b) -> a > b ? 1.0 : 0.0);
-        registerMathNode("less", "Less Than", (a, b) -> a < b ? 1.0 : 0.0);
-        registerMathNode("equal", "Equal", (a, b) -> Math.abs(a - b) < 0.0001 ? 1.0 : 0.0);
+        registerMathNode("greater", "Greater Than", "Logic", (a, b) -> a > b ? 1.0 : 0.0);
+        registerMathNode("less", "Less Than", "Logic", (a, b) -> a < b ? 1.0 : 0.0);
+        registerMathNode("equal", "Equal", "Logic", (a, b) -> Math.abs(a - b) < 0.0001 ? 1.0 : 0.0);
 
         // Logic (AND, OR, XOR)
-        registerMathNode("and", "Logic AND", (a, b) -> (a > 0 && b > 0) ? 1.0 : 0.0);
-        registerMathNode("or", "Logic OR", (a, b) -> (a > 0 || b > 0) ? 1.0 : 0.0);
-        registerMathNode("xor", "Logic XOR", (a, b) -> (a > 0 ^ b > 0) ? 1.0 : 0.0);
+        registerMathNode("and", "Logic AND", "Logic", (a, b) -> (a > 0 && b > 0) ? 1.0 : 0.0);
+        registerMathNode("or", "Logic OR", "Logic", (a, b) -> (a > 0 || b > 0) ? 1.0 : 0.0);
+        registerMathNode("xor", "Logic XOR", "Logic", (a, b) -> (a > 0 ^ b > 0) ? 1.0 : 0.0);
 
         // NOT
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "not"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "not"), "Logic", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "not"), "Logic NOT", x, y);
             node.addInput("In", 0xFFFFFFFF);
             node.addOutput("Out", 0xFFFFFFFF);
@@ -345,7 +360,7 @@ public class RocketNodes {
         });
 
         // Select (If/Else)
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "select"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "select"), "Logic", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "select"), "Select", x, y);
             node.addInput("Condition", 0xFFFFFF00); // Yellow for condition
             node.addInput("If True", 0xFFFFFFFF);
@@ -361,7 +376,7 @@ public class RocketNodes {
         });
 
         // Display Node
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "display"), (x, y) -> {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "display"), "Display", (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "display"), "Display", x, y);
             node.addInput("In", 0xFFFFFFFF);
             dev.devce.websnodelib.api.elements.WLabel label = new dev.devce.websnodelib.api.elements.WLabel("0.00", 0xFF00FF00); // Green text
@@ -372,10 +387,106 @@ public class RocketNodes {
             });
             return node;
         });
+
+        // Input Port (for functions)
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "input"), "Functions", (x, y) -> {
+            WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "input"), "Input Port", x, y);
+            node.addOutput("Out", 0xFFFFFFFF);
+            dev.devce.websnodelib.api.elements.WTextField nameField = new dev.devce.websnodelib.api.elements.WTextField(60);
+            nameField.setValue("in_1");
+            node.addElement(nameField);
+            return node;
+        });
+
+        // Output Port (for functions)
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "output"), "Functions", (x, y) -> {
+            WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "output"), "Output Port", x, y);
+            node.addInput("In", 0xFFFFFFFF);
+            dev.devce.websnodelib.api.elements.WTextField nameField = new dev.devce.websnodelib.api.elements.WTextField(60);
+            nameField.setValue("out_1");
+            node.addElement(nameField);
+            return node;
+        });
+
+        // The "Brain" of the Zip feature: The Function Node
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "function"), "Functions", (x, y) -> {
+            WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "function"), "Function", x, y);
+            node.setInternalGraph(new WGraph());
+            
+            node.setEvaluator(n -> {
+                WGraph sub = n.getInternalGraph();
+                if (sub == null) return;
+
+                // 1. Sync Pins (Dynamic creation)
+                syncFunctionPins(n);
+
+                // 2. Push inputs to internal input ports
+                List<WNode> internalNodes = sub.getNodes();
+                int inIdx = 0;
+                for (WNode inNode : internalNodes) {
+                    if (inNode.getTypeId().getPath().equals("input")) {
+                        if (inIdx < n.getInputs().size()) {
+                            double val = n.getInputs().get(inIdx).getValue();
+                            inNode.getOutputs().get(0).setValue(val);
+                        }
+                        inIdx++;
+                    }
+                }
+
+                // 3. Tick sub-graph
+                sub.tick();
+
+                // 4. Pull outputs from internal output ports
+                int outIdx = 0;
+                for (WNode outNode : internalNodes) {
+                    if (outNode.getTypeId().getPath().equals("output")) {
+                        if (outIdx < n.getOutputs().size()) {
+                            double val = outNode.getInputs().get(0).getValue();
+                            n.getOutputs().get(outIdx).setValue(val);
+                        }
+                        outIdx++;
+                    }
+                }
+            });
+            return node;
+        });
+
+        // Frame / Comment Node
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "frame"), "System", (x, y) -> {
+            WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "frame"), "Comment Frame", x, y);
+            node.setWidth(200);
+            node.setHeight(150);
+            return node;
+        });
     }
 
-    private static void registerMathNode(String id, String name, java.util.function.BiFunction<Double, Double, Double> op) {
-        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, id), (x, y) -> {
+    private static void syncFunctionPins(WNode node) {
+        WGraph sub = node.getInternalGraph();
+        if (sub == null) return;
+
+        List<WNode> inputs = sub.getNodes().stream().filter(n -> n.getTypeId().getPath().equals("input")).toList();
+        List<WNode> outputs = sub.getNodes().stream().filter(n -> n.getTypeId().getPath().equals("output")).toList();
+
+        // Check if we need to rebuild pins
+        if (node.getInputs().size() != inputs.size() || node.getOutputs().size() != outputs.size()) {
+            node.clearInputs();
+            for (WNode in : inputs) {
+                String name = "in";
+                try { name = ((dev.devce.websnodelib.api.elements.WTextField)in.getElements().get(0)).getValue(); } catch(Exception e){}
+                node.addInput(name, 0xFFFFFFFF);
+            }
+
+            node.clearOutputs();
+            for (WNode out : outputs) {
+                String name = "out";
+                try { name = ((dev.devce.websnodelib.api.elements.WTextField)out.getElements().get(0)).getValue(); } catch(Exception e){}
+                node.addOutput(name, 0xFFFFFFFF);
+            }
+        }
+    }
+
+    private static void registerMathNode(String id, String name, String category, java.util.function.BiFunction<Double, Double, Double> op) {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, id), category, (x, y) -> {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, id), name, x, y);
             node.addInput("A", 0xFFFFFFFF);
             node.addInput("B", 0xFFFFFFFF);
@@ -384,6 +495,19 @@ public class RocketNodes {
                 double a = n.getInputs().get(0).getValue();
                 double b = n.getInputs().get(1).getValue();
                 n.getOutputs().get(0).setValue(op.apply(a, b));
+            });
+            return node;
+        });
+    }
+
+    private static void registerUnaryMathNode(String id, String name, String category, java.util.function.Function<Double, Double> op) {
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, id), category, (x, y) -> {
+            WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, id), name, x, y);
+            node.addInput("In", 0xFFFFFFFF);
+            node.addOutput("Out", 0xFFFFFFFF);
+            node.setEvaluator(n -> {
+                double val = n.getInputs().get(0).getValue();
+                n.getOutputs().get(0).setValue(op.apply(val));
             });
             return node;
         });

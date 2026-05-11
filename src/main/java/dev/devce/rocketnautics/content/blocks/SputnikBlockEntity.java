@@ -408,8 +408,29 @@ public class SputnikBlockEntity extends BlockEntity {
         }
         if (tag.contains("NodeGraph")) {
             CompoundTag graphTag = tag.getCompound("NodeGraph");
-            graph.load(graphTag);
-            graph.setContext(this);
+            // On client, only load if the graph is empty to avoid wiping out the editor state
+            // during the periodic 5-tick sync pulse from the server.
+            if (!level.isClientSide || graph.getNodes().isEmpty()) {
+                graph.load(graphTag);
+                graph.setContext(this);
+            } else {
+                // If already loaded on client, we just want to update values for the display nodes
+                // without rebuilding the entire node list.
+                syncGraphValues(graphTag);
+            }
+        }
+    }
+
+    private void syncGraphValues(CompoundTag tag) {
+        net.minecraft.nbt.ListTag nodesTag = tag.getList("nodes", 10);
+        for (int i = 0; i < nodesTag.size(); i++) {
+            CompoundTag nTag = nodesTag.getCompound(i);
+            if (!nTag.hasUUID("id")) continue;
+            UUID id = nTag.getUUID("id");
+            graph.getNodes().stream()
+                .filter(n -> n.getId().equals(id))
+                .findFirst()
+                .ifPresent(node -> node.load(nTag));
         }
     }
 }

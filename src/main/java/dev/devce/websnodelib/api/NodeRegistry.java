@@ -7,9 +7,11 @@ import java.util.function.Supplier;
 
 public class NodeRegistry {
     private static final Map<ResourceLocation, NodeFactory> REGISTRY = new HashMap<>();
+    private static final Map<ResourceLocation, String> CATEGORIES = new HashMap<>();
 
-    public static void register(ResourceLocation id, NodeFactory factory) {
+    public static void register(ResourceLocation id, String category, NodeFactory factory) {
         REGISTRY.put(id, factory);
+        CATEGORIES.put(id, category);
     }
 
     public static WNode createNode(ResourceLocation id, int x, int y) {
@@ -26,6 +28,10 @@ public class NodeRegistry {
 
     public static Map<ResourceLocation, NodeFactory> getRegistry() {
         return REGISTRY;
+    }
+
+    public static String getCategory(ResourceLocation id) {
+        return CATEGORIES.getOrDefault(id, "Other");
     }
 
     @FunctionalInterface
