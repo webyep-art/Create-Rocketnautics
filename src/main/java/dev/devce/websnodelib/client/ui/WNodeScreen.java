@@ -187,6 +187,17 @@ public class WNodeScreen extends Screen {
                 graphics.pose().pushPose();
                 graphics.pose().translate(0, 0, z++ * 5); 
                 node.render(graphics, (int)((mouseX - width / 2f) / zoom + width / 2f - panX), (int)((mouseY - height / 2f) / zoom + height / 2f - panY), partialTick);
+                
+                // AI FIX/ADD START
+                if (renamingNode == node) {
+                    graphics.fill(node.getX(), node.getY(), node.getX() + node.getWidth(), node.getY() + 15, 0xFF1A1A1A); // Dark bg to cover original title
+                    graphics.fill(node.getX(), node.getY() + 14, node.getX() + node.getWidth(), node.getY() + 15, 0xFF00FF88);
+                    String display = renameField.getValue();
+                    if ((System.currentTimeMillis() / 500) % 2 == 0) display += "_";
+                    graphics.drawString(font, display, node.getX() + 5, node.getY() + 3, 0xFFFFFFFF, false);
+                }
+                // AI FIX/ADD STOP
+
                 graphics.pose().popPose();
             }
         }
@@ -227,9 +238,14 @@ public class WNodeScreen extends Screen {
         if (isContextMenuOpen) {
             renderContextMenu(graphics);
         }
+        // AI FIX/ADD START
+        // Removed renderRenameOverlay(graphics)
+        // AI FIX/ADD STOP
+        /*
         if (renamingNode != null) {
             renderRenameOverlay(graphics);
         }
+        */
         if (activeItemPicker != null) {
             renderItemPickerOverlay(graphics);
         }
@@ -582,6 +598,13 @@ public class WNodeScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // AI FIX/ADD START
+        if (renamingNode != null) {
+            renamingNode.setTitle(renameField.getValue());
+            renamingNode = null;
+        }
+        // AI FIX/ADD STOP
+
         if (activeItemPicker != null) {
             if (handleItemPickerClick(mouseX, mouseY, button)) return true;
             activeItemPicker = null;
