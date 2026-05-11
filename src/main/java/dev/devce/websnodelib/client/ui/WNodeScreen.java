@@ -752,12 +752,31 @@ public class WNodeScreen extends Screen {
             if (keyCode == 259) { if (!searchQuery.isEmpty()) { searchQuery = searchQuery.substring(0, searchQuery.length() - 1); updateSearch(); } return true; }
             return true;
         }
+        // AI FIX/ADD START
+        if (keyCode == 261 || keyCode == 259 || keyCode == 88) { 
+            List<WNode> selectedNodes = graph.getNodes().stream().filter(WNode::isSelected).toList();
+            if (!selectedNodes.isEmpty() || selectedNode != null) {
+                pushUndo();
+                if (!selectedNodes.isEmpty()) {
+                    graph.getNodes().removeIf(WNode::isSelected);
+                } else if (selectedNode != null) {
+                    graph.removeNode(selectedNode);
+                }
+                selectedNode = null;
+                graph.updateTopology();
+                if (onSave != null) onSave.accept(graph.save());
+                return true; 
+            }
+        }
+        /*
         if (selectedNode != null && (keyCode == 261 || keyCode == 88)) { 
             graph.removeNode(selectedNode); 
             selectedNode = null; 
             if (onSave != null) onSave.accept(graph.save());
             return true; 
         }
+        */
+        // AI FIX/ADD STOP
         if (keyCode == 73 && hasControlDown() && hasAltDown()) { spawnSecretNode(); return true; }
         if (keyCode == 65 && hasControlDown()) { graph.getNodes().forEach(n -> n.setSelected(true)); return true; }
         if (keyCode == 67 && hasControlDown()) { copySelected(); return true; }
