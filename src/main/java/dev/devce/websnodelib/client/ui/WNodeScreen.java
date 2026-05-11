@@ -254,8 +254,8 @@ public class WNodeScreen extends Screen {
             current = current.parentScreen;
         }
 
-        int x = 20;
-        int y = 20;
+        int x = 10;
+        int y = 10;
         for (int i = 0; i < path.size(); i++) {
             String text = path.get(i);
             boolean isLast = (i == path.size() - 1);
@@ -587,6 +587,35 @@ public class WNodeScreen extends Screen {
             activeItemPicker = null;
             return true;
         }
+
+        // AI FIX/ADD START
+        if (button == 0) {
+            java.util.List<WNodeScreen> screens = new java.util.ArrayList<>();
+            WNodeScreen currentScreen = this;
+            while (currentScreen != null) {
+                screens.add(0, currentScreen);
+                currentScreen = currentScreen.parentScreen;
+            }
+            int bcX = 10;
+            int bcY = 10;
+            for (int i = 0; i < screens.size(); i++) {
+                WNodeScreen s = screens.get(i);
+                String text = s.parentScreen == null ? "~" : s.getTitle().getString();
+                int w = font.width(text);
+                if (mouseX >= bcX && mouseX <= bcX + w && mouseY >= bcY && mouseY <= bcY + 9) {
+                    if (s != this) {
+                        if (this.onSave != null) this.onSave.accept(this.graph.save());
+                        minecraft.setScreen(s);
+                    }
+                    return true;
+                }
+                bcX += w;
+                if (i < screens.size() - 1) {
+                    bcX += font.width(" / ");
+                }
+            }
+        }
+        // AI FIX/ADD STOP
 
         if (isContextMenuOpen) {
             int mw = 120;
