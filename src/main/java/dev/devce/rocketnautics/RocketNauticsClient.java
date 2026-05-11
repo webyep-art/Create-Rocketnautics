@@ -261,16 +261,19 @@ public class RocketNauticsClient {
         event.registerBlockEntityRenderer(RocketBlockEntities.VECTOR_THRUSTER.get(), VectorThrusterRenderer::new);
         event.registerBlockEntityRenderer(RocketBlockEntities.ROCKET_THRUSTER.get(), RocketThrusterRenderer::new);
         event.registerBlockEntityRenderer(RocketBlockEntities.BOOSTER_THRUSTER.get(), BoosterThrusterRenderer::new);
+        event.registerBlockEntityRenderer(RocketBlockEntities.PARACHUTE_CASE.get(), dev.devce.rocketnautics.content.blocks.parachute.ParachuteRenderer::new);
     }
 
     @SubscribeEvent
     public static void registerModels(ModelEvent.RegisterAdditional event) {
         event.register(RocketPartials.VECTOR_THRUSTER_NOZZLE_MODEL);
+        event.register(RocketPartials.OPEN_PARACHUTE_MODEL);
     }
 
     @SubscribeEvent
     public static void onModelBake(ModelEvent.BakingCompleted event) {
         RocketPartials.vectorThrusterNozzle = event.getModels().get(RocketPartials.VECTOR_THRUSTER_NOZZLE_MODEL);
+        RocketPartials.openParachute = event.getModels().get(RocketPartials.OPEN_PARACHUTE_MODEL);
     }
 
     /**

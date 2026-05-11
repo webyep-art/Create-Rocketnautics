@@ -9,8 +9,11 @@ public class RocketPartials {
 
     public static final ModelResourceLocation VECTOR_THRUSTER_NOZZLE_MODEL = 
         new ModelResourceLocation(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "block/vector_thruster_nozzle"), "standalone");
+    public static final ModelResourceLocation OPEN_PARACHUTE_MODEL = 
+        new ModelResourceLocation(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "block/openparachute"), "standalone");
     
     public static BakedModel vectorThrusterNozzle;
+    public static BakedModel openParachute;
 
     public static void init() {
         

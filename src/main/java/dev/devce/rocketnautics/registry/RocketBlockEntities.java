@@ -36,6 +36,10 @@ public class RocketBlockEntities {
             .validBlocks(RocketBlocks.SPUTNIK)
             .register();
 
+    public static final Supplier<BlockEntityType<dev.devce.rocketnautics.content.blocks.parachute.ParachuteCaseBlockEntity>> PARACHUTE_CASE =
+            BLOCK_ENTITIES.register("parachute_case",
+                    () -> BlockEntityType.Builder.of(dev.devce.rocketnautics.content.blocks.parachute.ParachuteCaseBlockEntity::new, RocketBlocks.PARACHUTE_CASE.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         eventBus.addListener(RocketBlockEntities::registerCapabilities);
     }

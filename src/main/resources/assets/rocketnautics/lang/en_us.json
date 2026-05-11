@@ -104,5 +104,9 @@
   "item.rocketnautics.titanium_nozzle.summary": "Precision-engineered nozzle for liquid engines. Directs exhaust to provide thrust.",
   
   "key.rocketnautics.toggle_jetpack": "Toggle Jetpack Mode",
-  "key.categories.rocketnautics": "Cosmonautics"
+  "key.categories.rocketnautics": "Cosmonautics",
+  "block.rocketnautics.parachute_case": "Parachute Case",
+  "block.rocketnautics.parachute_case.funny": "Deploy with Redstone to slow down your inevitable crash.",
+  "block.rocketnautics.parachute_case.summary": "Automatically deploys a parachute when receiving a Redstone signal.",
+  "item.rocketnautics.parachute": "Parachute"
 }

@@ -104,5 +104,10 @@
   "item.rocketnautics.titanium_nozzle.summary": "Высокотехнологичное сопло для жидкостных двигателей. Направляет выхлоп для создания тяги.",
   
   "key.rocketnautics.toggle_jetpack": "Переключить режим джетпака",
-  "key.categories.rocketnautics": "Cosmonautics"
+  "key.categories.rocketnautics": "Cosmonautics",
+
+  "block.rocketnautics.parachute_case": "Кейс для парашюта",
+  "block.rocketnautics.parachute_case.funny": "Активируется редстоуном, чтобы замедлить ваше неизбежное падение.",
+  "block.rocketnautics.parachute_case.summary": "Автоматически раскрывает парашют при получении сигнала редстоуна.",
+  "item.rocketnautics.parachute": "Парашют"
 }

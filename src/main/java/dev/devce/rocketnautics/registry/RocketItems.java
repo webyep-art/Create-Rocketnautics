@@ -33,6 +33,10 @@ public class RocketItems {
             .properties(p -> p.stacksTo(1))
             .register();
 
+    public static final ItemEntry<RocketItem> PARACHUTE = REGISTRATE.item("parachute", RocketItem::new)
+            .properties(p -> p.stacksTo(1))
+            .register();
+
     static { REGISTRATE.setCreativeTab(RocketTabs.RESOURCE_TAB); }
 
     public static final ItemEntry<RocketItem> TITANIUM_INGOT = taggedIngredient("titanium_ingot", RocketTags.MetalTags.TITANIUM.ingots, Tags.Items.INGOTS);

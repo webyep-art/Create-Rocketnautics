@@ -69,6 +69,12 @@ public class RocketBlocks {
 
     static { REGISTRATE.setCreativeTab(RocketTabs.WORLD_TAB); }
 
+    public static final BlockEntry<dev.devce.rocketnautics.content.blocks.parachute.ParachuteCaseBlock> PARACHUTE_CASE = REGISTRATE.block("parachute_case", dev.devce.rocketnautics.content.blocks.parachute.ParachuteCaseBlock::new)
+            .initialProperties(() -> Blocks.IRON_BLOCK)
+            .properties(BlockBehaviour.Properties::noOcclusion)
+            .transform(pickaxeOnly())
+            .item(RocketBlockItem::new).build().register();
+
     public static final BlockEntry<Block> TITANIUM_ORE = REGISTRATE.block("titanium_ore", Block::new)
             .initialProperties(() -> Blocks.IRON_ORE)
             .properties(p -> p.mapColor(MapColor.TERRACOTTA_PINK)
