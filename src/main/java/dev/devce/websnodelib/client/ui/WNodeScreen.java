@@ -651,6 +651,9 @@ public class WNodeScreen extends Screen {
                 if (menuY + mh > this.height) {
                     menuY = Math.max(0, this.height - mh - 5);
                 }
+                if (menuX + mw > this.width) {
+                    menuX = Math.max(0, this.width - mw - 5);
+                }
                 
                 return true;
                 // AI FIX/ADD STOP
@@ -911,6 +914,9 @@ public class WNodeScreen extends Screen {
             int mh = 15 + visibleCount * itemH;
             if (menuY + mh > this.height) {
                 menuY = Math.max(0, this.height - mh - 5);
+            }
+            if (menuX + mw > this.width) {
+                menuX = Math.max(0, this.width - mw - 5);
             }
             return true;
             // AI FIX/ADD STOP
@@ -1199,8 +1205,12 @@ public class WNodeScreen extends Screen {
         // AI FIX/ADD START
         int itemH = 14;
         int mh = currentActions.size() * itemH + 4;
+        int mw = 120;
         if (ctxMenuY + mh > this.height) {
             ctxMenuY = Math.max(0, this.height - mh - 5);
+        }
+        if (ctxMenuX + mw > this.width) {
+            ctxMenuX = Math.max(0, this.width - mw - 5);
         }
         // AI FIX/ADD STOP
     }
