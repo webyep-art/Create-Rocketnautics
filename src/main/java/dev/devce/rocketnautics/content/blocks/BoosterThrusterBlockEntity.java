@@ -4,7 +4,6 @@ import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.foundation.blockEntity.behaviour.CenteredSideValueBoxTransform;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
-import dev.devce.rocketnautics.registry.RocketBlockEntities;
 import dev.devce.rocketnautics.registry.RocketParticles;
 import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
@@ -19,6 +18,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -60,8 +60,8 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
         return thrustPower;
     }
 
-    public BoosterThrusterBlockEntity(BlockPos pos, BlockState state) {
-        super(RocketBlockEntities.BOOSTER_THRUSTER.get(), pos, state);
+    public BoosterThrusterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
     }
 
     @Override

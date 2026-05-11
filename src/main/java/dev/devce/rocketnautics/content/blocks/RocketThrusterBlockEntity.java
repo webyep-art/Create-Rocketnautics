@@ -5,7 +5,6 @@ import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour
 import com.simibubi.create.foundation.blockEntity.behaviour.CenteredSideValueBoxTransform;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
 import dev.devce.rocketnautics.RocketConfig;
-import dev.devce.rocketnautics.registry.RocketBlockEntities;
 import dev.devce.rocketnautics.registry.RocketParticles;
 import dev.devce.rocketnautics.registry.RocketTags;
 import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
@@ -80,11 +79,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         return 40;
     }
 
-    public RocketThrusterBlockEntity(BlockPos pos, BlockState state) {
-        super(RocketBlockEntities.ROCKET_THRUSTER.get(), pos, state);
-    }
-
-    protected RocketThrusterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+    public RocketThrusterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
 
@@ -486,7 +481,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
     private boolean isRocketFuel(FluidStack stack) {
         if (stack.isEmpty()) return false;
         if (stack.getFluid().isSame(net.minecraft.world.level.material.Fluids.LAVA)) return true;
-        if (stack.is(RocketTags.Fluids.ROCKET_FUEL)) return true;
+        if (stack.is(RocketTags.FluidTags.ROCKET_FUEL.tag)) return true;
         
         String id = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(stack.getFluid()).toString();
         return id.contains("tfmg") && (id.contains("kerosene") || id.contains("diesel") || id.contains("gasoline") || id.contains("fuel_oil") || id.contains("lpg"));

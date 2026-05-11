@@ -1,47 +1,37 @@
 package dev.devce.rocketnautics;
 
 import net.minecraft.client.DeltaTracker;
-
 import dev.devce.rocketnautics.content.blocks.VectorThrusterRenderer;
 import dev.devce.rocketnautics.content.blocks.RocketThrusterRenderer;
 import dev.devce.rocketnautics.content.blocks.BoosterThrusterRenderer;
 import dev.devce.rocketnautics.content.particles.RocketExhaustParticle;
 import dev.devce.rocketnautics.RocketConfig;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.*;
 import dev.devce.rocketnautics.client.RocketSettingsScreen;
-import dev.devce.rocketnautics.registry.RocketBlockEntities;
-import dev.devce.rocketnautics.registry.RocketParticles;
+import dev.devce.rocketnautics.content.particles.RocketExhaustParticle;
 import dev.devce.rocketnautics.registry.RocketPartials;
-import net.minecraft.ChatFormatting;
+import dev.devce.rocketnautics.registry.RocketParticles;
+import dev.ryanhcode.sable.Sable;
+import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
+import dev.ryanhcode.sable.companion.math.Pose3d;
+import dev.ryanhcode.sable.sublevel.SubLevel;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.DimensionSpecialEffects;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.*;
-import net.minecraft.world.phys.Vec3;
-import dev.ryanhcode.sable.Sable;
-import dev.ryanhcode.sable.sublevel.SubLevel;
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.companion.math.Pose3d;
-import org.joml.Vector3d;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
+import org.joml.Vector3d;
 
-import net.minecraft.network.chat.Component;
-import net.minecraft.ChatFormatting;
-import org.joml.Quaterniond;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import net.neoforged.fml.common.EventBusSubscriber.Bus;
 
 /**
  * Main client-side class for Cosmonautics.
@@ -262,7 +252,6 @@ public class RocketNauticsClient {
         
         net.neoforged.fml.ModLoadingContext.get().registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class, 
             () -> (client, parent) -> new RocketSettingsScreen(parent));
-
         event.enqueueWork(() -> {
             net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(dev.devce.rocketnautics.registry.RocketBlocks.SEPARATOR.get(), net.minecraft.client.renderer.RenderType.cutout());
         });

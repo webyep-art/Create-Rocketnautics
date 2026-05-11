@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+<<<<<<< HEAD:src/main/resources/data/rocketnautics/loot_table/blocks/vector_thruster.json
+=======
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+>>>>>>> pr-12:src/generated/resources/data/rocketnautics/loot_table/blocks/vector_thruster.json
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "rocketnautics:vector_thruster"
+        }
+      ],
+<<<<<<< HEAD:src/main/resources/data/rocketnautics/loot_table/blocks/vector_thruster.json
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ]
+}
+=======
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "rocketnautics:blocks/vector_thruster"
+}
+>>>>>>> pr-12:src/generated/resources/data/rocketnautics/loot_table/blocks/vector_thruster.json

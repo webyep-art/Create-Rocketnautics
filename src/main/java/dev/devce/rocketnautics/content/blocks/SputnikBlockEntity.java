@@ -1,35 +1,31 @@
 package dev.devce.rocketnautics.content.blocks;
 
 import dev.devce.rocketnautics.registry.RocketBlockEntities;
+import dev.devce.rocketnautics.api.nodes.NodeContext;
+import dev.devce.rocketnautics.api.peripherals.IPeripheral;
+import dev.devce.rocketnautics.content.blocks.nodes.Node;
+import dev.devce.rocketnautics.content.blocks.nodes.NodeGraph;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import dev.ryanhcode.sable.sublevel.SubLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.core.HolderLookup;
-import dev.ryanhcode.sable.sublevel.SubLevel;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.joml.Vector3d;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.items.ItemStackHandler;
 import net.minecraft.world.item.ItemStack;
 import dev.devce.websnodelib.api.WGraph;
 import dev.devce.websnodelib.api.WNode;
 import dev.devce.rocketnautics.content.blocks.RocketThrusterBlockEntity;
-
-import dev.devce.rocketnautics.api.peripherals.IPeripheral;
-import java.util.Collections;
-import java.util.UUID;
 
 public class SputnikBlockEntity extends BlockEntity {
     public final WGraph graph = new WGraph();
@@ -56,8 +52,8 @@ public class SputnikBlockEntity extends BlockEntity {
     // Redstone outputs per side: 0=down, 1=up, 2=north, 3=south, 4=west, 5=east
     private final int[] sideOutputs = new int[6];
 
-    public SputnikBlockEntity(BlockPos pos, BlockState state) {
-        super(RocketBlockEntities.SPUTNIK.get(), pos, state);
+    public SputnikBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
         graph.setContext(this);
     }
 

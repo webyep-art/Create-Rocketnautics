@@ -12,7 +12,7 @@ repositories {
         url = "https://modmaven.dev"
     }
 
-    maven { url = "https://maven.tterrag.com/" }
+    maven { url = "https://maven.ithundxr.dev/snapshots" } // Registrate
     maven {
         name = "create maven"
         url = "https://maven.createmod.net/"
@@ -64,6 +64,11 @@ neoForge {
             programArgument '--nogui'
             systemProperty 'neoforge.enabledGameTestNamespaces', 'rocketnautics'
         }
+
+        data {
+            data()
+            programArguments.addAll '--mod', project.name, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
     }
 
     mods {
@@ -79,8 +84,8 @@ dependencies {
     implementation("net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}")
     compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_version}")
     implementation("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}")
+    jarJar(api("com.tterrag.registrate:Registrate:$registrate_version"))
 
-    
     compileOnly("dev.ryanhcode.sable:sable-common-${minecraft_version}:${sable_version}")
     runtimeOnly("dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}") {
         exclude group: 'com.tterrag.registrate', module: 'Registrate'

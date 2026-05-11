@@ -1,0 +1,37 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+<<<<<<< HEAD:src/main/resources/data/rocketnautics/loot_table/blocks/titanium_alloy_block.json
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "id": "rocketnautics:titanium_alloy_block"
+        }
+      ],
+=======
+>>>>>>> pr-12:src/generated/resources/data/rocketnautics/loot_table/blocks/titanium_alloy_block.json
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+<<<<<<< HEAD:src/main/resources/data/rocketnautics/loot_table/blocks/titanium_alloy_block.json
+      "rolls": 1.0
+    }
+  ]
+}
+=======
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "rocketnautics:titanium_alloy_block"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "rocketnautics:blocks/titanium_alloy_block"
+}
+>>>>>>> pr-12:src/generated/resources/data/rocketnautics/loot_table/blocks/titanium_alloy_block.json
