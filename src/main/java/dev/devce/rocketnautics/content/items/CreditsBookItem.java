@@ -11,6 +11,10 @@ import net.minecraft.world.item.component.WrittenBookContent;
 
 import java.util.List;
 
+/**
+ * A custom item class that provides a pre-written credits book for the mod.
+ * Displays the team members, contributors, and hall of fame entries.
+ */
 public class CreditsBookItem extends Item {
 
     public CreditsBookItem(Properties properties) {
@@ -22,6 +26,11 @@ public class CreditsBookItem extends Item {
         return buildCreditsBook();
     }
 
+    /**
+     * Constructs a pre-formatted written book stack with the mod's credits.
+     * 
+     * @return An ItemStack of a written book containing Cosmonautics credits.
+     */
     public static ItemStack buildCreditsBook() {
         ItemStack credits = new ItemStack(Items.WRITTEN_BOOK);
 

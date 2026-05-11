@@ -1,61 +1,53 @@
-# Create: Cosmonautics 🚀
+# Create: Cosmonautics
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![NeoForge](https://img.shields.io/badge/NeoForge-21.1+-orange.svg)](https://neoforged.net/)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-blue.svg)](https://www.minecraft.net/)
 
-**Create: Cosmonautics** is an industrial-aerospace addon for the **Create** mod. It allows players to build realistic, physics-based rockets, launch them into space, and control them with precision.
+**Create: Cosmonautics** is a high-fidelity industrial-aerospace expansion for the **Create** mod. It enables the construction of physics-driven launch vehicles, orbital stations, and interstellar exploration systems.
 
-Unlike many space mods where rockets are just scripted "elevators", this mod utilizes the **Sable** physics engine (Create: Aeronautics), turning ships into real physical objects. Thrust, center of mass, orbital mechanics, and stage separation - it's all here, similar to *Kerbal Space Program*!
-
----
-
-## 🛠️ Main Mechanics & Blocks
-
-### 1. Rocket Thruster 🔥
-Classic Liquid Rocket Engine (LRE).
-* **Fuel**: Lava. The engine can store a small amount internally but primarily draws from adjacent Fluid Tanks.
-* **Control**: Thrust is controlled via the kinetic energy system (Create). You must provide rotation to its built-in pump. Higher RPM results in stronger thrust and faster lava consumption.
-* **Physics**: Provides a constant Linear Impulse directly to the rocket's center of mass.
-
-### 2. Vector Thruster 🎛️
-Advanced version of the LRE with Thrust Vector Control (TVC).
-* **Fuel & Power**: Same as the Rocket Thruster (Lava + Rotation).
-* **Main Feature**: The nozzle can tilt! By providing analog redstone signals to the block's sides, you can physically tilt the nozzle (Gimbal).
-* **Physics**: Tilting the nozzle changes the thrust angle, creating torque that allows the ship to maneuver, roll, and turn during flight.
-
-### 3. Booster Thruster 🧨
-Powerful Solid Rocket Motor (SRM) for overcoming thick atmospheric layers.
-* **Fuel**: Coal Blocks. The booster takes solid fuel from attached inventories or nearby blocks.
-* **Control**: Activated by a simple redstone signal.
-* **Features**: Like real boosters, it *cannot be turned off* or throttled. Once ignited, it roars at full power until all fuel is consumed.
-
-### 4. Stage Separator 💥
-Mechanism for creating multi-stage rockets.
-* **Principle**: Installed between rocket stages.
-* **Activation**: When triggered by redstone, this block instantly "explodes" (disappears), breaking the physical connection between parts of the ship.
+Featuring dynamic rigid body physics, the mod integrates mechanics such as thrust-to-weight ratios, center of mass alignment, and atmospheric drag, providing an immersive aerospace experience within the Minecraft ecosystem.
 
 ---
 
-## 🌌 Space Exploration
-There are no separate "space dimensions" or loading screens. Space is reached seamlessly by flying high enough! By overcoming gravity and leaving the thick layers of the atmosphere (above Y=1000), players enter orbit where different rules apply: vacuum, microgravity, and the ability to build real space stations using Create mechanisms.
+## Core Systems and Components
+
+### 1. Advanced Propulsion Systems
+The mod features various engine types with unique performance characteristics:
+*   **Rocket Thruster**: A standard liquid rocket engine. It consumes liquid fuels (Kerosene, Diesel, Gasoline, or Lava) and provides steady linear thrust.
+*   **Vector Thruster**: Features Thrust Vector Control (TVC). The nozzle can be gimbaled via redstone inputs, allowing for precise attitude control and maneuvering without specialized reaction wheels.
+*   **Booster Thruster**: A high-thrust solid rocket motor. Once ignited via redstone, it provides maximum thrust until its fuel supply (Coal Blocks) is exhausted, making it ideal for the initial launch phase.
+
+### 2. Physical Mechanics
+*   **Dynamic Gravity**: Gravity strength scales with altitude. Players and ships experience microgravity (Zero-G) upon reaching space altitudes or the dedicated space dimension.
+*   **Reentry Effects**: Descending through the atmosphere at high velocities triggers intense visual heating effects and atmospheric drag.
+
+### 3. Space Environment
+*   **Seamless Transitions**: The mod manages transitions between the Overworld and the Space dimension. Ships reaching threshold altitudes automatically jump dimensions, maintaining their momentum and entity attachments.
+*   **Procedural Asteroids**: Space is populated with procedurally generated asteroids of varying sizes and compositions. These can be mined for rare resources like Titanium.
+*   **Atmospheric Hazard**: High altitudes and the vacuum of space require specialized life-support equipment. Players without oxygen systems will face rapid suffocation.
+
+### 4. EVA and Utility
+*   **Jetpack System**: Provides personal mobility in microgravity and planetary environments. Features throttle control and state synchronization across the server.
+*   **Magnetic Boots**: Allows players to remain securely attached to ship surfaces even during high-acceleration maneuvers or Zero-G conditions.
+
 
 ---
 
-## 🏗️ Development & Contributing
+## Technical Specifications and Requirements
 
-### Requirements
-* **Java 21**
-* **NeoForge** 21.1.228+
-* **Create** 1.21.1
-* **Create: Aeronautics** (Sable)
+### Dependencies
+*   **Java 21**
+*   **NeoForge** 21.1.228+
+*   **Create** 0.6+ (for Minecraft 1.21.1)
+*   **Sable API** (Core physics backend)
 
-### Setup
+### Setup for Developers
 1. Clone the repository.
-2. Run `./gradlew genSources` to set up the development environment.
-3. Use `./gradlew runClient` to test the mod.
+2. Synchronize the Gradle project with your IDE (IntelliJ or VS Code). For manual setup, run `./gradlew neoForgeIdeSync` to prepare the environment.
+3. Use `./gradlew runClient` to launch a test instance or `./gradlew build` to compile the mod.
 
 ---
 
-## 📄 License
-This project is licensed under the **GNU General Public License v3** - see the [LICENSE](LICENSE) file for details.
+## License
+This project is licensed under the **GNU General Public License v3**. Detailed terms can be found in the [LICENSE](LICENSE) file.

@@ -2,23 +2,29 @@ package dev.devce.rocketnautics.content.blocks;
 
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
-import dev.devce.rocketnautics.registry.RocketBlockEntities;
 import dev.devce.rocketnautics.registry.RocketParticles;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3d;
 
 import java.util.List;
 
 public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
+    @Override
+    public String getPeripheralType() {
+        return "rcs";
+    }
 
-    public RCSThrusterBlockEntity(BlockPos pos, BlockState state) {
-        super(RocketBlockEntities.RCS_THRUSTER.get(), pos, state);
+    public RCSThrusterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
     }
 
     @Override
@@ -35,29 +41,40 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
         return isActive() ? 1 : 0;
     }
 
+    private boolean computerActive = false;
+
     @Override
     public boolean isActive() {
         if (level == null) return false;
         if (level.isClientSide) return currentlyBurning;
-        return level.hasNeighborSignal(worldPosition);
+        return level.hasNeighborSignal(worldPosition) || computerActive;
+    }
+
+    @Override
+    public void setActive(boolean active) {
+        this.computerActive = active;
+        notifyUpdate();
     }
 
     @Override
     public void sable$physicsTick(ServerSubLevel serverSubLevel, RigidBodyHandle handle, double deltaTime) {
         if (!isActive()) return;
+        assert level != null;
 
-        double currentThrust = 100.0;
+        double maxThrust = 105.0;
         double y = serverSubLevel.logicalPose().position().y;
         
         
         if (y < 5000) {
             if (y <= 2000) {
-                currentThrust = 7.0;
+                maxThrust = 12.0;
             } else {
                 double factor = (y - 2000.0) / 3000.0;
-                currentThrust = 7.0 + (93.0 * factor);
+                maxThrust = 12.0 + (93.0 * factor);
             }
         }
+
+        double currentThrust = Math.min(7 * level.getBestNeighborSignal(worldPosition), maxThrust);
 
         Direction facing = getThrustDirection();
         Direction pushDirection = facing.getOpposite();
@@ -114,6 +131,18 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
         } else {
             if (blockEntity.ignitionTicks > 0) blockEntity.ignitionTicks--;
         }
+    }
+
+    @Override
+    protected void write(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
+        super.write(tag, registries, clientPacket);
+        tag.putBoolean("ComputerActive", computerActive);
+    }
+
+    @Override
+    protected void read(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
+        super.read(tag, registries, clientPacket);
+        computerActive = tag.getBoolean("ComputerActive");
     }
 
     @Override

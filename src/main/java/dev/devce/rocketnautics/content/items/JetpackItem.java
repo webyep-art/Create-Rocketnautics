@@ -15,15 +15,8 @@ public class JetpackItem extends ArmorItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        if (Screen.hasShiftDown()) {
-            tooltipComponents.add(Component.literal(" "));
-            tooltipComponents.add(Component.translatable("item.rocketnautics.jetpack.tooltip.desc").withStyle(ChatFormatting.GOLD));
-            tooltipComponents.add(Component.literal(" ")); 
-            tooltipComponents.add(Component.translatable("item.rocketnautics.jetpack.tooltip.control").withStyle(ChatFormatting.AQUA));
-        } else {
-            tooltipComponents.add(Component.translatable("rocketnautics.tooltip.hold_shift").withStyle(ChatFormatting.DARK_GRAY));
-        }
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
         super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
+        dev.devce.rocketnautics.content.RocketTooltipHelper.appendTooltip(stack, this, tooltipComponents, tooltipFlag);
     }
 }

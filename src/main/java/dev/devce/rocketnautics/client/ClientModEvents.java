@@ -13,16 +13,24 @@ import net.minecraft.client.resources.PlayerSkin;
 
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 
-@EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+import net.neoforged.fml.common.EventBusSubscriber.Bus;
+
+/**
+ * Event subscriber for mod-bus client-side events.
+ * Handles key mapping registration and entity rendering layers.
+ */
 public class ClientModEvents {
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(RocketNauticsClient.JETPACK_TOGGLE);
     }
 
+    /**
+     * Adds the jetpack rendering layer to player models.
+     */
     @SubscribeEvent
     public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
-        
+        // Iterate through all player skin models (slim and normal)
         for (PlayerSkin.Model model : event.getSkins()) {
             PlayerRenderer renderer = event.getSkin(model);
             if (renderer != null) {

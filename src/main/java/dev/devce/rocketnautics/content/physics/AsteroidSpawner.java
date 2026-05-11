@@ -42,26 +42,39 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+/**
+ * System for procedurally spawning and generating asteroids in space.
+ * Asteroids are generated as SubLevels with randomized shapes (lumps and craters) 
+ * and varying compositions (stone, deepslate, ores).
+ */
 @EventBusSubscriber(modid = RocketNautics.MODID)
 public class AsteroidSpawner {
 
     private static final Random RANDOM = new Random();
+    /** Probability of an asteroid spawning near a player per tick. */
     private static final double SPAWN_CHANCE = 0.000083; 
+    /** Minimum distance from player to spawn an asteroid. */
     private static final double MIN_SPAWN_DIST = 150.0;
+    /** Maximum distance from player to spawn an asteroid. */
     private static final double MAX_SPAWN_DIST = 400.0;
+    /** Distance at which an asteroid becomes 'permanent' and won't despawn. */
     private static final double DISCOVERY_DIST_SQ = 80.0 * 80.0; 
+    /** Distance at which a non-permanent asteroid will despawn. */
     private static final double DESPAWN_DIST_SQ = 600.0 * 600.0; 
     
     private static final Set<UUID> PENDING_IMPULSE = ConcurrentHashMap.newKeySet();
     private static final Set<UUID> ASTEROIDS = ConcurrentHashMap.newKeySet();
     private static final Set<UUID> PERMANENT_ASTEROIDS = ConcurrentHashMap.newKeySet();
 
+    /**
+     * Initializes the asteroid management cycle.
+     * Handles initial physics impulses and despawning of distant/undiscovered asteroids.
+     */
     public static void init() {
         SableEventPlatform.INSTANCE.onPhysicsTick((physicsSystem, timeStep) -> {
             ServerLevel level = physicsSystem.getLevel();
             ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
             if (container == null) return;
-
             
             Iterator<UUID> it = ASTEROIDS.iterator();
             while (it.hasNext()) {
@@ -73,7 +86,7 @@ public class AsteroidSpawner {
                     continue;
                 }
 
-                
+                // Apply initial movement/rotation to new asteroids
                 if (PENDING_IMPULSE.contains(uuid)) {
                     RigidBodyHandle handle = physicsSystem.getPhysicsHandle(asteroid);
                     if (handle != null) {
@@ -82,11 +95,11 @@ public class AsteroidSpawner {
                     }
                 }
 
-                
                 Vector3d pos = asteroid.logicalPose().position();
                 boolean nearPlayerForDiscovery = false;
                 boolean nearPlayerForDespawn = false;
 
+                // Check player proximity
                 for (ServerPlayer player : level.players()) {
                     double distSq = pos.distanceSquared(player.getX(), player.getY(), player.getZ());
                     if (distSq < DISCOVERY_DIST_SQ) {
@@ -97,18 +110,19 @@ public class AsteroidSpawner {
                     }
                 }
 
+                // If player gets close, the asteroid stays in the world permanently
                 if (nearPlayerForDiscovery && !PERMANENT_ASTEROIDS.contains(uuid)) {
                     PERMANENT_ASTEROIDS.add(uuid);
                     RocketNautics.LOGGER.info("Asteroid {} marked as PERMANENT (Player discovered it)", uuid);
                 }
                 
-                
+                // Despawn logic for distant asteroids
                 if (!nearPlayerForDespawn) {
                     if (PERMANENT_ASTEROIDS.contains(uuid)) {
-                        
+                        // Permanent asteroids just stop being ticked but aren't deleted
                         it.remove();
                     } else {
-                        
+                        // Transient asteroids are deleted if never seen
                         asteroid.markRemoved();
                         it.remove();
                         RocketNautics.LOGGER.info("Transient asteroid {} despawned (not discovered)", uuid);
@@ -168,11 +182,14 @@ public class AsteroidSpawner {
         }
     }
 
+    /**
+     * Spawns a new asteroid at a random location around a player.
+     */
     public static void spawnAsteroid(ServerPlayer player, ServerLevel level) {
         ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
         if (container == null) return;
 
-        
+        // Calculate random spherical coordinates for spawn position
         double theta = RANDOM.nextDouble() * Math.PI * 2;
         double phi = Math.acos(2.0 * RANDOM.nextDouble() - 1.0);
         double r = MIN_SPAWN_DIST + RANDOM.nextDouble() * (MAX_SPAWN_DIST - MIN_SPAWN_DIST);
@@ -188,7 +205,6 @@ public class AsteroidSpawner {
         ServerSubLevel newShip = (ServerSubLevel) container.allocateNewSubLevel(pose);
         UUID uuid = newShip.getUniqueId();
 
-        
         try {
             newShip.setName("Asteroid " + uuid.toString().substring(0, 4));
         } catch (Throwable ignored) {}
@@ -211,6 +227,10 @@ public class AsteroidSpawner {
             Blocks.AIR.defaultBlockState()
         );
 
+    /**
+     * Procedurally generates the block structure of an asteroid.
+     * Combines multiple spheres (lumps) and carves out craters to create a realistic jagged shape.
+     */
     private static void generateAsteroidBlocks(ServerLevel world, ServerSubLevel asteroid, long seed) {
         Random random = new Random(seed);
         

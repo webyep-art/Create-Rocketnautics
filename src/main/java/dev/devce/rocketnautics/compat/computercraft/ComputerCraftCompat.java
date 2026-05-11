@@ -10,5 +10,6 @@ public class ComputerCraftCompat {
         event.registerBlockEntity(PeripheralCapability.get(), RocketBlockEntities.BOOSTER_THRUSTER.get(), (be, side) -> new ThrusterPeripheral(be));
         event.registerBlockEntity(PeripheralCapability.get(), RocketBlockEntities.VECTOR_THRUSTER.get(), (be, side) -> new ThrusterPeripheral(be));
         event.registerBlockEntity(PeripheralCapability.get(), RocketBlockEntities.RCS_THRUSTER.get(), (be, side) -> new ThrusterPeripheral(be));
+        event.registerBlockEntity(PeripheralCapability.get(), RocketBlockEntities.SPUTNIK.get(), (be, side) -> new SputnikPeripheral(be));
     }
 }

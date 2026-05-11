@@ -27,6 +27,11 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
+/**
+ * Core physics handler for space-related mechanics.
+ * Manages zero-gravity effects for ships and entities, reentry heat damage, 
+ * and space suffocation mechanics.
+ */
 @EventBusSubscriber(modid = RocketNautics.MODID)
 public class GlobalSpacePhysicsHandler {
 
@@ -36,6 +41,7 @@ public class GlobalSpacePhysicsHandler {
     private static final double REENTRY_HEAT_END_Y = 2500.0;
     private static final double REENTRY_SPEED_THRESHOLD = 60.0;
     private static final double REENTRY_FRICTION_COEFF = 0.3;
+    private static final double MAX_Q_STRESS_THRESHOLD = 625.0; // density * speed^2
     private static final double DEFAULT_CALIBRATION = 0.99895;
 
     private static final ResourceLocation SPACE_GRAVITY_ID = ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "space_gravity");
@@ -60,6 +66,9 @@ public class GlobalSpacePhysicsHandler {
         calibrationMultiplier = value;
     }
 
+    /**
+     * Initializes the physics tick listener using Sable's physics system.
+     */
     public static void init() {
         SableEventPlatform.INSTANCE.onPhysicsTick((physicsSystem, timeStep) -> {
             ServerLevel level = physicsSystem.getLevel();
@@ -84,8 +93,32 @@ public class GlobalSpacePhysicsHandler {
 
         applyZeroGravity(subLevel, handle, level, worldPos, timeStep);
         applyReentryHeat(subLevel, handle, level, worldPos, timeStep);
+        applyMaxQStress(subLevel, handle, level, worldPos, timeStep);
+        applyGlobalSpeedLimit(subLevel, handle, timeStep);
+        applySpaceDragRemoval(subLevel, handle, level, worldPos);
     }
 
+    /**
+     * Disables linear and angular damping for ships in space to ensure momentum is preserved.
+     * Since we can't find a direct setDamping method, we counteract it with a small impulse.
+     */
+    private static void applySpaceDragRemoval(ServerSubLevel subLevel, RigidBodyHandle handle, ServerLevel level, Vector3d worldPos) {
+        double gravityFactor = calculateGravityFactor(level, worldPos.y());
+        if (gravityFactor >= 0.99) {
+            double mass = subLevel.getMassTracker().getMass();
+            
+            // Counteract linear damping (set to 0.20% as requested)
+            Vector3d velocity = new Vector3d(handle.getLinearVelocity());
+            if (velocity.length() > 0.001) {
+                handle.applyLinearImpulse(velocity.mul(mass * 0.002));
+            }
+        }
+    }
+
+    /**
+     * Applies an anti-gravity impulse to counter-act the world's gravity.
+     * The impulse is calculated based on the ship's mass and the current gravity factor.
+     */
     private static void applyZeroGravity(ServerSubLevel subLevel, RigidBodyHandle handle, ServerLevel level, Vector3d worldPos, double timeStep) {
         double gravityFactor = calculateGravityFactor(level, worldPos.y());
         if (gravityFactor <= 0.0) return;
@@ -93,31 +126,139 @@ public class GlobalSpacePhysicsHandler {
         double mass = subLevel.getMassTracker().getMass();
         Vector3d gravityVector = DimensionPhysicsData.getGravity(level);
 
+        // Calculate anti-gravity force: F = -m * g * factor
         Vector3d antiGravityImpulse = new Vector3d(gravityVector)
                 .mul(-1.0 * mass * gravityFactor * timeStep * calibrationMultiplier);
 
+        // Transform impulse to local ship coordinates before applying
         Quaterniond orientation = subLevel.logicalPose().orientation();
         Vector3d localImpulse = orientation.transformInverse(antiGravityImpulse, new Vector3d());
         handle.applyLinearImpulse(localImpulse);
     }
 
+    /**
+     * Calculates the gravity reduction factor based on altitude.
+     * @return 0.0 (full gravity) to 1.0 (zero gravity).
+     */
     private static double calculateGravityFactor(net.minecraft.world.level.Level level, double y) {
         if (gravityOverride != null) {
             return 1.0 - gravityOverride;
         }
 
-        
+        // Space dimension is always zero gravity
         if (level.dimension().location().getPath().equals("space")) {
             return 1.0;
         }
 
-        
+        // Overworld transition logic: starts at 2000m, full at 5000m
         if (y <= SPACE_GRAVITY_START_Y) return 0.0;
         return Math.clamp((y - SPACE_GRAVITY_START_Y) / (SPACE_GRAVITY_FULL_Y - SPACE_GRAVITY_START_Y), 0.0, 1.0);
     }
 
+    /**
+     * Enforces a global speed limit of 50m/s by applying braking force.
+     */
+    private static void applyGlobalSpeedLimit(ServerSubLevel subLevel, RigidBodyHandle handle, double timeStep) {
+        Vector3d velocity = new Vector3d(handle.getLinearVelocity());
+        double speed = velocity.length();
+        double limit = 50.0;
+
+        if (speed > limit) {
+            double mass = subLevel.getMassTracker().getMass();
+            // Apply a counter-impulse to bleed off excess speed
+            // Using 0.1 factor for smooth but firm braking
+            Vector3d brakingDir = new Vector3d(velocity).normalize().mul(-1.0);
+            double excessSpeed = speed - limit;
+            Vector3d brakingImpulse = brakingDir.mul(excessSpeed * mass * 0.1);
+            
+            handle.applyLinearImpulse(brakingImpulse);
+        }
+    }
+
+    /**
+     * Applies structural damage to ships moving too fast in dense atmosphere.
+     */
+    private static void applyMaxQStress(ServerSubLevel subLevel, RigidBodyHandle handle, ServerLevel level, Vector3d worldPos, double timeStep) {
+        double altitude = worldPos.y();
+        if (altitude > 10000.0) return; // Expanded limit for testing
+
+        double density = 1.0 - calculateGravityFactor(level, altitude);
+        if (density < 0.05) return; // Too thin to cause stress
+
+        Vector3d velocity = new Vector3d(handle.getLinearVelocity());
+        double speedSq = velocity.lengthSquared();
+        double stress = density * speedSq;
+
+        if (stress > MAX_Q_STRESS_THRESHOLD) {
+            double intensity = (stress - MAX_Q_STRESS_THRESHOLD) / MAX_Q_STRESS_THRESHOLD;
+            
+            // Random block damage - much more aggressive
+            if (level.random.nextFloat() < Math.min(0.9f, intensity * 0.5f)) {
+                damageRandomShipBlock(subLevel, level);
+            }
+
+            // Damage entities inside
+            if (intensity > 0.5 && level.getGameTime() % 10 == 0) {
+                AABB area = new AABB(worldPos.x - 5, worldPos.y - 5, worldPos.z - 5, worldPos.x + 5, worldPos.y + 5, worldPos.z + 5);
+                level.getEntitiesOfClass(LivingEntity.class, area).forEach(e -> {
+                    e.hurt(level.damageSources().generic(), (float)intensity * 2.0f);
+                });
+            }
+
+            // Visual feedback (reuse reentry heat with higher intensity or dedicated effect)
+            if (level.getGameTime() % 15 == 0) {
+                for (ServerPlayer player : level.players()) {
+                    PacketDistributor.sendToPlayer(player, new ReentryHeatPayload(worldPos.x, worldPos.y, worldPos.z, (float)intensity));
+                }
+            }
+        }
+    }
+
+    private static void damageRandomShipBlock(ServerSubLevel subLevel, ServerLevel level) {
+        var plot = subLevel.getPlot();
+        var minChunk = plot.getChunkMin();
+        var maxChunk = plot.getChunkMax();
+
+        int minX = minChunk.x * 16;
+        int maxX = maxChunk.x * 16 + 15;
+        int minZ = minChunk.z * 16;
+        int maxZ = maxChunk.z * 16 + 15;
+        int minY = level.getMinBuildHeight();
+        int maxY = level.getMaxBuildHeight();
+
+        // Target the actual blocks in the PLOT area
+        for (int i = 0; i < 40; i++) { // More attempts
+            int x = minX + level.random.nextInt(maxX - minX + 1);
+            int z = minZ + level.random.nextInt(maxZ - minZ + 1);
+            int y = minY + level.random.nextInt(maxY - minY + 1);
+            
+            net.minecraft.core.BlockPos pos = new net.minecraft.core.BlockPos(x, y, z);
+            net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+            
+            if (!state.isAir()) {
+                // Break the real block in the plot
+                level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                level.levelEvent(2001, pos, net.minecraft.world.level.block.Block.getId(state));
+                
+                // Add explosion at the plot location
+                level.explode(null, x + 0.5, y + 0.5, z + 0.5, 2.0f, ServerLevel.ExplosionInteraction.BLOCK);
+                
+                // Also spawn particles at the projected world position of the ship for visual feedback
+                Vector3d shipWorldPos = subLevel.logicalPose().position();
+                for (ServerPlayer player : level.players()) {
+                    PacketDistributor.sendToPlayer(player, new ReentryHeatPayload(shipWorldPos.x, shipWorldPos.y, shipWorldPos.z, 1.0f));
+                }
+                return;
+            }
+        }
+    }
+
+    /**
+     * Applies atmospheric friction and heat damage when descending at high speeds.
+     */
     private static void applyReentryHeat(ServerSubLevel subLevel, RigidBodyHandle handle, ServerLevel level, Vector3d worldPos, double timeStep) {
         double y = worldPos.y();
+        // Reentry effects occur between 1000m and 2500m
         if (y > REENTRY_HEAT_END_Y || y < REENTRY_HEAT_START_Y) return;
 
         Vector3d velocity = new Vector3d(handle.getLinearVelocity());
@@ -126,9 +267,11 @@ public class GlobalSpacePhysicsHandler {
         if (descentSpeed > REENTRY_SPEED_THRESHOLD) {
             float intensity = (float) Math.clamp((descentSpeed - REENTRY_SPEED_THRESHOLD) / REENTRY_SPEED_THRESHOLD, 0.0, 1.0);
             
+            // Apply upward friction force to simulate atmospheric drag
             Vector3d friction = new Vector3d(0, descentSpeed * intensity * REENTRY_FRICTION_COEFF, 0);
             handle.applyLinearImpulse(friction.mul(subLevel.getMassTracker().getMass() * timeStep));
 
+            // Burn entities inside the ship area
             if (intensity > 0.3 && level.getGameTime() % 20 == 0) {
                 AABB damageArea = new AABB(worldPos.x - 4, worldPos.y - 4, worldPos.z - 4, worldPos.x + 4, worldPos.y + 4, worldPos.z + 4);
                 level.getEntitiesOfClass(LivingEntity.class, damageArea).forEach(entity -> {
@@ -136,6 +279,7 @@ public class GlobalSpacePhysicsHandler {
                 });
             }
             
+            // Notify clients to render heat effects
             for (ServerPlayer player : level.players()) {
                 PacketDistributor.sendToPlayer(player, new ReentryHeatPayload(worldPos.x, worldPos.y, worldPos.z, intensity));
             }
@@ -158,11 +302,34 @@ public class GlobalSpacePhysicsHandler {
             updateLivingEntityGravityModifier(living);
             applyFallingHeatDamage(living);
             applySpaceSuffocation(living);
+            applyEntitySpaceDrag(living);
         }
     }
 
+    /**
+     * Counteracts Minecraft's default air resistance for entities in space.
+     */
+    private static void applyEntitySpaceDrag(LivingEntity entity) {
+        if (calculateGravityFactor(entity.level(), entity.getY()) >= 0.99) {
+            // Air drag in MC is usually 0.91 or 0.98. 
+            // We apply a small boost to counteract it if the entity is moving.
+            // We only apply this to X and Z to avoid the 'ascension' bug where 
+            // vertical velocity gets amplified without bound in zero-g.
+            Vec3 motion = entity.getDeltaMovement();
+            if (motion.lengthSqr() > 0.0001) {
+                // Boost back slightly to feel "floaty" and preserve horizontal momentum
+                entity.setDeltaMovement(new Vec3(motion.x * 1.05, motion.y, motion.z * 1.05));
+            }
+        }
+    }
+
+    /**
+     * Applies suffocation damage to entities in space or at high altitudes 
+     * if they lack proper life support equipment (helmets/tanks).
+     */
     private static void applySpaceSuffocation(LivingEntity entity) {
         if (entity.level().isClientSide) return;
+        // Suffocation starts above 1000m or in the space dimension
         if (entity.getY() > 1000 || entity.level().dimension().location().getPath().equals("space")) {
             if (entity instanceof net.minecraft.world.entity.player.Player player && (player.isCreative() || player.isSpectator())) return;
             
@@ -171,12 +338,12 @@ public class GlobalSpacePhysicsHandler {
             
             boolean hasProtection = false;
             
-            
+            // Check for items tagged as space helmets
             if (headItem.is(net.minecraft.tags.ItemTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("c", "space_helmets")))) {
                 hasProtection = true;
             }
             
-            
+            // Compatibility with Create diving gear: Helmet + Backtank/Jetpack
             ResourceLocation headId = BuiltInRegistries.ITEM.getKey(headItem.getItem());
             if (headId.getNamespace().equals("create") && headId.getPath().contains("diving_helmet")) {
                 ResourceLocation chestId = BuiltInRegistries.ITEM.getKey(chestItem.getItem());
@@ -189,6 +356,7 @@ public class GlobalSpacePhysicsHandler {
             if (!hasProtection) {
                 int air = entity.getAirSupply();
                 
+                // Rapidly deplete air supply
                 entity.setAirSupply(air - 5); 
                 
                 if (entity.getAirSupply() <= -20) {
@@ -205,6 +373,10 @@ public class GlobalSpacePhysicsHandler {
         }
     }
 
+    /**
+     * Updates the gravity attribute modifier for living entities.
+     * This uses the vanilla gravity attribute to ensure smooth movement and physics.
+     */
     private static void updateLivingEntityGravityModifier(LivingEntity living) {
         double gravityFactor = calculateGravityFactor(living.level(), living.getY());
         var gravityAttr = living.getAttribute(Attributes.GRAVITY);
@@ -217,11 +389,12 @@ public class GlobalSpacePhysicsHandler {
                     currentFactor = -currentMod.amount();
                 }
                 
+                // Only update if the factor has changed significantly to avoid attribute recalculation overhead
                 if (Math.abs(currentFactor - gravityFactor) > 0.01) {
                     gravityAttr.removeModifier(SPACE_GRAVITY_ID);
                     gravityAttr.addTransientModifier(new AttributeModifier(
                             SPACE_GRAVITY_ID, 
-                            -gravityFactor, 
+                            -gravityFactor, // Negative factor to reduce gravity
                             AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
                     ));
                 }

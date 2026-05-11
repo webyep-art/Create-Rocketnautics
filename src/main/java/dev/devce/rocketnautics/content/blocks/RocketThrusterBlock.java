@@ -1,21 +1,15 @@
 package dev.devce.rocketnautics.content.blocks;
 
 import dev.devce.rocketnautics.registry.RocketBlockEntities;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DirectionalBlock;
-import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import org.jetbrains.annotations.Nullable;
 
-public class RocketThrusterBlock extends DirectionalBlock implements EntityBlock {
+public class RocketThrusterBlock extends AbstractRocketThrusterBlock<RocketThrusterBlockEntity> {
     public static final com.mojang.serialization.MapCodec<RocketThrusterBlock> CODEC = simpleCodec(RocketThrusterBlock::new);
 
     public RocketThrusterBlock(Properties properties) {
@@ -28,31 +22,20 @@ public class RocketThrusterBlock extends DirectionalBlock implements EntityBlock
         return CODEC;
     }
 
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
-    }
-
-    @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState()
-                .setValue(FACING, context.getNearestLookingDirection().getOpposite());
-    }
-
-    @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
-        
-    }
-
     @Nullable
     @Override
     public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(Level level, BlockState state, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
-        return type == RocketBlockEntities.ROCKET_THRUSTER.get() ? (level1, pos, state1, blockEntity) -> RocketThrusterBlockEntity.tick(level1, pos, state1, (RocketThrusterBlockEntity) blockEntity) : null;
+        // TODO attach this as a behavior in the block entity instead
+        return type == getBlockEntityType() ? (level1, pos, state1, blockEntity) -> RocketThrusterBlockEntity.tick(level1, pos, state1, (RocketThrusterBlockEntity) blockEntity) : null;
     }
 
-    @Nullable
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return RocketBlockEntities.ROCKET_THRUSTER.get().create(pos, state);
+    public Class<RocketThrusterBlockEntity> getBlockEntityClass() {
+        return RocketThrusterBlockEntity.class;
+    }
+
+    @Override
+    public BlockEntityType<? extends RocketThrusterBlockEntity> getBlockEntityType() {
+        return RocketBlockEntities.ROCKET_THRUSTER.get();
     }
 }

@@ -57,11 +57,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Handles the seamless transition of ships and players between dimensions (Overworld <-> Space).
+ * This includes saving ship data to NBT, managing teleportation, rebuilding ships in the target dimension,
+ * and recovering player seating/entities.
+ */
 @EventBusSubscriber(modid = RocketNautics.MODID)
 public class SpaceTransitionHandler {
     
     
-    public static final double OVERWORLD_SPACE_Y = 20000.0;
+    public static final double OVERWORLD_SPACE_Y = 1000000.0;
     private static final double SPACE_EXIT_Y = 0.0;
     private static final double TRANSITION_SAFE_OFFSET = 50.0;
     private static final int REBUILD_DELAY_TICKS = 3;
@@ -85,11 +90,14 @@ public class SpaceTransitionHandler {
     private static final String KEY_POSE_QZ = "qz";
     private static final String KEY_POSE_QW = "qw";
 
+    /** Target dimension for space exploration. */
     public static final ResourceKey<Level> SPACE_DIM = ResourceKey.create(Registries.DIMENSION,
         ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "space"));
 
+    /** Directory where temporary ship data is stored during transitions. */
     private static final Path SHIPS_DIR = FMLPaths.CONFIGDIR.get().resolve("rocketnautics_ships");
     
+    // Maps to track pending tasks during the asynchronous transition process
     private static final Map<UUID, Integer> PENDING_REBUILDS = new ConcurrentHashMap<>();
     private static final Map<UUID, TeleportTask> PENDING_TELEPORTS = new ConcurrentHashMap<>();
     private static final Map<UUID, SeatingTask> PENDING_SEATING = new ConcurrentHashMap<>();
@@ -97,17 +105,23 @@ public class SpaceTransitionHandler {
 
     private record TeleportTask(ResourceKey<Level> targetDim, double targetY) {}
     private record SeatingTask(UUID shipUUID, double relPlotX, double relPlotY, double relPlotZ, String vehicleType, int ticksLeft, boolean blockClicked) {}
+    
+    /** Represents a ship jumping dimensions without a player. */
     private record AutonomousTask(ResourceKey<Level> targetDim, double x, double y, double z, Vector3d velocity, String name, int ticksLeft) {
         public AutonomousTask withTicksDecrement() {
             return new AutonomousTask(targetDim, x, y, z, velocity, name, ticksLeft - 1);
         }
     }
 
+    /**
+     * Initializes autonomous transition listeners.
+     * Ships that reach threshold altitudes without players will automatically jump dimensions.
+     */
     public static void init() {
         SableEventPlatform.INSTANCE.onPhysicsTick((physicsSystem, timeStep) -> {
             ServerLevel level = physicsSystem.getLevel();
             
-            
+            // Handle ships currently in the world
             ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
             if (container != null) {
                 
@@ -117,7 +131,7 @@ public class SpaceTransitionHandler {
                     if (!(sl instanceof ServerSubLevel ship) || ship.isRemoved()) continue;
                     if (PENDING_AUTONOMOUS.containsKey(id)) continue;
 
-                    
+                    // Only process ships WITHOUT players
                     boolean hasPlayer = false;
                     for (ServerPlayer player : level.players()) {
                         if (Sable.HELPER.getContaining(level, player.blockPosition()) == ship) {
@@ -245,11 +259,16 @@ public class SpaceTransitionHandler {
         checkTransitionConditions(player, currentLevel);
     }
 
+    /**
+     * Checks if a player has reached the transition altitude and starts the jump sequence.
+     */
     private static void checkTransitionConditions(ServerPlayer player, ServerLevel level) {
         double y = player.getY();
         if (level.dimension() == SPACE_DIM && y <= SPACE_EXIT_Y) {
+            // Drop from space back to the Overworld
             initiateTransition(player, level, Level.OVERWORLD, OVERWORLD_SPACE_Y - TRANSITION_SAFE_OFFSET);
         } else if (level.dimension() == Level.OVERWORLD && y >= OVERWORLD_SPACE_Y) {
+            // Ascend from the Overworld into space
             initiateTransition(player, level, SPACE_DIM, 10.0);
         }
     }
@@ -287,6 +306,10 @@ public class SpaceTransitionHandler {
         return true;
     }
 
+    /**
+     * Prepares both the ship and the player for dimension hopping.
+     * The ship is serialized to NBT, and the player is queued for teleportation.
+     */
     private static void initiateTransition(ServerPlayer player, ServerLevel fromLevel, ResourceKey<Level> toDim, double targetY) {
         sendDebug(player, "Initiating dimension jump...", 0x55FF55);
         
@@ -296,6 +319,7 @@ public class SpaceTransitionHandler {
             destroyShipInSourceDimension(ship);
         }
 
+        // Enable client-side transition overlay
         PacketDistributor.sendToPlayer(player, new SeamlessTransitionPayload(true));
         PENDING_TELEPORTS.put(player.getUUID(), new TeleportTask(toDim, targetY));
         sendDebug(player, "Teleport task queued for " + toDim.location(), 0xFFFF55);
@@ -420,22 +444,29 @@ public class SpaceTransitionHandler {
         tag.put(KEY_OLD_POSE, poseTag);
     }
 
+    /**
+     * Re-assembles the ship in the new dimension using the saved NBT data.
+     * Maps the ship's plot to a new location and restores entities.
+     */
     private static void rebuildShipAfterTransition(ServerPlayer player, ServerLevel level, File file) {
         try {
             CompoundTag tag = NbtIo.readCompressed(file.toPath(), NbtAccounter.unlimitedHeap());
             
-            
+            // Calculate where the ship should be relative to the player's new position
             Pose3d newPose = calculateNewPose(player, tag);
             
-            
+            // Allocate a new SubLevel (ship instance)
             ServerSubLevelContainer container = (ServerSubLevelContainer) SubLevelContainer.getContainer(level);
             ServerSubLevel newShip = (ServerSubLevel) container.allocateNewSubLevel(newPose);
             
+            // Remap block entity coordinates within the plot NBT
             ChunkPos sourcePlotPos = new ChunkPos(tag.getInt(KEY_OLD_PLOT_X), tag.getInt(KEY_OLD_PLOT_Z));
             ShipCopyPasteCommand.remapBlockEntityPositions(tag, sourcePlotPos, newShip.getPlot().plotPos);
-            newShip.getPlot().load(tag);
             
+            // Load block data and restore entities
+            newShip.getPlot().load(tag);
             rebuildEntities(level, newShip, tag);
+            
             finalizeShipRebuild(player, newShip, tag, file);
             
         } catch (IOException e) {

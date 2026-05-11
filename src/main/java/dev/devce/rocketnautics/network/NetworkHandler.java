@@ -10,6 +10,11 @@ import dev.devce.rocketnautics.content.orbit.universe.CubePlanet;
 import dev.devce.rocketnautics.content.orbit.universe.UniverseDefinition;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BiomeTags;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.Climate;
+import dev.devce.rocketnautics.network.SputnikNodeSyncPayload;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -17,8 +22,8 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.concurrent.CompletableFuture;
+import net.neoforged.fml.common.EventBusSubscriber.Bus;
 
-@EventBusSubscriber(modid = RocketNautics.MODID, bus = EventBusSubscriber.Bus.MOD)
 public class NetworkHandler {
 
     @SubscribeEvent
@@ -68,6 +73,12 @@ public class NetworkHandler {
         );
 
         registrar.playToServer(
+                SputnikNodeSyncPayload.TYPE,
+                SputnikNodeSyncPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> handleSputnikSync(context.player(), payload.pos(), payload.graphData()))
+        );
+
+        registrar.playToServer(
                 PlanetRenderRequestPayload.TYPE,
                 PlanetRenderRequestPayload.CODEC,
                 (payload, context) -> context.enqueueWork(() -> handlePlanetRenderRequest(context.player(), payload.ids(), payload.powerScale()))
@@ -90,6 +101,38 @@ public class NetworkHandler {
                 DeepSpacePositionPayload.CODEC,
                 (payload, context) -> context.enqueueWork(payload::handle)
         );
+
+    }
+
+    private static void handleSputnikSync(net.minecraft.world.entity.player.Player player, net.minecraft.core.BlockPos pos, net.minecraft.nbt.CompoundTag graphData) {
+        net.minecraft.world.level.Level foundLevel = null;
+        if (player.level().getBlockEntity(pos) instanceof dev.devce.rocketnautics.content.blocks.SputnikBlockEntity) {
+            foundLevel = player.level();
+        } else {
+            // Check all levels if not in current player level (e.g. ship in space)
+            for (net.minecraft.server.level.ServerLevel serverLevel : player.getServer().getAllLevels()) {
+                if (serverLevel.getBlockEntity(pos) instanceof dev.devce.rocketnautics.content.blocks.SputnikBlockEntity) {
+                    foundLevel = serverLevel;
+                    break;
+                }
+            }
+        }
+
+        if (foundLevel != null && foundLevel.getBlockEntity(pos) instanceof dev.devce.rocketnautics.content.blocks.SputnikBlockEntity sputnik) {
+            sputnik.graph.load(graphData);
+            sputnik.graph.setContext(sputnik);
+
+            // Force immediate refresh to ensure server sees engines before next tick
+            sputnik.refreshEngines();
+            sputnik.setChanged();
+
+            if (dev.devce.rocketnautics.RocketConfig.SERVER.enableEngineDebugLogging.get()) {
+                dev.devce.rocketnautics.RocketNautics.LOGGER.info("Sputnik at {} (level {}) SYNCED. Nodes: {}, Connections: {}, Engines Found: {}",
+                        pos, foundLevel.dimension().location(), sputnik.graph.getNodes().size(), sputnik.graph.getConnections().size(), sputnik.getEngineCount());
+            }
+        } else {
+            dev.devce.rocketnautics.RocketNautics.LOGGER.warn("Failed to find Sputnik at {} for sync from player {}", pos, player.getName().getString());
+        }
     }
 
     @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)

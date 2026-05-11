@@ -1,17 +1,13 @@
 package dev.devce.rocketnautics.content.blocks;
 
 import com.mojang.serialization.MapCodec;
-import net.minecraft.ChatFormatting;
+import com.simibubi.create.content.equipment.wrench.IWrenchable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -19,9 +15,7 @@ import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 
-import java.util.List;
-
-public class SeparatorBlock extends DirectionalBlock {
+public class SeparatorBlock extends DirectionalBlock implements IWrenchable {
     public static final MapCodec<SeparatorBlock> CODEC = simpleCodec(SeparatorBlock::new);
 
     public SeparatorBlock(Properties properties) {
@@ -87,4 +81,29 @@ public class SeparatorBlock extends DirectionalBlock {
         }
     }
 
+    @Override
+    public net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
+        Direction direction = state.getValue(FACING);
+        switch (direction) {
+            case UP:
+                return Block.box(2.0, 0.0, 2.0, 14.0, 16.0, 14.0);
+            case DOWN:
+                return Block.box(2.0, 0.0, 2.0, 14.0, 16.0, 14.0);
+            case NORTH:
+                return Block.box(2.0, 2.0, 0.0, 14.0, 14.0, 16.0);
+            case SOUTH:
+                return Block.box(2.0, 2.0, 0.0, 14.0, 14.0, 16.0);
+            case EAST:
+                return Block.box(0.0, 2.0, 2.0, 16.0, 14.0, 14.0);
+            case WEST:
+                return Block.box(0.0, 2.0, 2.0, 16.0, 14.0, 14.0);
+            default:
+                return net.minecraft.world.phys.shapes.Shapes.block();
+        }
+    }
+
+    @Override
+    public net.minecraft.world.phys.shapes.VoxelShape getCollisionShape(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
+        return this.getShape(state, level, pos, context);
+    }
 }

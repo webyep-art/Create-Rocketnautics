@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<launchConfiguration type="org.eclipse.jdt.launching.localJavaApplication">
+    <stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="rocketnautics-create RocketNautics"></stringAttribute>
+    <stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="net.neoforged.devlaunch.Main"></stringAttribute>
+    <stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value=" &quot;@C:\\Users\\devce\\OneDrive\\Документы\\Project\\create RocketNautics\\build\\moddev\\dataRunProgramArgs.txt&quot;"></stringAttribute>
+    <stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value=" &quot;@C:\\Users\\devce\\OneDrive\\Документы\\Project\\create RocketNautics\\build\\moddev\\dataRunVmArgs.txt&quot; &quot;-Dfml.modFolders=rocketnautics%%C:\\Users\\devce\\OneDrive\\Документы\\Project\\create RocketNautics\\bin\\main&quot;"></stringAttribute>
+    <stringAttribute key="org.eclipse.jdt.launching.WORKING_DIRECTORY" value="C:\Users\devce\OneDrive\Документы\Project\create RocketNautics\run"></stringAttribute>
+    <booleanAttribute key="org.eclipse.jdt.launching.STOP_IN_MAIN" value="false"></booleanAttribute>
+    <stringAttribute key="org.eclipse.jdt.launching.JRE_CONTAINER" value="JavaSE-21"></stringAttribute>
+    <booleanAttribute key="org.eclipse.jdt.launching.ATTR_ATTR_USE_ARGFILE" value="false"></booleanAttribute>
+</launchConfiguration>

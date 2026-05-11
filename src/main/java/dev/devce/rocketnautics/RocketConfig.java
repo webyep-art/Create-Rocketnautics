@@ -3,6 +3,10 @@ package dev.devce.rocketnautics;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 
+/**
+ * Configuration class for RocketNautics.
+ * Uses NeoForge's ModConfigSpec to define and register server and client-side settings.
+ */
 public class RocketConfig {
     public static final ModConfigSpec SERVER_SPEC;
     public static final Server SERVER;
@@ -20,6 +24,10 @@ public class RocketConfig {
         CLIENT = clientPair.getLeft();
     }
 
+    /**
+     * Server-side configuration settings.
+     * These settings are synced from the server to all connected clients.
+     */
     public static class Server {
         public final ModConfigSpec.IntValue maxFuelConsumption;
         public final ModConfigSpec.DoubleValue jetpackThrust;
@@ -27,6 +35,7 @@ public class RocketConfig {
         public final ModConfigSpec.IntValue ignitionFlow;
         public final ModConfigSpec.IntValue steamMinFlow;
         public final ModConfigSpec.BooleanValue enableEngineDebugLogging;
+        public final ModConfigSpec.BooleanValue brokenBarrier;
 
         public Server(ModConfigSpec.Builder builder) {
             builder.push("Thrusters");
@@ -42,6 +51,9 @@ public class RocketConfig {
             enableEngineDebugLogging = builder
                     .comment("Enable debug logging for engine fuel and thrust (can cause spam)")
                     .define("enableEngineDebugLogging", false);
+            brokenBarrier = builder
+                    .comment("Allow engine thrust to exceed standard limits (up to 5000N)")
+                    .define("brokenBarrier", false);
             builder.pop();
 
             builder.push("Jetpack");
@@ -55,6 +67,10 @@ public class RocketConfig {
         }
     }
 
+    /**
+     * Client-side configuration settings.
+     * These settings are local to each player's client.
+     */
     public static class Client {
         public final ModConfigSpec.DoubleValue shakeIntensity;
         public final ModConfigSpec.DoubleValue shakeRadius;

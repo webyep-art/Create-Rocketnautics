@@ -45,6 +45,11 @@ public class ThrusterPeripheral implements IPeripheral {
     }
 
     @LuaFunction(mainThread = true)
+    public final void setActive(boolean active) {
+        thruster.setActive(active);
+    }
+
+    @LuaFunction(mainThread = true)
     public final float getThrust() {
         if (thruster instanceof RocketThrusterBlockEntity rt) {
             return rt.getCurrentPower() * 10.0f;

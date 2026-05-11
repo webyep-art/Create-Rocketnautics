@@ -1,41 +1,42 @@
 package dev.devce.rocketnautics.registry;
 
+import com.tterrag.registrate.util.entry.BlockEntityEntry;
 import dev.devce.rocketnautics.RocketNautics;
-import dev.devce.rocketnautics.content.blocks.BoosterThrusterBlockEntity;
-import dev.devce.rocketnautics.content.blocks.RCSThrusterBlockEntity;
-import dev.devce.rocketnautics.content.blocks.RocketThrusterBlockEntity;
-import dev.devce.rocketnautics.content.blocks.VectorThrusterBlockEntity;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import dev.devce.rocketnautics.content.blocks.*;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.registries.DeferredRegister;
-
-import java.util.function.Supplier;
 
 public class RocketBlockEntities {
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = 
-            DeferredRegister.create(BuiltInRegistries.BLOCK_ENTITY_TYPE, RocketNautics.MODID);
+    private static final RocketRegistrate REGISTRATE = RocketNautics.getRegistrate();
 
-    public static final Supplier<BlockEntityType<RocketThrusterBlockEntity>> ROCKET_THRUSTER = 
-            BLOCK_ENTITIES.register("rocket_thruster", 
-                    () -> BlockEntityType.Builder.of(RocketThrusterBlockEntity::new, RocketBlocks.ROCKET_THRUSTER.get()).build(null));
+    public static final BlockEntityEntry<RocketThrusterBlockEntity> ROCKET_THRUSTER = REGISTRATE
+            .blockEntity("rocket_thruster", RocketThrusterBlockEntity::new)
+            .validBlocks(RocketBlocks.ROCKET_THRUSTER)
+            .register();
 
-    public static final Supplier<BlockEntityType<BoosterThrusterBlockEntity>> BOOSTER_THRUSTER = 
-            BLOCK_ENTITIES.register("booster_thruster", 
-                    () -> BlockEntityType.Builder.of(BoosterThrusterBlockEntity::new, RocketBlocks.BOOSTER_THRUSTER.get()).build(null));
+    public static final BlockEntityEntry<BoosterThrusterBlockEntity> BOOSTER_THRUSTER = REGISTRATE
+            .blockEntity("booster_thruster", BoosterThrusterBlockEntity::new)
+            .validBlocks(RocketBlocks.BOOSTER_THRUSTER)
+            .register();
 
-    public static final Supplier<BlockEntityType<VectorThrusterBlockEntity>> VECTOR_THRUSTER = 
-            BLOCK_ENTITIES.register("vector_thruster", 
-                    () -> BlockEntityType.Builder.of(VectorThrusterBlockEntity::new, RocketBlocks.VECTOR_THRUSTER.get()).build(null));
+    public static final BlockEntityEntry<VectorThrusterBlockEntity> VECTOR_THRUSTER = REGISTRATE
+            .blockEntity("vector_thruster", VectorThrusterBlockEntity::new)
+            .validBlocks(RocketBlocks.VECTOR_THRUSTER)
+            .renderer(() -> VectorThrusterRenderer::new)
+            .register();
 
-    public static final Supplier<BlockEntityType<RCSThrusterBlockEntity>> RCS_THRUSTER =
-            BLOCK_ENTITIES.register("rcs_thruster", 
-                    () -> BlockEntityType.Builder.of(RCSThrusterBlockEntity::new, RocketBlocks.RCS_THRUSTER.get()).build(null));
+    public static final BlockEntityEntry<RCSThrusterBlockEntity> RCS_THRUSTER = REGISTRATE
+            .blockEntity("rcs_thruster", RCSThrusterBlockEntity::new)
+            .validBlocks(RocketBlocks.RCS_THRUSTER)
+            .register();
+
+    public static final BlockEntityEntry<SputnikBlockEntity> SPUTNIK = REGISTRATE
+            .blockEntity("sputnik", SputnikBlockEntity::new)
+            .validBlocks(RocketBlocks.SPUTNIK)
+            .register();
 
     public static void register(IEventBus eventBus) {
-        BLOCK_ENTITIES.register(eventBus);
         eventBus.addListener(RocketBlockEntities::registerCapabilities);
     }
 

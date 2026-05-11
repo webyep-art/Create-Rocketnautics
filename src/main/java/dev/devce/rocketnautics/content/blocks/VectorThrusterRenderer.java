@@ -32,21 +32,20 @@ public class VectorThrusterRenderer extends SafeBlockEntityRenderer<VectorThrust
         float gY = Mth.lerp(partialTicks, be.getPrevGimbalY(), be.getGimbalY());
         float gZ = Mth.lerp(partialTicks, be.getPrevGimbalZ(), be.getGimbalZ());
         
+        // Calculate the world-space target direction vector
+        Vector3f baseDir = new Vector3f(facing.getStepX(), facing.getStepY(), facing.getStepZ());
+        Vector3f targetDir = new Vector3f(
+            facing.getStepX() + gX,
+            facing.getStepY() + gY,
+            facing.getStepZ() + gZ
+        ).normalize();
         
-        Vector3f dir = new Vector3f(
-            facing.getStepX() - gX, 
-            facing.getStepY() - gY, 
-            facing.getStepZ() - gZ
-        );
+        // Create a rotation that tilts the neutral 'facing' direction towards our 'targetDir'
+        Quaternionf tilt = new Quaternionf().rotationTo(baseDir, targetDir);
         
+        // Apply tilt on top of the base facing rotation
+        Quaternionf q = new Quaternionf(tilt).mul(facing.getRotation());
         
-        if (dir.lengthSquared() < 0.0001f) {
-            dir.set(facing.getStepX(), facing.getStepY(), facing.getStepZ());
-        }
-        dir.normalize();
-        
-        
-        Quaternionf q = new Quaternionf().rotationTo(new Vector3f(0, 1, 0), dir);
         ms.mulPose(q);
         
         ms.translate(-0.5, -0.5, -0.5);
@@ -59,5 +58,6 @@ public class VectorThrusterRenderer extends SafeBlockEntityRenderer<VectorThrust
         }
 
         ms.popPose();
+
     }
 }
