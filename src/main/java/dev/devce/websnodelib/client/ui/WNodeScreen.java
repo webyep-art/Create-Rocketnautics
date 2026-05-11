@@ -784,6 +784,11 @@ public class WNodeScreen extends Screen {
             if (keyCode == 259) { if (!searchQuery.isEmpty()) { searchQuery = searchQuery.substring(0, searchQuery.length() - 1); updateSearch(); } return true; }
             return true;
         }
+
+        // AI FIX/ADD START
+        if (selectedNode != null && selectedNode.keyPressed(keyCode, scanCode, modifiers)) return true;
+        // AI FIX/ADD STOP
+
         // AI FIX/ADD START
         if (keyCode == 261 || keyCode == 259 || keyCode == 88) { 
             List<WNode> selectedNodes = graph.getNodes().stream().filter(WNode::isSelected).toList();
@@ -820,7 +825,11 @@ public class WNodeScreen extends Screen {
             menuY = this.mouseY;
             updateSearch(); return true;
         }
-        if (selectedNode != null && selectedNode.keyPressed(keyCode, scanCode, modifiers)) return true;
+        
+        // AI FIX/ADD START
+        // Removed to move priority up
+        // if (selectedNode != null && selectedNode.keyPressed(keyCode, scanCode, modifiers)) return true;
+        // AI FIX/ADD STOP
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
@@ -833,7 +842,12 @@ public class WNodeScreen extends Screen {
             return true;
         }
         if (isSearching) {
+            // AI FIX/ADD START
+            if (searchQuery.isEmpty() && (codePoint == 'A' || codePoint == 'Ф')) return true;
+            /*
             if (searchQuery.isEmpty() && (codePoint == 'a' || codePoint == 'A' || codePoint == 'ф' || codePoint == 'Ф')) return true;
+            */
+            // AI FIX/ADD STOP
             searchQuery += codePoint; updateSearch(); return true;
         }
         if (selectedNode != null && selectedNode.charTyped(codePoint, modifiers)) return true;
