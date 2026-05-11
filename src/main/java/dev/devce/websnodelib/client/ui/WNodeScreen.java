@@ -172,7 +172,12 @@ public class WNodeScreen extends Screen {
 
         // 2. Render Connections
         for (WConnection conn : graph.getConnections()) {
+            // AI FIX/ADD START
+            drawConnection(graphics, conn, partialTick, mouseX, mouseY);
+            /*
             drawConnection(graphics, conn, partialTick);
+            */
+            // AI FIX/ADD STOP
         }
         
         // 3. Render Nodes (Foreground layer)
@@ -416,7 +421,41 @@ public class WNodeScreen extends Screen {
         graphics.pose().popPose();
     }
 
+    // AI FIX/ADD START
+    private WConnection getHoveredConnection(int mx, int my) {
+        int nx = (int) getGraphX(mx);
+        int ny = (int) getGraphY(my);
+        for (WConnection conn : graph.getConnections()) {
+            WNode src = findNode(conn.sourceNode());
+            WNode tgt = findNode(conn.targetNode());
+            if (src == null || tgt == null) continue;
+            int x1 = src.getX() + src.getWidth();
+            int y1 = src.getY() + 18 + conn.sourcePin() * 12;
+            int x2 = tgt.getX();
+            int y2 = tgt.getY() + 18 + conn.targetPin() * 12;
+            
+            int steps = 24;
+            for (int i = 0; i <= steps; i++) {
+                float t = (float) i / steps;
+                float cx1 = x1 + (x2 - x1) * 0.5f; float cy1 = y1;
+                float cx2 = x1 + (x2 - x1) * 0.5f; float cy2 = y2;
+                float mt = 1.0f - t;
+                float x = mt * mt * mt * x1 + 3 * mt * mt * t * cx1 + 3 * mt * t * t * cx2 + t * t * t * x2;
+                float y = mt * mt * mt * y1 + 3 * mt * mt * t * cy1 + 3 * mt * t * t * cy2 + t * t * t * y2;
+                
+                if (Math.abs(x - nx) < 6 && Math.abs(y - ny) < 6) {
+                    return conn;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void drawConnection(GuiGraphics graphics, WConnection conn, float partialTick, int mouseX, int mouseY) {
+    // AI FIX/ADD STOP
+    /*
     private void drawConnection(GuiGraphics graphics, WConnection conn, float partialTick) {
+    */
         WNode src = findNode(conn.sourceNode());
         WNode tgt = findNode(conn.targetNode());
         if (src == null || tgt == null) return;
@@ -424,7 +463,17 @@ public class WNodeScreen extends Screen {
         int y1 = src.getY() + 18 + conn.sourcePin() * 12;
         int x2 = tgt.getX();
         int y2 = tgt.getY() + 18 + conn.targetPin() * 12;
+        
+        // AI FIX/ADD START
+        boolean isHovered = conn.equals(getHoveredConnection(mouseX, mouseY));
+        float thickness = isHovered ? 3.5f : 1.5f;
+        int color = isHovered ? 0xFFFF5555 : 0xAA00FF88;
+        drawSmoothCurve(graphics, x1, y1, x2, y2, color, thickness);
+        // AI FIX/ADD STOP
+        /*
         drawSmoothCurve(graphics, x1, y1, x2, y2, 0xAA00FF88, 1.5f);
+        */
+        
         float speed = 0.003f;
         float time = (System.currentTimeMillis() % 1000000) * speed; 
         float cycle = 4.0f; 
@@ -578,6 +627,15 @@ public class WNodeScreen extends Screen {
                 openContextMenu((int)mouseX, (int)mouseY);
                 return true;
             } else {
+                // AI FIX/ADD START
+                WConnection hoveredConn = getHoveredConnection((int)mouseX, (int)mouseY);
+                if (hoveredConn != null) {
+                    pushUndo();
+                    graph.getConnections().remove(hoveredConn);
+                    if (onSave != null) onSave.accept(graph.save());
+                    return true;
+                }
+                // AI FIX/ADD STOP
                 isSearching = true; searchQuery = ""; menuX = (int)mouseX; menuY = (int)mouseY; updateSearch(); return true;
             }
         }
@@ -928,6 +986,9 @@ public class WNodeScreen extends Screen {
     }
 
     private void addNodeAt(net.minecraft.resources.ResourceLocation type, int x, int y) {
+        // AI FIX/ADD START
+        pushUndo();
+        // AI FIX/ADD STOP
         WNode node = dev.devce.websnodelib.api.NodeRegistry.createNode(type, x, y);
         if (node != null) {
             graph.addNode(node);
@@ -1095,6 +1156,14 @@ public class WNodeScreen extends Screen {
                 currentActions.add(new ContextAction("§bZip to Function", this::zipToFunction, false));
             }
         }
+        
+        // AI FIX/ADD START
+        int itemH = 14;
+        int mh = currentActions.size() * itemH + 4;
+        if (ctxMenuY + mh > this.height) {
+            ctxMenuY -= mh;
+        }
+        // AI FIX/ADD STOP
     }
 
     private void pushUndo() {
