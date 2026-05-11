@@ -33,11 +33,27 @@ public class WTextField extends WElement {
     @Override
     public boolean handleKeyPress(int keyCode, int scanCode, int modifiers) {
         if (!focused) return false;
+        
+        // AI FIX/ADD START
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            focused = false;
+            return true;
+        }
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE) {
+            if (!value.isEmpty()) {
+                value = value.substring(0, value.length() - 1);
+            }
+            return true;
+        }
+        return true; // Consume other keys so they don't trigger global shortcuts
+        /*
         if (keyCode == GLFW.GLFW_KEY_BACKSPACE && !value.isEmpty()) {
             value = value.substring(0, value.length() - 1);
             return true;
         }
         return false;
+        */
+        // AI FIX/ADD STOP
     }
 
     @Override
