@@ -132,6 +132,9 @@ public class WNodeScreen extends Screen {
     protected void init() {
         super.init();
         screenAnimation = 0;
+        // AI FIX/ADD START
+        lastFrameTime = 0;
+        // AI FIX/ADD STOP
         graph.updateTopology();
     }
 
