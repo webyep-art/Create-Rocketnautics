@@ -95,6 +95,12 @@ public class WNodeScreen extends Screen {
     // Undo/Redo State
     private final java.util.LinkedList<CompoundTag> undoStack = new java.util.LinkedList<>();
     private final java.util.LinkedList<CompoundTag> redoStack = new java.util.LinkedList<>();
+
+    // AI FIX/ADD START
+    private long lastClickTime = 0;
+    private WNode lastClickedNode = null;
+    private int lastClickButton = -1;
+    // AI FIX/ADD STOP
     
     // Favorites
     private static final java.util.Set<ResourceLocation> FAVORITES = new java.util.HashSet<>();
@@ -584,6 +590,32 @@ public class WNodeScreen extends Screen {
                 if (!Screen.hasShiftDown() && !node.isSelected()) graph.getNodes().forEach(n -> n.setSelected(false));
                 node.setSelected(true);
                 selectedNode = node; // Set before element interaction!
+
+                // AI FIX/ADD START
+                long currentTime = net.minecraft.Util.getMillis();
+                boolean isDoubleClick = (button == 0 && lastClickedNode == node && lastClickButton == 0 && (currentTime - lastClickTime) < 300);
+                lastClickedNode = node;
+                lastClickTime = currentTime;
+                lastClickButton = button;
+
+                int localY = ny - node.getY();
+                if (isDoubleClick) {
+                    if (localY <= 15) {
+                        pushUndo();
+                        renamingNode = node;
+                        renameField = new dev.devce.websnodelib.api.elements.WTextField(100);
+                        renameField.setValue(node.getTitle());
+                        renameField.handleMouseClick(0, 0, 0); // Force focus
+                        return true;
+                    } else if (node.getTypeId().getPath().equals("function")) {
+                        minecraft.setScreen(new WNodeScreen(Component.literal("Sub-Graph Editor"), node.getInternalGraph(), (tag) -> {
+                            node.getInternalGraph().load(tag);
+                            if (this.onSave != null) this.onSave.accept(this.graph.save());
+                        }, this));
+                        return true;
+                    }
+                }
+                // AI FIX/ADD STOP
 
                 if (node.mouseClicked(nx - node.getX(), ny - node.getY(), button)) return true;
                 
