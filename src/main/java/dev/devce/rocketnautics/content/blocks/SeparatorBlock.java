@@ -81,4 +81,29 @@ public class SeparatorBlock extends DirectionalBlock implements IWrenchable {
         }
     }
 
+    @Override
+    public net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
+        Direction direction = state.getValue(FACING);
+        switch (direction) {
+            case UP:
+                return Block.box(2.0, 0.0, 2.0, 14.0, 16.0, 14.0);
+            case DOWN:
+                return Block.box(2.0, 0.0, 2.0, 14.0, 16.0, 14.0);
+            case NORTH:
+                return Block.box(2.0, 2.0, 0.0, 14.0, 14.0, 16.0);
+            case SOUTH:
+                return Block.box(2.0, 2.0, 0.0, 14.0, 14.0, 16.0);
+            case EAST:
+                return Block.box(0.0, 2.0, 2.0, 16.0, 14.0, 14.0);
+            case WEST:
+                return Block.box(0.0, 2.0, 2.0, 16.0, 14.0, 14.0);
+            default:
+                return net.minecraft.world.phys.shapes.Shapes.block();
+        }
+    }
+
+    @Override
+    public net.minecraft.world.phys.shapes.VoxelShape getCollisionShape(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
+        return this.getShape(state, level, pos, context);
+    }
 }
