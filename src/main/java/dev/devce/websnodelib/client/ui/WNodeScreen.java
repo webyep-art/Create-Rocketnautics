@@ -466,8 +466,8 @@ public class WNodeScreen extends Screen {
         
         // AI FIX/ADD START
         boolean isHovered = conn.equals(getHoveredConnection(mouseX, mouseY));
-        float thickness = isHovered ? 3.5f : 1.5f;
-        int color = isHovered ? 0xFFFF5555 : 0xAA00FF88;
+        float thickness = isHovered ? 2.5f : 1.5f;
+        int color = 0xAA00FF88;
         drawSmoothCurve(graphics, x1, y1, x2, y2, color, thickness);
         // AI FIX/ADD STOP
         /*
@@ -636,7 +636,27 @@ public class WNodeScreen extends Screen {
                     return true;
                 }
                 // AI FIX/ADD STOP
+                // AI FIX/ADD START
+                isSearching = true; 
+                searchQuery = ""; 
+                menuX = (int)mouseX; 
+                menuY = (int)mouseY; 
+                updateSearch(); 
+                
+                int mw = 140;
+                int itemH = 12;
+                int maxVisible = 12;
+                int visibleCount = Math.min(maxVisible, filteredItemsList.size());
+                int mh = 15 + visibleCount * itemH;
+                if (menuY + mh > this.height) {
+                    menuY = Math.max(0, this.height - mh - 5);
+                }
+                
+                return true;
+                // AI FIX/ADD STOP
+                /*
                 isSearching = true; searchQuery = ""; menuX = (int)mouseX; menuY = (int)mouseY; updateSearch(); return true;
+                */
             }
         }
         if (button == 2 || (button == 1 && Screen.hasShiftDown())) { isPanning = true; return true; }
@@ -877,11 +897,30 @@ public class WNodeScreen extends Screen {
         if (keyCode == 67 && hasControlDown()) { copySelected(); return true; }
         if (keyCode == 86 && hasControlDown()) { pasteFromClipboard(); return true; }
         if (keyCode == 65 && Screen.hasShiftDown()) {
+            // AI FIX/ADD START
+            isSearching = true;
+            searchQuery = "";
+            menuX = this.mouseX;
+            menuY = this.mouseY;
+            updateSearch(); 
+            
+            int mw = 140;
+            int itemH = 12;
+            int maxVisible = 12;
+            int visibleCount = Math.min(maxVisible, filteredItemsList.size());
+            int mh = 15 + visibleCount * itemH;
+            if (menuY + mh > this.height) {
+                menuY = Math.max(0, this.height - mh - 5);
+            }
+            return true;
+            // AI FIX/ADD STOP
+            /*
             isSearching = true;
             searchQuery = "";
             menuX = this.mouseX;
             menuY = this.mouseY;
             updateSearch(); return true;
+            */
         }
         
         // AI FIX/ADD START
@@ -1161,7 +1200,7 @@ public class WNodeScreen extends Screen {
         int itemH = 14;
         int mh = currentActions.size() * itemH + 4;
         if (ctxMenuY + mh > this.height) {
-            ctxMenuY -= mh;
+            ctxMenuY = Math.max(0, this.height - mh - 5);
         }
         // AI FIX/ADD STOP
     }
