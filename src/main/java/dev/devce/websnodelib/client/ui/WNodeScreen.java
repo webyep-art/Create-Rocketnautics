@@ -148,7 +148,8 @@ public class WNodeScreen extends Screen {
             screenAnimation = Math.max(0.0f, screenAnimation - deltaTime * 4.0f);
             if (screenAnimation <= 0.0f && nextScreen != null) {
                 minecraft.setScreen(nextScreen);
-                return;
+                // Do not return here! We need to finish rendering the black screen overlay for this frame
+                // to prevent the game world from flashing behind it.
             }
         } else {
             screenAnimation = Math.min(1.0f, screenAnimation + deltaTime * 4.0f);
