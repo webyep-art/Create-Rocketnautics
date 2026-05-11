@@ -22,7 +22,7 @@ import com.mojang.logging.LogUtils;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
-import dev.devce.rocketnautics.content.blocks.nodes.LinkedSignalHandler;
+import dev.devce.websnodelib.internal.InternalNodes;
 
 /**
  * Main class for the Cosmonautics (RocketNautics) mod.
@@ -64,7 +64,8 @@ public class RocketNautics {
         RocketBlockEntities.register(modEventBus);
         RocketParticles.register(modEventBus);
         RocketSounds.register(modEventBus);
-        dev.devce.rocketnautics.api.nodes.NodeRegistry.register(modEventBus);
+        InternalNodes.register();
+        dev.devce.rocketnautics.registry.RocketNodes.register();
         RocketSimulatedTab.init();
 
         // Register mod-bus event subscribers manually to avoid deprecated bus() parameter
@@ -113,13 +114,9 @@ public class RocketNautics {
     }
     @SubscribeEvent
     public void onLevelTick(LevelTickEvent.Post event) {
-        LinkedSignalHandler.tick(event.getLevel());
     }
 
     @SubscribeEvent
     public void onLevelUnload(LevelEvent.Unload event) {
-        if (event.getLevel() instanceof net.minecraft.world.level.Level level) {
-            LinkedSignalHandler.onWorldUnload(level);
-        }
     }
 }

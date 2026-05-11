@@ -30,6 +30,9 @@ public class RocketNauticsClientCommands {
             );
             
         dispatcher.register(builder);
+        
+        // Register node library debug commands
+        dev.devce.websnodelib.internal.WebsNodeCommands.register(dispatcher);
     }
 
     private static void showRenderInfo() {

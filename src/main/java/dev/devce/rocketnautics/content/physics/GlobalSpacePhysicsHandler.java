@@ -92,6 +92,24 @@ public class GlobalSpacePhysicsHandler {
 
         applyZeroGravity(subLevel, handle, level, worldPos, timeStep);
         applyReentryHeat(subLevel, handle, level, worldPos, timeStep);
+        applySpaceDragRemoval(subLevel, handle, level, worldPos);
+    }
+
+    /**
+     * Disables linear and angular damping for ships in space to ensure momentum is preserved.
+     * Since we can't find a direct setDamping method, we counteract it with a small impulse.
+     */
+    private static void applySpaceDragRemoval(ServerSubLevel subLevel, RigidBodyHandle handle, ServerLevel level, Vector3d worldPos) {
+        double gravityFactor = calculateGravityFactor(level, worldPos.y());
+        if (gravityFactor >= 0.99) {
+            double mass = subLevel.getMassTracker().getMass();
+            
+            // Counteract linear damping (set to 0.20% as requested)
+            Vector3d velocity = new Vector3d(handle.getLinearVelocity());
+            if (velocity.length() > 0.001) {
+                handle.applyLinearImpulse(velocity.mul(mass * 0.002));
+            }
+        }
     }
 
     /**
@@ -183,6 +201,24 @@ public class GlobalSpacePhysicsHandler {
             updateLivingEntityGravityModifier(living);
             applyFallingHeatDamage(living);
             applySpaceSuffocation(living);
+            applyEntitySpaceDrag(living);
+        }
+    }
+
+    /**
+     * Counteracts Minecraft's default air resistance for entities in space.
+     */
+    private static void applyEntitySpaceDrag(LivingEntity entity) {
+        if (calculateGravityFactor(entity.level(), entity.getY()) >= 0.99) {
+            // Air drag in MC is usually 0.91 or 0.98. 
+            // We apply a small boost to counteract it if the entity is moving.
+            // We only apply this to X and Z to avoid the 'ascension' bug where 
+            // vertical velocity gets amplified without bound in zero-g.
+            Vec3 motion = entity.getDeltaMovement();
+            if (motion.lengthSqr() > 0.0001) {
+                // Boost back slightly to feel "floaty" and preserve horizontal momentum
+                entity.setDeltaMovement(new Vec3(motion.x * 1.05, motion.y, motion.z * 1.05));
+            }
         }
     }
 

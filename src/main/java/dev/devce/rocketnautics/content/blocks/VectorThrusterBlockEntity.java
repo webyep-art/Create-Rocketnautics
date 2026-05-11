@@ -56,21 +56,33 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
                 nozzle.getStepZ() - gimbalZ).normalize();
     }
 
+    private int ccGimbalTimeout = 0;
+
     public void setComputerGimbal(float x, float y, float z) {
         this.ccGimbalX = Math.max(-1.0f, Math.min(1.0f, x));
         this.ccGimbalY = Math.max(-1.0f, Math.min(1.0f, y));
         this.ccGimbalZ = Math.max(-1.0f, Math.min(1.0f, z));
+        this.ccGimbalTimeout = 5;
         setChanged();
     }
 
-    @Override
-    public void setGimbal(double x, double y, double z) {
-        setComputerGimbal((float) x, (float) y, (float) z);
-    }
+
 
     public void updateGimbalAngles() {
         if (level == null)
             return;
+            
+        if (ccGimbalTimeout > 0) {
+            ccGimbalTimeout--;
+        } else {
+            ccGimbalX *= 0.8f;
+            ccGimbalY *= 0.8f;
+            ccGimbalZ *= 0.8f;
+            if (Math.abs(ccGimbalX) < 0.001f) ccGimbalX = 0;
+            if (Math.abs(ccGimbalY) < 0.001f) ccGimbalY = 0;
+            if (Math.abs(ccGimbalZ) < 0.001f) ccGimbalZ = 0;
+        }
+            
         Direction nozzle = getThrustDirection();
 
         float gX = ccGimbalX;
@@ -169,16 +181,25 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
 
     @Override
     public void writeValue(String key, double value) {
-        if ("thrust".equals(key) || "throttle".equals(key)) {
-            setThrottle((float) value);
+        if ("throttle".equals(key)) {
             setActive(value > 0);
+            setThrottle((float) value);
+        } else if ("thrust".equals(key)) {
+            setActive(value > 0);
+            var behavior = getThrustPower();
+            if (behavior != null) {
+                float maxN = behavior.getValue() * 10.0f;
+                setThrottle(maxN > 0 ? (float)(value / maxN) : 0);
+            } else {
+                setThrottle((float) value);
+            }
         }
     }
 
     @Override
     public void writeValues(String key, double... values) {
         if ("gimbal".equals(key) && values.length >= 2) {
-            setGimbal(values[0], values[1]);
+            setComputerGimbal((float) values[0], 0.0f, (float) values[1]);
         }
     }
 

@@ -17,21 +17,22 @@ import org.joml.Vector3d;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.minecraft.world.item.ItemStack;
-import dev.devce.rocketnautics.content.blocks.nodes.NodeGraph;
-import dev.devce.rocketnautics.content.blocks.nodes.Node;
+import dev.devce.websnodelib.api.WGraph;
+import dev.devce.websnodelib.api.WNode;
 import dev.devce.rocketnautics.content.blocks.RocketThrusterBlockEntity;
 
-import dev.devce.rocketnautics.api.nodes.NodeContext;
 import dev.devce.rocketnautics.api.peripherals.IPeripheral;
 import java.util.Collections;
 import java.util.UUID;
 
-public class SputnikBlockEntity extends BlockEntity implements NodeContext {
-    public final NodeGraph graph = new NodeGraph();
+public class SputnikBlockEntity extends BlockEntity {
+    public final WGraph graph = new WGraph();
     private boolean isForced = false;
     private ChunkPos lastForcedParentChunk = null;
     private ServerLevel lastForcedParentLevel = null;
@@ -57,6 +58,7 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
 
     public SputnikBlockEntity(BlockPos pos, BlockState state) {
         super(RocketBlockEntities.SPUTNIK.get(), pos, state);
+        graph.setContext(this);
     }
 
     private SubLevel getSubLevel() {
@@ -84,7 +86,8 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
     }
 
     private void tickNodes() {
-        graph.tick(this);
+        dev.devce.rocketnautics.content.blocks.LinkedSignalHandler.tick(level);
+        graph.tick();
         
         // Sync graph values to client periodically for UI display
         if (level.getGameTime() % 5 == 0) {
@@ -92,8 +95,10 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
         }
     }
 
+    private final List<UUID> peripheralIds = new ArrayList<>();
+
     public void refreshPeripherals() {
-        discoveredPeripherals.clear();
+        Map<UUID, IPeripheral> found = new java.util.HashMap<>();
         SubLevel sl = getSubLevel();
         
         if (sl != null) {
@@ -105,8 +110,8 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
                     net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(cx, cz);
                     if (chunk == null) continue;
                     for (BlockEntity be : chunk.getBlockEntities().values()) {
-                        if (be instanceof IPeripheral peripheral) {
-                            discoveredPeripherals.add(peripheral);
+                        if (be instanceof IPeripheral p) {
+                            found.put(p.getUniqueId(), p);
                         }
                     }
                 }
@@ -116,21 +121,28 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
                 for (int y = -8; y <= 8; y++) {
                     for (int z = -8; z <= 8; z++) {
                         BlockEntity be = level.getBlockEntity(worldPosition.offset(x, y, z));
-                        if (be instanceof IPeripheral peripheral && !discoveredPeripherals.contains(peripheral)) {
-                            discoveredPeripherals.add(peripheral);
+                        if (be instanceof IPeripheral p) {
+                            found.put(p.getUniqueId(), p);
                         }
                     }
                 }
             }
         }
 
-        // Sort for stable IDs
-        discoveredPeripherals.sort(Comparator.comparingInt((IPeripheral p) -> p.getBlockPos().getX())
-            .thenComparingInt(p -> p.getBlockPos().getY())
-            .thenComparingInt(p -> p.getBlockPos().getZ()));
+        // Add newly discovered peripherals to the end of the registry
+        for (UUID id : found.keySet()) {
+            if (!peripheralIds.contains(id)) {
+                peripheralIds.add(id);
+            }
+        }
+
+        // Update the list of active peripherals, preserving order
+        discoveredPeripherals.clear();
+        for (UUID id : peripheralIds) {
+            discoveredPeripherals.add(found.get(id)); // May add null if peripheral is missing
+        }
     }
 
-    @Override
     public List<IPeripheral> getPeripherals() {
         return Collections.unmodifiableList(discoveredPeripherals);
     }
@@ -144,24 +156,20 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
     }
     public void refreshEngines() { refreshPeripherals(); }
 
-    @Override
     public double evaluateInput(UUID nodeId, int pin) {
-        return graph.getInputValue(nodeId, pin, this);
+        // In the new system, inputs are pushed, so we don't need a pull-based evaluateInput
+        // but we keep the interface for compatibility if needed.
+        return 0;
     }
 
-    @Override
     public double getX() { return getGlobalPos().x; }
-    @Override
     public double getY() { return getGlobalPos().y; }
-    @Override
     public double getZ() { return getGlobalPos().z; }
 
-    @Override
     public double getAltitude() {
         return getGlobalPos().y;
     }
 
-    @Override
     public double getVelocity() {
         SubLevel subLevel = getSubLevel();
         if (subLevel != null) {
@@ -172,7 +180,6 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
         return 0;
     }
 
-    @Override
     public double getPitch() {
         SubLevel subLevel = getSubLevel();
         if (subLevel != null) {
@@ -182,12 +189,10 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
         return 0;
     }
 
-    @Override
     public net.minecraft.world.level.Level getLevel() {
         return level;
     }
 
-    @Override
     public double getYaw() {
         SubLevel subLevel = getSubLevel();
         if (subLevel != null) {
@@ -197,7 +202,6 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
         return 0;
     }
 
-    @Override
     public double getRoll() {
         SubLevel subLevel = getSubLevel();
         if (subLevel != null) {
@@ -207,7 +211,6 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
         return 0;
     }
 
-    @Override
     public void setOutput(String side, int strength) {
         if (side.equalsIgnoreCase("all")) {
             for (int i = 0; i < 6; i++) {
@@ -368,7 +371,14 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putBoolean("Forced", isForced);
-        tag.put("NodeGraph", graph.save(registries));
+        tag.put("NodeGraph", graph.save());
+        
+        net.minecraft.nbt.ListTag pIds = new net.minecraft.nbt.ListTag();
+        for (UUID id : peripheralIds) {
+            pIds.add(net.minecraft.nbt.NbtUtils.createUUID(id));
+        }
+        tag.put("PeripheralIds", pIds);
+
         tag.put("StageFrequencies", stageFrequencies.serializeNBT(registries));
         tag.putIntArray("StageConditions", stageConditions);
         
@@ -396,28 +406,17 @@ public class SputnikBlockEntity extends BlockEntity implements NodeContext {
                 stageValues[i] = valuesTag.getDouble("v"+i);
             }
         }
+        if (tag.contains("PeripheralIds")) {
+            peripheralIds.clear();
+            net.minecraft.nbt.ListTag pIds = tag.getList("PeripheralIds", net.minecraft.nbt.Tag.TAG_INT_ARRAY);
+            for (int i = 0; i < pIds.size(); i++) {
+                peripheralIds.add(net.minecraft.nbt.NbtUtils.loadUUID(pIds.get(i)));
+            }
+        }
         if (tag.contains("NodeGraph")) {
             CompoundTag graphTag = tag.getCompound("NodeGraph");
-            if (level != null && level.isClientSide && !graph.nodes.isEmpty()) {
-                // Client-side periodic sync: update values ONLY to prevent race conditions with placement
-                net.minecraft.nbt.ListTag nodesTag = graphTag.getList("Nodes", net.minecraft.nbt.Tag.TAG_COMPOUND);
-                for (int i = 0; i < nodesTag.size(); i++) {
-                    CompoundTag nTag = nodesTag.getCompound(i);
-                    java.util.UUID id = nTag.getUUID("Id");
-                    Node localNode = graph.getNode(id);
-                    if (localNode != null) {
-                        localNode.value = nTag.getDouble("Value");
-                    }
-                }
-            } else {
-                // Full load/overwrite
-                graph.nodes.clear();
-                graph.connections.clear();
-                NodeGraph loaded = new NodeGraph(graphTag, registries);
-                graph.nodes.addAll(loaded.nodes);
-                graph.connections.addAll(loaded.connections);
-                graph.clearCache();
-            }
+            graph.load(graphTag);
+            graph.setContext(this);
         }
     }
 }

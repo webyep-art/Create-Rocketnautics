@@ -182,20 +182,20 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
                 float baseSpeedMult = 0.8f + (visualPower / 100.0f) * 1.2f;
                 float maxSpeedMult = (float)(hitDist / 15.0);
                 float actualSpeedMult = Math.min(baseSpeedMult, maxSpeedMult);
-            
+
                 for (int i = 0; i < plumeCount; i++) {
                     double speedX = pDir.x() * (1.5 + random.nextDouble() * 1.0) * boost * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
                     double speedY = pDir.y() * (1.5 + random.nextDouble() * 1.0) * boost * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
                     double speedZ = pDir.z() * (1.5 + random.nextDouble() * 1.0) * boost * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
-                    
+
                     var particle = (blockEntity.ignitionTicks < blockEntity.getWarmupTime()) ? 
                             RocketParticles.PLUME.get() : 
                             RocketParticles.BLUE_FLAME.get();
-                    
+
                     level.addParticle(particle, x, y, z, speedX, speedY, speedZ);
                 }
                 
-                // Secondary effects: ground smoke and camera shake
+                // Secondary effects: ground smoke (dust) and camera shake
                 if (active) {
                     if (hitBlock && random.nextFloat() < (visualPower / 50.0f)) {
                         for (int i = 0; i < (1 + visualPower / 5); i++) {
@@ -204,16 +204,6 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
                             net.minecraft.world.phys.Vec3 spreadDir = randomDir.subtract(normal.scale(randomDir.dot(normal))).normalize();
                             double speed = 0.5 + random.nextDouble() * 1.5;
                             level.addParticle(RocketParticles.JET_SMOKE.get(), hitPos.x, hitPos.y, hitPos.z, spreadDir.x * speed, spreadDir.y * speed, spreadDir.z * speed);
-                        }
-                    } else if (!hitBlock && random.nextFloat() < (visualPower / 100.0f)) {
-                        double smokeX = x + pDir.x() * hitDist * 0.8;
-                        double smokeY = y + pDir.y() * hitDist * 0.8;
-                        double smokeZ = z + pDir.z() * hitDist * 0.8;
-                        for (int i = 0; i < (1 + visualPower / 10); i++) {
-                            double speedX = pDir.x() * (0.8 + random.nextDouble() * 0.5) + (random.nextDouble() - 0.5) * 0.8;
-                            double speedY = pDir.y() * (0.8 + random.nextDouble() * 0.5) + (random.nextDouble() - 0.5) * 0.8;
-                            double speedZ = pDir.z() * (0.8 + random.nextDouble() * 0.5) + (random.nextDouble() - 0.5) * 0.8;
-                            level.addParticle(RocketParticles.JET_SMOKE.get(), smokeX, smokeY, smokeZ, speedX, speedY, speedZ);
                         }
                     }
 
@@ -510,9 +500,17 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         return 0;
     }
 
+    private java.util.UUID uniqueId = java.util.UUID.randomUUID();
+
+    @Override
+    public java.util.UUID getUniqueId() {
+        return uniqueId;
+    }
+
     @Override
     protected void write(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
         super.write(tag, registries, clientPacket);
+        tag.putUUID("UniqueId", uniqueId);
         tag.putBoolean("Burning", currentlyBurning);
         tag.putBoolean("TargetActive", targetActive);
         tag.putInt("IgnitionTicks", ignitionTicks);
@@ -535,6 +533,9 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
     @Override
     protected void read(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
         super.read(tag, registries, clientPacket);
+        if (tag.hasUUID("UniqueId")) {
+            uniqueId = tag.getUUID("UniqueId");
+        }
         currentlyBurning = tag.getBoolean("Burning");
         targetActive = tag.getBoolean("TargetActive");
         ignitionTicks = tag.getInt("IgnitionTicks");
@@ -608,9 +609,13 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
 
     @Override
     public void writeValue(String key, double value) {
-        if ("throttle".equals(key) || "thrust".equals(key)) {
-            setThrottle((float) value);
+        if ("throttle".equals(key)) {
             setActive(value > 0);
+            setThrottle((float) value);
+        } else if ("thrust".equals(key)) {
+            setActive(value > 0);
+            float maxN = maxThrust.getValue() * 10.0f;
+            setThrottle(maxN > 0 ? (float)(value / maxN) : 0);
         }
     }
 

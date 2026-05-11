@@ -25,8 +25,15 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3d;
 
 import java.util.List;
+import java.util.UUID;
 
 public class BoosterThrusterBlockEntity extends SmartBlockEntity implements BlockEntitySubLevelActor, IThruster, com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation {
+    private UUID uniqueId = UUID.randomUUID();
+
+    @Override
+    public UUID getUniqueId() {
+        return uniqueId;
+    }
     @Override
     public String getPeripheralType() {
         return "booster";
@@ -106,7 +113,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
                 int visualPower = (int)(power * 2.85f);
 
                 net.minecraft.world.phys.Vec3 start = new net.minecraft.world.phys.Vec3(x, y, z);
-                double maxSearchDist = 15.0 + (visualPower / 10.0);
+                double maxSearchDist = 64.0;
                 net.minecraft.world.phys.Vec3 end = start.add(nozzle.getStepX() * maxSearchDist, nozzle.getStepY() * maxSearchDist, nozzle.getStepZ() * maxSearchDist);
                 net.minecraft.world.phys.BlockHitResult hit = level.clip(new net.minecraft.world.level.ClipContext(start, end, net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, net.minecraft.world.phys.shapes.CollisionContext.empty()));
                 
@@ -119,20 +126,20 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
                     hitPos = hit.getLocation();
                 }
 
-                int plumeCount = 1 + (visualPower / 5);
-                float baseSpeedMult = 0.8f + (visualPower / 100.0f) * 1.2f;
-                float maxSpeedMult = (float)(hitDist / 15.0);
-                float actualSpeedMult = Math.min(baseSpeedMult, maxSpeedMult);
-            
+                // Spawn exhaust particles based on power and distance
+                int plumeCount = 1 + (visualPower / 4);
+                float boost = 1.0f + (blockEntity.getFlow() * 0.5f);
+                float actualSpeedMult = (float)Math.min(1.2f, hitDist / 10.0);
+
                 for (int i = 0; i < plumeCount; i++) {
-                    double speedX = nozzle.getStepX() * (1.5 + random.nextDouble() * 1.0) * 1.0f * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
-                    double speedY = nozzle.getStepY() * (1.5 + random.nextDouble() * 1.0) * 1.0f * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
-                    double speedZ = nozzle.getStepZ() * (1.5 + random.nextDouble() * 1.0) * 1.0f * actualSpeedMult + (random.nextDouble() - 0.5) * 0.2;
-                    
-                    var particle = (blockEntity.ignitionTicks < blockEntity.getWarmupTime()) ? 
+                    double speedX = nozzle.getStepX() * (2.0 + random.nextDouble() * 2.0) * boost * actualSpeedMult + (random.nextDouble() - 0.5) * 0.4;
+                    double speedY = nozzle.getStepY() * (2.0 + random.nextDouble() * 2.0) * boost * actualSpeedMult + (random.nextDouble() - 0.5) * 0.4;
+                    double speedZ = nozzle.getStepZ() * (2.0 + random.nextDouble() * 2.0) * boost * actualSpeedMult + (random.nextDouble() - 0.5) * 0.4;
+
+                    var particle = (blockEntity.ignitionTicks < blockEntity.getWarmupTime() / 2) ? 
                             RocketParticles.PLUME.get() : 
-                            RocketParticles.BLUE_FLAME.get();
-                    
+                            RocketParticles.PLASMA.get();
+
                     level.addParticle(particle, x, y, z, speedX, speedY, speedZ);
                 }
                 
@@ -143,17 +150,6 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
                         net.minecraft.world.phys.Vec3 spreadDir = randomDir.subtract(normal.scale(randomDir.dot(normal))).normalize();
                         double speed = 0.5 + random.nextDouble() * 1.5;
                         level.addParticle(RocketParticles.JET_SMOKE.get(), hitPos.x, hitPos.y, hitPos.z, spreadDir.x * speed, spreadDir.y * speed, spreadDir.z * speed);
-                    }
-                } else if (!hitBlock && random.nextFloat() < (visualPower / 100.0f)) {
-                    double smokeX = x + nozzle.getStepX() * hitDist * 0.8;
-                    double smokeY = y + nozzle.getStepY() * hitDist * 0.8;
-                    double smokeZ = z + nozzle.getStepZ() * hitDist * 0.8;
-                    
-                    for (int i = 0; i < (1 + visualPower / 10); i++) {
-                        double speedX = nozzle.getStepX() * (0.8 + random.nextDouble() * 0.5) + (random.nextDouble() - 0.5) * 0.8;
-                        double speedY = nozzle.getStepY() * (0.8 + random.nextDouble() * 0.5) + (random.nextDouble() - 0.5) * 0.8;
-                        double speedZ = nozzle.getStepZ() * (0.8 + random.nextDouble() * 0.5) + (random.nextDouble() - 0.5) * 0.8;
-                        level.addParticle(RocketParticles.JET_SMOKE.get(), smokeX, smokeY, smokeZ, speedX, speedY, speedZ);
                     }
                 }
             }
@@ -282,7 +278,7 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
     private BlockPos cachedFuelPos = null;
     private long cachedFuelPosTick = Long.MIN_VALUE;
     private boolean fuelCacheValid = false;
-    private boolean computerActive = true;
+    private boolean computerActive = false;
 
     public boolean isActive() {
         if (level != null && level.isClientSide) return currentlyBurning;
@@ -406,6 +402,8 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
     @Override
     protected void write(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
         super.write(tag, registries, clientPacket);
+        tag.putUUID("UniqueId", uniqueId);
+        tag.putInt("Fuel", fuelTicks);
         tag.putBoolean("Burning", currentlyBurning);
         tag.putBoolean("Ignited", ignited);
         tag.putBoolean("Spent", isSpent);
@@ -417,6 +415,10 @@ public class BoosterThrusterBlockEntity extends SmartBlockEntity implements Bloc
     @Override
     protected void read(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
         super.read(tag, registries, clientPacket);
+        if (tag.hasUUID("UniqueId")) {
+            uniqueId = tag.getUUID("UniqueId");
+        }
+        fuelTicks = tag.getInt("Fuel");
         currentlyBurning = tag.getBoolean("Burning");
         ignited = tag.getBoolean("Ignited");
         isSpent = tag.getBoolean("Spent");

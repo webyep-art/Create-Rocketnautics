@@ -3,6 +3,8 @@ package dev.devce.rocketnautics;
 import net.minecraft.client.DeltaTracker;
 
 import dev.devce.rocketnautics.content.blocks.VectorThrusterRenderer;
+import dev.devce.rocketnautics.content.blocks.RocketThrusterRenderer;
+import dev.devce.rocketnautics.content.blocks.BoosterThrusterRenderer;
 import dev.devce.rocketnautics.content.particles.RocketExhaustParticle;
 import dev.devce.rocketnautics.RocketConfig;
 import dev.devce.rocketnautics.client.RocketSettingsScreen;
@@ -269,6 +271,8 @@ public class RocketNauticsClient {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(RocketBlockEntities.VECTOR_THRUSTER.get(), VectorThrusterRenderer::new);
+        event.registerBlockEntityRenderer(RocketBlockEntities.ROCKET_THRUSTER.get(), RocketThrusterRenderer::new);
+        event.registerBlockEntityRenderer(RocketBlockEntities.BOOSTER_THRUSTER.get(), BoosterThrusterRenderer::new);
     }
 
     @SubscribeEvent
@@ -462,7 +466,11 @@ public class RocketNauticsClient {
             // Apply thrust, gravity, and drag
             currentVel.add(thrustAccel);
             currentVel.y -= 0.04; // Gravity approx
-            currentVel.mul(0.99); // Drag approx
+            
+            // Apply drag only if in atmosphere
+            if (currentPos.y < 2000 && !level.dimension().location().getPath().equals("space")) {
+                currentVel.mul(0.99); // Drag approx
+            }
             
             buffer.addVertex(matrix, (float)currentPos.x, (float)currentPos.y, (float)currentPos.z).setColor(r, g, b, 1.0f);
             buffer.addVertex(matrix, (float)nextPos.x, (float)nextPos.y, (float)nextPos.z).setColor(r, g, b, 1.0f);

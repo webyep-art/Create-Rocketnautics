@@ -19,7 +19,7 @@ public interface IThruster extends IPeripheral {
 
     @Override
     default String getPeripheralType() {
-        return "engine";
+        return "thruster";
     }
 
     @Override
@@ -30,9 +30,18 @@ public interface IThruster extends IPeripheral {
 
     @Override
     default void writeValue(String key, double value) {
-        if (key.equals("thrust")) {
+        if (key.equals("throttle")) {
             setActive(value > 0);
             setThrottle((float) value);
+        } else if (key.equals("thrust")) {
+            setActive(value > 0);
+            var behavior = getThrustPower();
+            if (behavior != null) {
+                float maxN = behavior.getValue() * 10.0f;
+                setThrottle(maxN > 0 ? (float)(value / maxN) : 0);
+            } else {
+                setThrottle((float) value);
+            }
         }
     }
 

@@ -125,6 +125,11 @@ public class JetpackHandler {
         // Apply drag: sprinting has less air resistance
         double drag = sprinting ? 0.98 : 0.95;
         
+        // Disable drag in space or high altitude
+        if (player.getY() > 2000 || player.level().dimension().location().getPath().equals("space")) {
+            drag = 1.0;
+        }
+        
         // Final motion calculation: Motion = (OldMotion * Drag) + Thrust
         Vec3 newMotion = motion.scale(drag).add(thrust);
         

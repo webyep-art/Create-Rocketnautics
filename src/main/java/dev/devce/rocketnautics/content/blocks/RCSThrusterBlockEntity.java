@@ -41,7 +41,7 @@ public class RCSThrusterBlockEntity extends RocketThrusterBlockEntity {
         return isActive() ? 1 : 0;
     }
 
-    private boolean computerActive = true;
+    private boolean computerActive = false;
 
     @Override
     public boolean isActive() {

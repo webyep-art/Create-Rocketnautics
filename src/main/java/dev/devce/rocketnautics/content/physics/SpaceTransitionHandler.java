@@ -66,7 +66,7 @@ import java.util.Optional;
 public class SpaceTransitionHandler {
     
     
-    public static final double OVERWORLD_SPACE_Y = 20000.0;
+    public static final double OVERWORLD_SPACE_Y = 1000000.0;
     private static final double SPACE_EXIT_Y = 0.0;
     private static final double TRANSITION_SAFE_OFFSET = 50.0;
     private static final int REBUILD_DELAY_TICKS = 3;

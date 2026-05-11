@@ -90,12 +90,8 @@ public class NetworkHandler {
         }
 
         if (foundLevel != null && foundLevel.getBlockEntity(pos) instanceof dev.devce.rocketnautics.content.blocks.SputnikBlockEntity sputnik) {
-            sputnik.graph.nodes.clear();
-            sputnik.graph.connections.clear();
-            dev.devce.rocketnautics.content.blocks.nodes.NodeGraph loaded = new dev.devce.rocketnautics.content.blocks.nodes.NodeGraph(graphData, foundLevel.registryAccess());
-            sputnik.graph.nodes.addAll(loaded.nodes);
-            sputnik.graph.connections.addAll(loaded.connections);
-            sputnik.graph.clearCache();
+            sputnik.graph.load(graphData);
+            sputnik.graph.setContext(sputnik);
             
             // Force immediate refresh to ensure server sees engines before next tick
             sputnik.refreshEngines();
@@ -103,10 +99,7 @@ public class NetworkHandler {
             
             if (dev.devce.rocketnautics.RocketConfig.SERVER.enableEngineDebugLogging.get()) {
                 dev.devce.rocketnautics.RocketNautics.LOGGER.info("Sputnik at {} (level {}) SYNCED. Nodes: {}, Connections: {}, Engines Found: {}", 
-                    pos, foundLevel.dimension().location(), sputnik.graph.nodes.size(), sputnik.graph.connections.size(), sputnik.getEngineCount());
-                for (var node : sputnik.graph.nodes) {
-                    dev.devce.rocketnautics.RocketNautics.LOGGER.info("  Node: {} type={} idx={}", node.id, node.typeId, node.engineIndex);
-                }
+                    pos, foundLevel.dimension().location(), sputnik.graph.getNodes().size(), sputnik.graph.getConnections().size(), sputnik.getEngineCount());
             }
         } else {
             dev.devce.rocketnautics.RocketNautics.LOGGER.warn("Failed to find Sputnik at {} for sync from player {}", pos, player.getName().getString());

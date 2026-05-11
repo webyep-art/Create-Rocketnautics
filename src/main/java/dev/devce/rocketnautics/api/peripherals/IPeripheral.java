@@ -9,6 +9,8 @@ public interface IPeripheral {
     Level getLevel();
     boolean isRemoved();
     
+    java.util.UUID getUniqueId();
+
     /**
      * Get a value from the peripheral.
      * @param key The data key (e.g., "altitude", "velocity", "thrust")
