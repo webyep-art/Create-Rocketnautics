@@ -51,6 +51,12 @@ public class WNodeScreen extends Screen {
     private float screenAnimation = 0.0f;
     private long lastFrameTime = 0;
     
+    // AI FIX/ADD START
+    private boolean isExiting = false;
+    private Screen nextScreen = null;
+    public boolean isReturning = false;
+    // AI FIX/ADD STOP
+    
     /**
      * Particle system for the background.
      */
@@ -137,7 +143,21 @@ public class WNodeScreen extends Screen {
         float deltaTime = (lastFrameTime == 0) ? 0.016f : (now - lastFrameTime) / 1000f;
         lastFrameTime = now;
         
+        // AI FIX/ADD START
+        if (isExiting) {
+            screenAnimation = Math.max(0.0f, screenAnimation - deltaTime * 4.0f);
+            if (screenAnimation <= 0.0f && nextScreen != null) {
+                minecraft.setScreen(nextScreen);
+                return;
+            }
+        } else {
+            screenAnimation = Math.min(1.0f, screenAnimation + deltaTime * 4.0f);
+        }
+        // AI FIX/ADD STOP
+        /*
         screenAnimation = Math.min(1.0f, screenAnimation + deltaTime * 4.0f);
+        */
+        
         this.mouseX = mouseX;
         this.mouseY = mouseY;
         
@@ -151,7 +171,19 @@ public class WNodeScreen extends Screen {
         graphics.pose().popPose();
 
         graphics.pose().pushPose();
+        // AI FIX/ADD START
+        float sOut;
+        if (isExiting) {
+            sOut = (0.98f + 0.02f * screenAnimation) * zoom;
+        } else if (isReturning) {
+            sOut = (1.02f - 0.02f * screenAnimation) * zoom;
+        } else {
+            sOut = (0.98f + 0.02f * screenAnimation) * zoom;
+        }
+        // AI FIX/ADD STOP
+        /*
         float sOut = (0.98f + 0.02f * screenAnimation) * zoom;
+        */
         graphics.pose().translate(width / 2f, height / 2f, 0);
         graphics.pose().scale(sOut, sOut, 1.0f);
         graphics.pose().translate(-width / 2f, -height / 2f, 0);
@@ -628,7 +660,14 @@ public class WNodeScreen extends Screen {
                 if (mouseX >= bcX && mouseX <= bcX + w && mouseY >= bcY && mouseY <= bcY + 9) {
                     if (s != this) {
                         if (this.onSave != null) this.onSave.accept(this.graph.save());
+                        // AI FIX/ADD START
+                        isExiting = true;
+                        nextScreen = s;
+                        s.isReturning = true;
+                        // AI FIX/ADD STOP
+                        /*
                         minecraft.setScreen(s);
+                        */
                     }
                     return true;
                 }
@@ -885,7 +924,14 @@ public class WNodeScreen extends Screen {
             
             if (parentScreen != null) {
                 if (onSave != null) onSave.accept(graph.save());
+                // AI FIX/ADD START
+                isExiting = true;
+                nextScreen = parentScreen;
+                parentScreen.isReturning = true;
+                // AI FIX/ADD STOP
+                /*
                 minecraft.setScreen(parentScreen);
+                */
                 return true;
             }
         }
