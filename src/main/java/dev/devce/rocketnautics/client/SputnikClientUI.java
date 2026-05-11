@@ -12,7 +12,8 @@ public class SputnikClientUI {
         Minecraft.getInstance().setScreen(new WNodeScreen(
             Component.literal("Flight Computer"), 
             blockEntity.graph,
-            (tag) -> PacketDistributor.sendToServer(new SputnikNodeSyncPayload(blockEntity.getBlockPos(), tag))
+            (tag) -> PacketDistributor.sendToServer(new SputnikNodeSyncPayload(blockEntity.getBlockPos(), tag)),
+            null
         ));
     }
 }

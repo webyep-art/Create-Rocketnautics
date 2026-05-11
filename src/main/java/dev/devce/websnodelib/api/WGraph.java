@@ -47,9 +47,9 @@ public class WGraph {
         net.minecraft.nbt.ListTag connsTag = new net.minecraft.nbt.ListTag();
         for (WConnection conn : connections) {
             net.minecraft.nbt.CompoundTag c = new net.minecraft.nbt.CompoundTag();
-            c.putString("src", conn.sourceNode().toString());
+            c.putUUID("src", conn.sourceNode());
             c.putInt("srcP", conn.sourcePin());
-            c.putString("tgt", conn.targetNode().toString());
+            c.putUUID("tgt", conn.targetNode());
             c.putInt("tgtP", conn.targetPin());
             connsTag.add(c);
         }
@@ -58,30 +58,42 @@ public class WGraph {
         return tag;
     }
 
-    /**
-     * Reconstructs the graph state from a NBT CompoundTag.
-     * @param tag The tag containing serialized graph data.
-     */
     public void load(net.minecraft.nbt.CompoundTag tag) {
-        nodes.clear();
-        connections.clear();
-        
+        // 1. Synchronize Nodes
         net.minecraft.nbt.ListTag nodesTag = tag.getList("nodes", 10);
+        java.util.Set<UUID> incomingIds = new java.util.HashSet<>();
+        
         for (int i = 0; i < nodesTag.size(); i++) {
             net.minecraft.nbt.CompoundTag nTag = nodesTag.getCompound(i);
-            net.minecraft.resources.ResourceLocation type = net.minecraft.resources.ResourceLocation.parse(nTag.getString("typeId"));
-            WNode node = NodeRegistry.createNode(type, nTag.getInt("x"), nTag.getInt("y"));
-            if (node != null) {
-                node.load(nTag);
-                addNode(node);
+            if (!nTag.hasUUID("id")) continue;
+            UUID id = nTag.getUUID("id");
+            incomingIds.add(id);
+            
+            WNode existing = findNode(id);
+            if (existing != null) {
+                existing.load(nTag);
+            } else {
+                net.minecraft.resources.ResourceLocation type = net.minecraft.resources.ResourceLocation.parse(nTag.getString("typeId"));
+                WNode newNode = NodeRegistry.createNode(type, nTag.getInt("x"), nTag.getInt("y"));
+                if (newNode != null) {
+                    newNode.load(nTag);
+                    addNode(newNode);
+                }
             }
         }
         
+        // Remove nodes that are no longer present
+        nodes.removeIf(node -> !incomingIds.contains(node.getId()));
+        
+        // 2. Rebuild Connections
+        connections.clear();
         net.minecraft.nbt.ListTag connsTag = tag.getList("conns", 10);
         for (int i = 0; i < connsTag.size(); i++) {
             net.minecraft.nbt.CompoundTag c = connsTag.getCompound(i);
-            connect(java.util.UUID.fromString(c.getString("src")), c.getInt("srcP"), 
-                    java.util.UUID.fromString(c.getString("tgt")), c.getInt("tgtP"));
+            if (c.hasUUID("src") && c.hasUUID("tgt")) {
+                connect(c.getUUID("src"), c.getInt("srcP"), 
+                        c.getUUID("tgt"), c.getInt("tgtP"));
+            }
         }
         updateTopology();
     }
