@@ -1,22 +1,24 @@
 package dev.devce.rocketnautics.content.blocks;
 
+import com.simibubi.create.foundation.block.IBE;
 import dev.devce.rocketnautics.registry.RocketBlockEntities;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.network.chat.Component;
-import java.util.List;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-public class SputnikBlock extends BaseEntityBlock {
+import java.util.List;
+
+public class SputnikBlock extends BaseEntityBlock implements IBE<SputnikBlockEntity> {
     public static final com.mojang.serialization.MapCodec<SputnikBlock> CODEC = simpleCodec(SputnikBlock::new);
 
     public SputnikBlock(Properties properties) {
@@ -59,10 +61,14 @@ public class SputnikBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
-    @Nullable
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new SputnikBlockEntity(pos, state);
+    public Class<SputnikBlockEntity> getBlockEntityClass() {
+        return SputnikBlockEntity.class;
+    }
+
+    @Override
+    public BlockEntityType<? extends SputnikBlockEntity> getBlockEntityType() {
+        return RocketBlockEntities.SPUTNIK.get();
     }
 
     @Nullable

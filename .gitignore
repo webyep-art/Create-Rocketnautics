@@ -22,7 +22,6 @@ Thumbs.db
 
 # Minecraft / NeoForge
 run/
-src/generated/
 *.log
 local.properties
 /buildSrc/build/

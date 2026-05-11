@@ -1,6 +1,5 @@
 package dev.devce.rocketnautics.content.blocks;
 
-import dev.devce.rocketnautics.registry.RocketBlockEntities;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.minecraft.core.BlockPos;
@@ -8,6 +7,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3d;
 
@@ -38,8 +38,8 @@ public class VectorThrusterBlockEntity extends RocketThrusterBlockEntity {
     private float ccGimbalY = 0;
     private float ccGimbalZ = 0;
 
-    public VectorThrusterBlockEntity(BlockPos pos, BlockState state) {
-        super(RocketBlockEntities.VECTOR_THRUSTER.get(), pos, state);
+    public VectorThrusterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
     }
 
     @Override

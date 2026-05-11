@@ -1,115 +1,161 @@
 package dev.devce.rocketnautics.registry;
 
+import com.tterrag.registrate.util.entry.BlockEntry;
 import dev.devce.rocketnautics.RocketNautics;
-import dev.devce.rocketnautics.content.blocks.RocketThrusterBlock;
-import dev.devce.rocketnautics.content.blocks.VectorThrusterBlock;
-import dev.devce.rocketnautics.content.blocks.BoosterThrusterBlock;
-import dev.devce.rocketnautics.content.blocks.RCSThrusterBlock;
-import dev.devce.rocketnautics.content.blocks.SeparatorBlock;
-import dev.devce.rocketnautics.content.blocks.SputnikBlock;
-import dev.devce.rocketnautics.content.items.CreditsBookItem;
-import dev.devce.rocketnautics.content.items.RocketItem;
-import dev.devce.rocketnautics.content.items.RocketBlockItem;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Rarity;
+import dev.devce.rocketnautics.content.blocks.*;
+import dev.simulated_team.simulated.registrate.SimulatedRegistrate;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.DeferredBlock;
-import net.neoforged.neoforge.registries.DeferredItem;
+import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.functions.ApplyBonusCount;
+import net.neoforged.neoforge.common.Tags;
 
-import java.util.function.Supplier;
+import java.util.Map;
+
+import static com.simibubi.create.foundation.data.TagGen.pickaxeOnly;
+import static com.simibubi.create.foundation.data.TagGen.tagBlockAndItem;
 
 public class RocketBlocks {
-    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(RocketNautics.MODID);
-    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(RocketNautics.MODID);
+    private static final SimulatedRegistrate REGISTRATE = RocketNautics.getRegistrate();
 
-    public static final DeferredBlock<Block> ROCKET_THRUSTER = registerBlock("rocket_thruster",
-            () -> new RocketThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+    public static final BlockEntry<RocketThrusterBlock> ROCKET_THRUSTER = REGISTRATE.block("rocket_thruster", RocketThrusterBlock::new)
+            .initialProperties(() -> Blocks.IRON_BLOCK)
+            .properties(BlockBehaviour.Properties::noOcclusion)
+            .transform(pickaxeOnly())
+            .tag(RocketTags.BlockTags.THRUSTERS.tag)
+            .item().build()
+            .register();
 
-    public static final DeferredBlock<Block> VECTOR_THRUSTER = registerBlock("vector_thruster",
-            () -> new VectorThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+    public static final BlockEntry<VectorThrusterBlock> VECTOR_THRUSTER = REGISTRATE.block("vector_thruster", VectorThrusterBlock::new)
+            .initialProperties(() -> Blocks.IRON_BLOCK)
+            .properties(BlockBehaviour.Properties::noOcclusion)
+            .transform(pickaxeOnly())
+            .tag(RocketTags.BlockTags.THRUSTERS.tag)
+            .item().build()
+            .register();
 
-    public static final DeferredBlock<Block> BOOSTER_THRUSTER = registerBlock("booster_thruster",
-            () -> new BoosterThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+    public static final BlockEntry<BoosterThrusterBlock> BOOSTER_THRUSTER = REGISTRATE.block("booster_thruster", BoosterThrusterBlock::new)
+            .initialProperties(() -> Blocks.IRON_BLOCK)
+            .properties(BlockBehaviour.Properties::noOcclusion)
+            .transform(pickaxeOnly())
+            .tag(RocketTags.BlockTags.THRUSTERS.tag)
+            .item().build()
+            .register();
 
-    public static final DeferredBlock<Block> RCS_THRUSTER = registerBlock("rcs_thruster",
-            () -> new RCSThrusterBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+    public static final BlockEntry<RCSThrusterBlock> RCS_THRUSTER = REGISTRATE.block("rcs_thruster", RCSThrusterBlock::new)
+            .initialProperties(() -> Blocks.IRON_BLOCK)
+            .properties(BlockBehaviour.Properties::noOcclusion)
+            .transform(pickaxeOnly())
+            .tag(RocketTags.BlockTags.THRUSTERS.tag)
+            .item().build()
+            .register();
 
-    public static final DeferredBlock<Block> SEPARATOR = registerBlock("separator",
-            () -> new SeparatorBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+    public static final BlockEntry<SeparatorBlock> SEPARATOR = REGISTRATE.block("separator", SeparatorBlock::new)
+            .initialProperties(() -> Blocks.IRON_BLOCK)
+            .properties(BlockBehaviour.Properties::noOcclusion)
+            .transform(pickaxeOnly())
+            .item().build()
+            .register();
 
-    public static final DeferredBlock<Block> SPUTNIK = registerBlock("sputnik",
-            () -> new SputnikBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+    public static final BlockEntry<SputnikBlock> SPUTNIK = REGISTRATE.block("sputnik", SputnikBlock::new)
+            .initialProperties(() -> Blocks.IRON_BLOCK)
+            .properties(BlockBehaviour.Properties::noOcclusion)
+            .transform(pickaxeOnly())
+            .item().build()
+            .register();
 
-    public static final DeferredItem<RocketItem> MUSIC_DISC_SPACE = ITEMS.register("music_disc_space",
-            () -> new RocketItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
-                    .jukeboxPlayable(ResourceKey.create(Registries.JUKEBOX_SONG, 
-                            ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "brittle_rille")))));
+    static { REGISTRATE.setCreativeTab(RocketTabs.WORLD_TAB); }
 
-    public static final DeferredItem<CreditsBookItem> CREDITS_BOOK = ITEMS.register("credits_book",
-            () -> new CreditsBookItem(new Item.Properties().stacksTo(1)));
+    public static final BlockEntry<Block> TITANIUM_ORE = REGISTRATE.block("titanium_ore", Block::new)
+            .initialProperties(() -> Blocks.IRON_ORE)
+            .properties(p -> p.mapColor(MapColor.TERRACOTTA_PINK)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.STONE))
+            .loot((lt, b) ->  {
+                HolderLookup.RegistryLookup<Enchantment> enchantmentRegistryLookup = lt.getRegistries().lookupOrThrow(Registries.ENCHANTMENT);
+                lt.add(b, lt.createSilkTouchDispatchTable(b, lt.applyExplosionDecay(b, LootItem.lootTableItem(RocketItems.RAW_TITANIUM.get())
+                                        .apply(ApplyBonusCount.addOreBonusCount(enchantmentRegistryLookup.getOrThrow(Enchantments.FORTUNE))))));
+            })
+            .transform(pickaxeOnly())
+            .tag(BlockTags.NEEDS_DIAMOND_TOOL)
+            .tag(Tags.Blocks.ORES)
+            .transform(tagBlockAndItem(Map.of(
+                    RocketTags.MetalTags.TITANIUM.ores.blocks(), RocketTags.MetalTags.TITANIUM.ores.items(),
+                    Tags.Blocks.ORES_IN_GROUND_STONE, Tags.Items.ORES_IN_GROUND_STONE)))
+            .tag(Tags.Items.ORES)
+            .build()
+            .register();
 
-    public static final DeferredItem<dev.devce.rocketnautics.content.items.JetpackItem> JETPACK = ITEMS.register("jetpack",
-            () -> new dev.devce.rocketnautics.content.items.JetpackItem(new Item.Properties().stacksTo(1)));
+    public static final BlockEntry<Block> DEEPSLATE_TITANIUM_ORE = REGISTRATE.block("deepslate_titanium_ore", Block::new)
+            .initialProperties(() -> Blocks.DEEPSLATE_IRON_ORE)
+            .properties(p -> p.mapColor(MapColor.STONE)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.DEEPSLATE))
+            .loot((lt, b) ->  {
+                HolderLookup.RegistryLookup<Enchantment> enchantmentRegistryLookup = lt.getRegistries().lookupOrThrow(Registries.ENCHANTMENT);
+                lt.add(b, lt.createSilkTouchDispatchTable(b, lt.applyExplosionDecay(b, LootItem.lootTableItem(RocketItems.RAW_TITANIUM.get())
+                        .apply(ApplyBonusCount.addOreBonusCount(enchantmentRegistryLookup.getOrThrow(Enchantments.FORTUNE))))));
+            })
+            .transform(pickaxeOnly())
+            .tag(BlockTags.NEEDS_DIAMOND_TOOL)
+            .tag(Tags.Blocks.ORES)
+            .transform(tagBlockAndItem(Map.of(
+                    RocketTags.MetalTags.TITANIUM.ores.blocks(), RocketTags.MetalTags.TITANIUM.ores.items(),
+                    Tags.Blocks.ORES_IN_GROUND_DEEPSLATE, Tags.Items.ORES_IN_GROUND_DEEPSLATE)))
+            .tag(Tags.Items.ORES)
+            .build()
+            .register();
 
-    
-    public static final DeferredBlock<Block> TITANIUM_ORE = registerBlock("titanium_ore",
-            () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_ORE)));
+    static { REGISTRATE.setCreativeTab(RocketTabs.RESOURCE_TAB); }
 
-    public static final DeferredBlock<Block> DEEPSLATE_TITANIUM_ORE = registerBlock("deepslate_titanium_ore",
-            () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.DEEPSLATE_IRON_ORE)));
+    public static final BlockEntry<Block> RAW_TITANIUM_BLOCK = REGISTRATE.block("raw_titanium_block", Block::new)
+            .initialProperties(() -> Blocks.RAW_IRON_BLOCK)
+            .properties(p -> p.mapColor(MapColor.COLOR_PURPLE)
+                    .requiresCorrectToolForDrops())
+            .transform(pickaxeOnly())
+            .tag(Tags.Blocks.STORAGE_BLOCKS)
+            .tag(BlockTags.NEEDS_IRON_TOOL)
+            .transform(RocketTags.tagBlockAndItem(RocketTags.MetalTags.TITANIUM.rawStorageBlocks))
+            .tag(Tags.Items.STORAGE_BLOCKS)
+            .build()
+            .register();
 
-    public static final DeferredBlock<Block> RAW_TITANIUM_BLOCK = registerBlock("raw_titanium_block",
-            () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.RAW_IRON_BLOCK)));
+    public static final BlockEntry<Block> TITANIUM_BLOCK = REGISTRATE.block("titanium_block", Block::new)
+            .initialProperties(() -> Blocks.IRON_BLOCK)
+            .properties(p -> p.mapColor(MapColor.COLOR_PURPLE)
+                    .requiresCorrectToolForDrops())
+            .transform(pickaxeOnly())
+            .tag(BlockTags.NEEDS_IRON_TOOL)
+            .tag(Tags.Blocks.STORAGE_BLOCKS)
+            .tag(BlockTags.BEACON_BASE_BLOCKS)
+            .transform(RocketTags.tagBlockAndItem(RocketTags.MetalTags.TITANIUM.storageBlocks))
+            .tag(Tags.Items.STORAGE_BLOCKS)
+            .build()
+            .register();
 
-    public static final DeferredBlock<Block> TITANIUM_BLOCK = registerBlock("titanium_block",
-            () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)));
+    public static final BlockEntry<Block> TITANIUM_ALLOY_BLOCK = REGISTRATE.block("titanium_alloy_block", Block::new)
+            .initialProperties(() -> Blocks.IRON_BLOCK)
+            .properties(p -> p.mapColor(MapColor.COLOR_PINK)
+                    .requiresCorrectToolForDrops())
+            .transform(pickaxeOnly())
+            .tag(BlockTags.NEEDS_IRON_TOOL)
+            .tag(Tags.Blocks.STORAGE_BLOCKS)
+            .tag(BlockTags.BEACON_BASE_BLOCKS)
+            .transform(RocketTags.tagBlockAndItem(RocketTags.MetalTags.TITANIUM_ALLOY.storageBlocks))
+            .tag(Tags.Items.STORAGE_BLOCKS)
+            .build()
+            .register();
 
-    public static final DeferredBlock<Block> TITANIUM_ALLOY_BLOCK = registerBlock("titanium_alloy_block",
-            () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)));
+    static { REGISTRATE.setCreativeTab(null); }
 
-    public static final DeferredItem<RocketItem> TITANIUM_INGOT = ITEMS.register("titanium_ingot",
-            () -> new RocketItem(new Item.Properties()));
 
-    public static final DeferredItem<RocketItem> RAW_TITANIUM = ITEMS.register("raw_titanium",
-            () -> new RocketItem(new Item.Properties()));
-
-    public static final DeferredItem<RocketItem> TITANIUM_ALLOY = ITEMS.register("titanium_alloy",
-            () -> new RocketItem(new Item.Properties()));
-
-    public static final DeferredItem<RocketItem> TITANIUM_NUGGET = ITEMS.register("titanium_nugget",
-            () -> new RocketItem(new Item.Properties()));
-
-    public static final DeferredItem<RocketItem> TITANIUM_ALLOY_NUGGET = ITEMS.register("titanium_alloy_nugget",
-            () -> new RocketItem(new Item.Properties()));
-
-    public static final DeferredItem<RocketItem> TITANIUM_SHEET = ITEMS.register("titanium_sheet",
-            () -> new RocketItem(new Item.Properties()));
-
-    public static final DeferredItem<RocketItem> TITANIUM_ALLOY_SHEET = ITEMS.register("titanium_alloy_sheet",
-            () -> new RocketItem(new Item.Properties()));
-
-    public static final DeferredItem<RocketItem> TITANIUM_NOZZLE = ITEMS.register("titanium_nozzle",
-            () -> new RocketItem(new Item.Properties()));
-
-    private static <T extends Block> DeferredBlock<T> registerBlock(String name, Supplier<T> block) {
-        DeferredBlock<T> toReturn = BLOCKS.register(name, block);
-        registerBlockItem(name, toReturn);
-        return toReturn;
-    }
-
-    private static <T extends Block> void registerBlockItem(String name, DeferredBlock<T> block) {
-        ITEMS.register(name, () -> new RocketBlockItem(block.get(), new Item.Properties()));
-    }
-
-    public static void register(IEventBus eventBus) {
-        BLOCKS.register(eventBus);
-        ITEMS.register(eventBus);
-    }
+    public static void init() {}
 }
