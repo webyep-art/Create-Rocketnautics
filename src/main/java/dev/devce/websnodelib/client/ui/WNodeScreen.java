@@ -590,8 +590,8 @@ public class WNodeScreen extends Screen {
             float pulsePos = t * t * (3.0f - 2.0f * t);
             float dist = (float) Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
             graphics.pose().pushPose();
-            graphics.pose().translate(0, 0, 500);
             drawPulsePoint(graphics, x1, y1, x2, y2, pulsePos, dist);
+            graphics.pose().translate(0, 0, 500);
             graphics.pose().popPose();
         }
     }
@@ -605,7 +605,7 @@ public class WNodeScreen extends Screen {
             float segmentT = t - (i * step); if (segmentT < 0) continue;
             float mt = 1.0f - segmentT;
             float x = mt * mt * mt * x1 + 3 * mt * mt * segmentT * cx1 + 3 * mt * segmentT * segmentT * cx2 + segmentT * segmentT * segmentT * x2;
-            float y = mt * mt * mt * y1 + 3 * mt * mt * segmentT * cy1 + 3 * mt * segmentT * segmentT * cy2 + segmentT * segmentT * segmentT * y2;
+            float y = mt * mt * mt * y1 + 3 * mt * mt * segmentT * cy1 + 3 * mt * segmentT * segmentT * cy2 + segmentT * segmentT * segmentT * y2 + 1;
             int alpha = (int)(255 * (1.0f - (float)i / segments));
             int color = (alpha << 24) | 0x00FF88;
             graphics.fill((int)x - 3, (int)y - 3, (int)x + 3, (int)y + 3, (color & 0x00FFFFFF) | ((alpha / 5) << 24));
