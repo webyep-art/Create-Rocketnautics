@@ -226,10 +226,14 @@ public class WNodeScreen extends Screen {
                 
                 // AI FIX/ADD START
                 if (renamingNode == node) {
-                    graphics.fill(node.getX() + 1, node.getY() + 1, node.getX() + node.getWidth() - 1, node.getY() + 14, 0xFF1A1A1A); // Dark bg to cover original title
-                    String display = renameField.getValue();
-                    if ((System.currentTimeMillis() / 500) % 2 == 0) display += "_";
-                    graphics.drawString(font, display, node.getX() + 5, node.getY() + 3, 0xFF00FF88, false);
+                    // Fill background to cover the original title
+                    int nx = (int)((mouseX - width / 2f) / zoom + width / 2f - panX);
+                    int ny = (int)((mouseY - height / 2f) / zoom + height / 2f - panY);
+                    boolean h = nx >= node.getX() && nx <= node.getX() + node.getWidth() && ny >= node.getY() && ny <= node.getY() + node.getHeight();
+                    graphics.fill(node.getX() + 1, node.getY() + 1, node.getX() + node.getWidth() - 1, node.getY() + 14, h ? 0xFF252525 : 0xFF1A1A1A);
+                    
+                    // Only render the text field overlay
+                    renameField.render(graphics, node.getX() + 3, node.getY() + 1, mouseX, mouseY, partialTick);
                 }
                 // AI FIX/ADD STOP
 
@@ -845,9 +849,15 @@ public class WNodeScreen extends Screen {
                     if (localY <= 15) {
                         pushUndo();
                         renamingNode = node;
-                        renameField = new dev.devce.websnodelib.api.elements.WTextField(100);
+                        // AI FIX/ADD START
+                        renameField = new dev.devce.websnodelib.api.elements.WTextField(node.getWidth() - 10)
+                            .setRenderBackground(false)
+                            .setTextColor(0xFF00FF88)
+                            .setCursorColor(0xFF00FF88);
                         renameField.setValue(node.getTitle());
-                        renameField.handleMouseClick(0, 0, 0); // Force focus
+                        renameField.setCursorToEnd();
+                        renameField.setFocused(true); // Force focus without resetting cursor
+                        // AI FIX/ADD STOP
                         return true;
                     } else if (node.getTypeId().getPath().equals("function")) {
                         minecraft.setScreen(new WNodeScreen(Component.literal(node.getTitle()), node.getInternalGraph(), (tag) -> {
@@ -1364,9 +1374,15 @@ public class WNodeScreen extends Screen {
                 if (node != null) {
                     pushUndo();
                     renamingNode = node;
-                    renameField = new dev.devce.websnodelib.api.elements.WTextField(100);
+                    // AI FIX/ADD START
+                    renameField = new dev.devce.websnodelib.api.elements.WTextField(node.getWidth() - 10)
+                        .setRenderBackground(false)
+                        .setTextColor(0xFF00FF88)
+                        .setCursorColor(0xFF00FF88);
                     renameField.setValue(node.getTitle());
-                    renameField.handleMouseClick(0, 0, 0); // Force focus
+                    renameField.setCursorToEnd();
+                    renameField.setFocused(true); // Force focus without resetting cursor
+                    // AI FIX/ADD STOP
                 }
             }, false));
             currentActions.add(new ContextAction("Delete", () -> {
