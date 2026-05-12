@@ -178,10 +178,16 @@ public class WNode {
 
         // Render pins
         for (int i = 0; i < inputs.size(); i++) {
-            renderPin(graphics, x - 4, y + 18 + i * 12, inputs.get(i), true, mouseX, mouseY);
+//             renderPin(graphics, x - 4, y + 18 + i * 12, inputs.get(i), true, mouseX, mouseY);
+            // AI FIX/ADD START
+            renderPin(graphics, x - 4, y + 20 + i * 12, inputs.get(i), true, mouseX, mouseY);
+            // AI FIX/ADD STOP
         }
         for (int i = 0; i < outputs.size(); i++) {
-            renderPin(graphics, x + width - 1, y + 18 + i * 12, outputs.get(i), false, mouseX, mouseY);
+//             renderPin(graphics, x + width - 1, y + 18 + i * 12, outputs.get(i), false, mouseX, mouseY);
+            // AI FIX/ADD START
+            renderPin(graphics, x + width - 1, y + 20 + i * 12, outputs.get(i), false, mouseX, mouseY);
+            // AI FIX/ADD STOP
         }
     }
 
@@ -217,7 +223,10 @@ public class WNode {
         List<WPin> list = isInput ? inputs : outputs;
         for (int i = 0; i < list.size(); i++) {
             int rx = startX;
-            int ry = 18 + i * 12;
+//             int ry = 18 + i * 12;
+            // AI FIX/ADD START
+            int ry = 20 + i * 12;
+            // AI FIX/ADD STOP
             if (px >= rx && px <= rx + 5 && py >= ry && py <= ry + 5) {
                 return i;
             }

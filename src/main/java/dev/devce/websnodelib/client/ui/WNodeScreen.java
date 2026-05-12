@@ -239,7 +239,10 @@ public class WNodeScreen extends Screen {
 
         if (linkingNode != null) {
             int sx = linkingNode.getX() + linkingNode.getWidth();
-            int sy = linkingNode.getY() + 18 + linkingPin * 12;
+//             int sy = linkingNode.getY() + 18 + linkingPin * 12;
+            // AI FIX/ADD START
+            int sy = linkingNode.getY() + 22 + linkingPin * 12;
+            // AI FIX/ADD STOP
             int tx = (int) getGraphX(mouseX);
             int ty = (int) getGraphY(mouseY);
             drawSmoothCurve(graphics, sx, sy, tx, ty, 0xAAFFFFFF, 1.5f);
@@ -360,9 +363,15 @@ public class WNodeScreen extends Screen {
             WNode tgt = findNode(conn.targetNode());
             if (src != null && tgt != null) {
                 int sx = mx + mw/2 + (int)((src.getX() + src.getWidth() + panX - width/2) * scale);
-                int sy = my + mh/2 + (int)((src.getY() + 18 + conn.sourcePin() * 12 + panY - height/2) * scale);
+//                 int sy = my + mh/2 + (int)((src.getY() + 18 + conn.sourcePin() * 12 + panY - height/2) * scale);
+                // AI FIX/ADD START
+                int sy = my + mh/2 + (int)((src.getY() + 22 + conn.sourcePin() * 12 + panY - height/2) * scale);
+                // AI FIX/ADD STOP
                 int tx = mx + mw/2 + (int)((tgt.getX() + panX - width/2) * scale);
-                int ty = my + mh/2 + (int)((tgt.getY() + 18 + conn.targetPin() * 12 + panY - height/2) * scale);
+//                 int ty = my + mh/2 + (int)((tgt.getY() + 18 + conn.targetPin() * 12 + panY - height/2) * scale);
+                // AI FIX/ADD START
+                int ty = my + mh/2 + (int)((tgt.getY() + 22 + conn.targetPin() * 12 + panY - height/2) * scale);
+                // AI FIX/ADD STOP
                 
                 if (sx >= mx && sx <= mx + mw && sy >= my && sy <= my + mh && tx >= mx && tx <= mx + mw && ty >= my && ty <= my + mh) {
                     drawMinimapLine(graphics, sx, sy, tx, ty, 0xAA00FF88);
@@ -516,9 +525,15 @@ public class WNodeScreen extends Screen {
             WNode tgt = findNode(conn.targetNode());
             if (src == null || tgt == null) continue;
             int x1 = src.getX() + src.getWidth();
-            int y1 = src.getY() + 18 + conn.sourcePin() * 12;
+//             int y1 = src.getY() + 18 + conn.sourcePin() * 12;
+        // AI FIX/ADD START
+        int y1 = src.getY() + 22 + conn.sourcePin() * 12;
+        // AI FIX/ADD STOP
             int x2 = tgt.getX();
-            int y2 = tgt.getY() + 18 + conn.targetPin() * 12;
+//             int y2 = tgt.getY() + 18 + conn.targetPin() * 12;
+        // AI FIX/ADD START
+        int y2 = tgt.getY() + 22 + conn.targetPin() * 12;
+        // AI FIX/ADD STOP
             
             int steps = 24;
             for (int i = 0; i <= steps; i++) {
@@ -546,9 +561,15 @@ public class WNodeScreen extends Screen {
         WNode tgt = findNode(conn.targetNode());
         if (src == null || tgt == null) return;
         int x1 = src.getX() + src.getWidth();
-        int y1 = src.getY() + 18 + conn.sourcePin() * 12;
+//         int y1 = src.getY() + 18 + conn.sourcePin() * 12;
+        // AI FIX/ADD START
+        int y1 = src.getY() + 22 + conn.sourcePin() * 12;
+        // AI FIX/ADD STOP
         int x2 = tgt.getX();
-        int y2 = tgt.getY() + 18 + conn.targetPin() * 12;
+//         int y2 = tgt.getY() + 18 + conn.targetPin() * 12;
+        // AI FIX/ADD START
+        int y2 = tgt.getY() + 22 + conn.targetPin() * 12;
+        // AI FIX/ADD STOP
         
         // AI FIX/ADD START
         boolean isHovered = conn.equals(getHoveredConnection(mouseX, mouseY));
@@ -593,27 +614,38 @@ public class WNodeScreen extends Screen {
     }
 
     private void drawSmoothCurve(GuiGraphics graphics, int x1, int y1, int x2, int y2, int color, float thickness) {
-        int steps = 24; int lastX = x1; int lastY = y1;
+        // AI FIX/ADD START
+        int steps = 24; 
+        double lastX = x1; 
+        double lastY = y1;
         for (int i = 1; i <= steps; i++) {
-            float t = (float) i / steps;
-            float cx1 = x1 + (x2 - x1) * 0.5f; float cy1 = y1;
-            float cx2 = x1 + (x2 - x1) * 0.5f; float cy2 = y2;
-            float mt = 1.0f - t;
-            float x = mt * mt * mt * x1 + 3 * mt * mt * t * cx1 + 3 * mt * t * t * cx2 + t * t * t * x2;
-            float y = mt * mt * mt * y1 + 3 * mt * mt * t * cy1 + 3 * mt * t * t * cy2 + t * t * t * y2;
-            drawLine(graphics, lastX, lastY, (int)x, (int)y, color, thickness);
-            lastX = (int)x; lastY = (int)y;
+            double t = (double) i / steps;
+            double cx1 = x1 + (x2 - x1) * 0.5; double cy1 = y1;
+            double cx2 = x1 + (x2 - x1) * 0.5; double cy2 = y2;
+            double mt = 1.0 - t;
+            double x = mt * mt * mt * x1 + 3 * mt * mt * t * cx1 + 3 * mt * t * t * cx2 + t * t * t * x2;
+            double y = mt * mt * mt * y1 + 3 * mt * mt * t * cy1 + 3 * mt * t * t * cy2 + t * t * t * y2;
+            drawLine(graphics, (int)Math.round(lastX), (int)Math.round(lastY), (int)Math.round(x), (int)Math.round(y), color, thickness);
+            lastX = x; lastY = y;
         }
+        // AI FIX/ADD STOP
     }
 
     private void drawLine(GuiGraphics graphics, int x1, int y1, int x2, int y2, int color, float thickness) {
+        // AI FIX/ADD START
         int dx = x2 - x1; int dy = y2 - y1;
-        int steps = Math.max(Math.abs(dx), Math.abs(dy)); if (steps == 0) return;
+        int steps = Math.max(Math.abs(dx), Math.abs(dy)); 
+        if (steps == 0) {
+            graphics.fill(x1, y1, x1 + (int)Math.max(1, thickness), y1 + (int)Math.max(1, thickness), color);
+            return;
+        }
         for (int i = 0; i <= steps; i++) {
-            float t = (float) i / steps;
-            int px = x1 + (int)(dx * t); int py = y1 + (int)(dy * t);
+            double t = (double) i / steps;
+            int px = (int)Math.round(x1 + dx * t); 
+            int py = (int)Math.round(y1 + dy * t);
             graphics.fill(px, py, px + (int)Math.max(1, thickness), py + (int)Math.max(1, thickness), color);
         }
+        // AI FIX/ADD STOP
     }
 
     private void renderParticles(GuiGraphics graphics, float deltaTime) {
