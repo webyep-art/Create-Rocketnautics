@@ -3,6 +3,7 @@ package dev.devce.rocketnautics.registry;
 import com.tterrag.registrate.util.entry.BlockEntityEntry;
 import dev.devce.rocketnautics.RocketNautics;
 import dev.devce.rocketnautics.content.blocks.*;
+import dev.devce.rocketnautics.content.blocks.parachute.ParachuteCaseBlockEntity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
@@ -36,9 +37,15 @@ public class RocketBlockEntities {
             .validBlocks(RocketBlocks.SPUTNIK)
             .register();
 
-    public static final Supplier<BlockEntityType<dev.devce.rocketnautics.content.blocks.parachute.ParachuteCaseBlockEntity>> PARACHUTE_CASE =
-            BLOCK_ENTITIES.register("parachute_case",
-                    () -> BlockEntityType.Builder.of(dev.devce.rocketnautics.content.blocks.parachute.ParachuteCaseBlockEntity::new, RocketBlocks.PARACHUTE_CASE.get()).build(null));
+    public static final BlockEntityEntry<ParachuteCaseBlockEntity> PARACHUTE_CASE = REGISTRATE
+            .<ParachuteCaseBlockEntity>blockEntity("parachute_case", ParachuteCaseBlockEntity::new)
+            .validBlocks(RocketBlocks.PARACHUTE_CASE)
+            .register();
+
+    public static final BlockEntityEntry<dev.devce.rocketnautics.content.blocks.rope.MultiRopeHubBlockEntity> MULTI_ROPE_HUB = REGISTRATE
+            .<dev.devce.rocketnautics.content.blocks.rope.MultiRopeHubBlockEntity>blockEntity("multi_rope_hub", dev.devce.rocketnautics.content.blocks.rope.MultiRopeHubBlockEntity::new)
+            .validBlocks(RocketBlocks.MULTI_ROPE_HUB)
+            .register();
 
     public static void register(IEventBus eventBus) {
         eventBus.addListener(RocketBlockEntities::registerCapabilities);

@@ -1,0 +1,52 @@
+{
+  "variants": {
+    "axis_along_first=false,facing=down": {
+      "model": "simulated:block/rope_connector/block_horizontal",
+      "x": 270,
+      "y": 90
+    },
+    "axis_along_first=false,facing=east": {
+      "model": "simulated:block/rope_connector/block_horizontal",
+      "y": 270
+    },
+    "axis_along_first=false,facing=north": {
+      "model": "simulated:block/rope_connector/block_vertical",
+      "y": 180
+    },
+    "axis_along_first=false,facing=south": {
+      "model": "simulated:block/rope_connector/block_vertical"
+    },
+    "axis_along_first=false,facing=up": {
+      "model": "simulated:block/rope_connector/block_horizontal",
+      "x": 90,
+      "y": 90
+    },
+    "axis_along_first=false,facing=west": {
+      "model": "simulated:block/rope_connector/block_horizontal",
+      "y": 90
+    },
+    "axis_along_first=true,facing=down": {
+      "model": "simulated:block/rope_connector/block_horizontal",
+      "x": 270
+    },
+    "axis_along_first=true,facing=east": {
+      "model": "simulated:block/rope_connector/block_vertical",
+      "y": 270
+    },
+    "axis_along_first=true,facing=north": {
+      "model": "simulated:block/rope_connector/block_horizontal",
+      "y": 180
+    },
+    "axis_along_first=true,facing=south": {
+      "model": "simulated:block/rope_connector/block_horizontal"
+    },
+    "axis_along_first=true,facing=up": {
+      "model": "simulated:block/rope_connector/block_horizontal",
+      "x": 90
+    },
+    "axis_along_first=true,facing=west": {
+      "model": "simulated:block/rope_connector/block_vertical",
+      "y": 90
+    }
+  }
+}

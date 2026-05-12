@@ -262,6 +262,7 @@ public class RocketNauticsClient {
         event.registerBlockEntityRenderer(RocketBlockEntities.ROCKET_THRUSTER.get(), RocketThrusterRenderer::new);
         event.registerBlockEntityRenderer(RocketBlockEntities.BOOSTER_THRUSTER.get(), BoosterThrusterRenderer::new);
         event.registerBlockEntityRenderer(RocketBlockEntities.PARACHUTE_CASE.get(), dev.devce.rocketnautics.content.blocks.parachute.ParachuteRenderer::new);
+        event.registerBlockEntityRenderer(RocketBlockEntities.MULTI_ROPE_HUB.get(), dev.devce.rocketnautics.content.blocks.rope.MultiRopeHubRenderer::new);
     }
 
     @SubscribeEvent

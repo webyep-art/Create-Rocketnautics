@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import dev.devce.rocketnautics.registry.RocketBlocks;
+import dev.devce.rocketnautics.registry.RocketItems;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -75,7 +76,7 @@ public class ParachuteCaseBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (level.getBlockEntity(pos) instanceof ParachuteCaseBlockEntity be) {
-            if (stack.is(RocketBlocks.PARACHUTE.get()) && !be.hasParachute()) {
+            if (stack.is(RocketItems.PARACHUTE.get()) && !be.hasParachute()) {
                 if (!level.isClientSide) {
                     ItemStack insert = stack.copy();
                     insert.setCount(1);
