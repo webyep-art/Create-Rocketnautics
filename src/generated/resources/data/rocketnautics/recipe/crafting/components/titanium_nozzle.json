@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": {
+      "tag": "c:plates/obsidian"
+    },
+    "B": {
+      "tag": "c:plates/titanium_alloy"
+    },
+    "C": {
+      "tag": "c:plates/titanium"
+    },
+    "D": {
+      "tag": "c:ingots/titanium_alloy"
+    }
+  },
+  "pattern": [
+    " A ",
+    "BCB",
+    "D D"
+  ],
+  "result": {
+    "count": 1,
+    "id": "rocketnautics:titanium_nozzle"
+  }
+}
