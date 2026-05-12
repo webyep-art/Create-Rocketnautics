@@ -8,6 +8,9 @@ import org.lwjgl.glfw.GLFW;
 public class WTextField extends WElement {
     private String value = "";
     private boolean focused = false;
+    // AI FIX/ADD START
+    private String originalValue = "";
+    // AI FIX/ADD STOP
 
     public WTextField(int width) {
         this.width = width;
@@ -26,8 +29,16 @@ public class WTextField extends WElement {
 
     @Override
     public boolean handleMouseClick(double localX, double localY, int button) {
+        // AI FIX/ADD START
+        boolean previouslyFocused = focused;
         focused = localX >= 0 && localX <= width && localY >= 0 && localY <= height;
+        
+        if (focused && !previouslyFocused) {
+            originalValue = value; // Store current value when gaining focus
+        }
+        
         return focused;
+        // AI FIX/ADD STOP
     }
 
     @Override
@@ -35,7 +46,12 @@ public class WTextField extends WElement {
         if (!focused) return false;
         
         // AI FIX/ADD START
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) {
+            focused = false; // Confirm
+            return true;
+        }
         if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            value = originalValue; // Cancel and restore
             focused = false;
             return true;
         }
@@ -46,13 +62,6 @@ public class WTextField extends WElement {
             return true;
         }
         return true; // Consume other keys so they don't trigger global shortcuts
-        /*
-        if (keyCode == GLFW.GLFW_KEY_BACKSPACE && !value.isEmpty()) {
-            value = value.substring(0, value.length() - 1);
-            return true;
-        }
-        return false;
-        */
         // AI FIX/ADD STOP
     }
 

@@ -867,9 +867,17 @@ public class WNodeScreen extends Screen {
         }
         if (button == 0) {
             isSelecting = true; selStartX = nx; selStartY = ny; selEndX = nx; selEndY = ny;
-            if (!Screen.hasShiftDown()) graph.getNodes().forEach(n -> n.setSelected(false));
+            if (!Screen.hasShiftDown()) {
+                graph.getNodes().forEach(n -> n.setSelected(false));
+                // AI FIX/ADD START
+                if (selectedNode != null) selectedNode.mouseClicked(-1000, -1000, button); // Force unfocus elements
+                // AI FIX/ADD STOP
+            }
             return true;
         }
+        // AI FIX/ADD START
+        if (selectedNode != null) selectedNode.mouseClicked(-1000, -1000, button);
+        // AI FIX/ADD STOP
         selectedNode = null; if (!Screen.hasShiftDown()) graph.getNodes().forEach(n -> n.setSelected(false));
         return super.mouseClicked(mouseX, mouseY, button);
     }
@@ -951,6 +959,10 @@ public class WNodeScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // AI FIX/ADD START
+        if (selectedNode != null && selectedNode.keyPressed(keyCode, scanCode, modifiers)) return true;
+        // AI FIX/ADD STOP
+        
         if (keyCode == 256) { // ESC
             if (renamingNode != null) { renamingNode = null; return true; }
             if (activeItemPicker != null) { activeItemPicker = null; return true; }
@@ -1035,7 +1047,6 @@ public class WNodeScreen extends Screen {
         }
 
         // AI FIX/ADD START
-        if (selectedNode != null && selectedNode.keyPressed(keyCode, scanCode, modifiers)) return true;
         // AI FIX/ADD STOP
 
         // AI FIX/ADD START
@@ -1099,7 +1110,6 @@ public class WNodeScreen extends Screen {
         
         // AI FIX/ADD START
         // Removed to move priority up
-        // if (selectedNode != null && selectedNode.keyPressed(keyCode, scanCode, modifiers)) return true;
         // AI FIX/ADD STOP
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
