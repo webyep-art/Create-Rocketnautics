@@ -97,12 +97,14 @@ public class NetworkHandler {
             sputnik.refreshEngines();
             sputnik.setChanged();
             
+            /* 
             if (dev.devce.rocketnautics.RocketConfig.SERVER.enableEngineDebugLogging.get()) {
                 dev.devce.rocketnautics.RocketNautics.LOGGER.info("Sputnik at {} (level {}) SYNCED. Nodes: {}, Connections: {}, Engines Found: {}", 
                     pos, foundLevel.dimension().location(), sputnik.graph.getNodes().size(), sputnik.graph.getConnections().size(), sputnik.getEngineCount());
             }
+            */
         } else {
-            dev.devce.rocketnautics.RocketNautics.LOGGER.warn("Failed to find Sputnik at {} for sync from player {}", pos, player.getName().getString());
+            // dev.devce.rocketnautics.RocketNautics.LOGGER.warn("Failed to find Sputnik at {} for sync from player {}", pos, player.getName().getString());
         }
     }
 
