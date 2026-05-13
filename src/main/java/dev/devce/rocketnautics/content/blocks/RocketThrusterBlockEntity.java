@@ -119,7 +119,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
 
     /**
      * Calculates the current thrust output in Newtons.
-     * 
+     *
      * @return Thrust value based on throttle and min/max settings.
      */
     public int getCurrentPower() {
@@ -153,7 +153,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
         // Check if current value exceeds limit or if we need to expand (periodic check for expansion to avoid every-tick calls)
         if (blockEntity.maxThrust.getValue() > targetMax || (targetMax == 100 && blockEntity.maxThrust.getValue() <= 20 && level.getGameTime() % 20 == 0)) {
             blockEntity.maxThrust.between(0, targetMax);
-        }  
+        }
         if (!level.isClientSide) {
             blockEntity.updateActiveState();
         }
@@ -607,7 +607,6 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
 
     private java.util.UUID uniqueId = java.util.UUID.randomUUID();
 
-    @Override
     public java.util.UUID getUniqueId() {
         return uniqueId;
     }
