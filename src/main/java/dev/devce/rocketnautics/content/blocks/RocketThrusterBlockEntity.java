@@ -483,6 +483,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
                 : 0;
         int actuallyDrained = attemptFuelDrain(targetConsumption);
 
+        /*
         if (dev.devce.rocketnautics.RocketConfig.SERVER.enableEngineDebugLogging.get()
                 && level.getGameTime() % 20 == 0) {
             String fluidName = fuelTank.getFluid().isEmpty() ? "Empty"
@@ -491,6 +492,7 @@ public class RocketThrusterBlockEntity extends SmartBlockEntity implements Block
             dev.devce.rocketnautics.RocketNautics.LOGGER.info("Engine at {}: Fluid={}, Amount={}mB, Drained={}mB, Valid={}",
                 worldPosition, fluidName, fuelTank.getFluidAmount(), actuallyDrained, isRocketFuel(fuelTank.getFluid()));
         }
+        */
 
         float targetFlow = actuallyDrained / (float) Math.max(1, targetConsumption);
 

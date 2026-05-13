@@ -60,7 +60,7 @@ public class CreditsBookItem extends Item {
                             .append(Component.literal("Maintainer: ").withStyle(ChatFormatting.DARK_BLUE))
                             .append(Component.literal("web\n"))
                             .append(Component.literal("Contributor: ").withStyle(ChatFormatting.DARK_BLUE))
-                            .append(Component.literal("SSnowly, M_W_K\n"))
+                            .append(Component.literal("SSnowly, M_W_K, snusxd\n"))
                             .append(Component.literal("Artist: ").withStyle(ChatFormatting.DARK_BLUE))
                             .append(Component.literal("LordAret, Mruranium\n"))
                             .append(Component.literal("Ideas: ").withStyle(ChatFormatting.DARK_GREEN))
@@ -68,7 +68,9 @@ public class CreditsBookItem extends Item {
                             .append(Component.literal("Testers: ").withStyle(ChatFormatting.DARK_RED))
                             .append(Component.literal("ABOBA, Kernos, MrFeddy\n"))
                             .append(Component.literal("Music: ").withStyle(ChatFormatting.DARK_AQUA))
-                            .append(Component.literal("Kevin Macleod"))
+                            .append(Component.literal("Kevin Macleod\n"))
+                            .append(Component.literal("Localization: ").withStyle(ChatFormatting.DARK_GREEN))
+                            .append(Component.literal("PigeonNian"))
                     ),
                     Filterable.passThrough(
                         Component.literal("")

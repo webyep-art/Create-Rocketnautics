@@ -5,8 +5,10 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ClientLevelMixin",
+    "EntityMixin",
     "LevelRendererMixin",
     "LivingEntityAccessor",
+    "LivingEntityMixin",
     "SubLevelPhysicsSystemMixin"
   ],
   "client": [

@@ -128,9 +128,17 @@ public class WNodeScreen extends Screen {
         super.removed();
     }
 
+    public WNodeScreen getParentScreen() { return parentScreen; }
+    public Component getTitle() { return title; }
+
     @Override
     protected void init() {
         super.init();
+        // AI FIX/ADD START: Auto-evaluate nodes to trigger initial compilation/parsing
+        for (WNode node : graph.getNodes()) {
+            node.evaluate();
+        }
+        // AI FIX/ADD STOP
         screenAnimation = 0;
         // AI FIX/ADD START
         lastFrameTime = 0;
@@ -226,10 +234,14 @@ public class WNodeScreen extends Screen {
                 
                 // AI FIX/ADD START
                 if (renamingNode == node) {
-                    graphics.fill(node.getX() + 1, node.getY() + 1, node.getX() + node.getWidth() - 1, node.getY() + 14, 0xFF1A1A1A); // Dark bg to cover original title
-                    String display = renameField.getValue();
-                    if ((System.currentTimeMillis() / 500) % 2 == 0) display += "_";
-                    graphics.drawString(font, display, node.getX() + 5, node.getY() + 3, 0xFF00FF88, false);
+                    // Fill background to cover the original title
+                    int nx = (int)((mouseX - width / 2f) / zoom + width / 2f - panX);
+                    int ny = (int)((mouseY - height / 2f) / zoom + height / 2f - panY);
+                    boolean h = nx >= node.getX() && nx <= node.getX() + node.getWidth() && ny >= node.getY() && ny <= node.getY() + node.getHeight();
+                    graphics.fill(node.getX() + 1, node.getY() + 1, node.getX() + node.getWidth() - 1, node.getY() + 14, h ? 0xFF252525 : 0xFF1A1A1A);
+                    
+                    // Only render the text field overlay
+                    renameField.render(graphics, node.getX() + 3, node.getY() + 1, mouseX, mouseY, partialTick);
                 }
                 // AI FIX/ADD STOP
 
@@ -239,7 +251,10 @@ public class WNodeScreen extends Screen {
 
         if (linkingNode != null) {
             int sx = linkingNode.getX() + linkingNode.getWidth();
-            int sy = linkingNode.getY() + 18 + linkingPin * 12;
+//             int sy = linkingNode.getY() + 18 + linkingPin * 12;
+            // AI FIX/ADD START
+            int sy = linkingNode.getY() + 22 + linkingPin * 12;
+            // AI FIX/ADD STOP
             int tx = (int) getGraphX(mouseX);
             int ty = (int) getGraphY(mouseY);
             drawSmoothCurve(graphics, sx, sy, tx, ty, 0xAAFFFFFF, 1.5f);
@@ -360,9 +375,15 @@ public class WNodeScreen extends Screen {
             WNode tgt = findNode(conn.targetNode());
             if (src != null && tgt != null) {
                 int sx = mx + mw/2 + (int)((src.getX() + src.getWidth() + panX - width/2) * scale);
-                int sy = my + mh/2 + (int)((src.getY() + 18 + conn.sourcePin() * 12 + panY - height/2) * scale);
+//                 int sy = my + mh/2 + (int)((src.getY() + 18 + conn.sourcePin() * 12 + panY - height/2) * scale);
+                // AI FIX/ADD START
+                int sy = my + mh/2 + (int)((src.getY() + 22 + conn.sourcePin() * 12 + panY - height/2) * scale);
+                // AI FIX/ADD STOP
                 int tx = mx + mw/2 + (int)((tgt.getX() + panX - width/2) * scale);
-                int ty = my + mh/2 + (int)((tgt.getY() + 18 + conn.targetPin() * 12 + panY - height/2) * scale);
+//                 int ty = my + mh/2 + (int)((tgt.getY() + 18 + conn.targetPin() * 12 + panY - height/2) * scale);
+                // AI FIX/ADD START
+                int ty = my + mh/2 + (int)((tgt.getY() + 22 + conn.targetPin() * 12 + panY - height/2) * scale);
+                // AI FIX/ADD STOP
                 
                 if (sx >= mx && sx <= mx + mw && sy >= my && sy <= my + mh && tx >= mx && tx <= mx + mw && ty >= my && ty <= my + mh) {
                     drawMinimapLine(graphics, sx, sy, tx, ty, 0xAA00FF88);
@@ -516,9 +537,15 @@ public class WNodeScreen extends Screen {
             WNode tgt = findNode(conn.targetNode());
             if (src == null || tgt == null) continue;
             int x1 = src.getX() + src.getWidth();
-            int y1 = src.getY() + 18 + conn.sourcePin() * 12;
+//             int y1 = src.getY() + 18 + conn.sourcePin() * 12;
+        // AI FIX/ADD START
+        int y1 = src.getY() + 22 + conn.sourcePin() * 12;
+        // AI FIX/ADD STOP
             int x2 = tgt.getX();
-            int y2 = tgt.getY() + 18 + conn.targetPin() * 12;
+//             int y2 = tgt.getY() + 18 + conn.targetPin() * 12;
+        // AI FIX/ADD START
+        int y2 = tgt.getY() + 22 + conn.targetPin() * 12;
+        // AI FIX/ADD STOP
             
             int steps = 24;
             for (int i = 0; i <= steps; i++) {
@@ -546,9 +573,15 @@ public class WNodeScreen extends Screen {
         WNode tgt = findNode(conn.targetNode());
         if (src == null || tgt == null) return;
         int x1 = src.getX() + src.getWidth();
-        int y1 = src.getY() + 18 + conn.sourcePin() * 12;
+//         int y1 = src.getY() + 18 + conn.sourcePin() * 12;
+        // AI FIX/ADD START
+        int y1 = src.getY() + 22 + conn.sourcePin() * 12;
+        // AI FIX/ADD STOP
         int x2 = tgt.getX();
-        int y2 = tgt.getY() + 18 + conn.targetPin() * 12;
+//         int y2 = tgt.getY() + 18 + conn.targetPin() * 12;
+        // AI FIX/ADD START
+        int y2 = tgt.getY() + 22 + conn.targetPin() * 12;
+        // AI FIX/ADD STOP
         
         // AI FIX/ADD START
         boolean isHovered = conn.equals(getHoveredConnection(mouseX, mouseY));
@@ -569,8 +602,8 @@ public class WNodeScreen extends Screen {
             float pulsePos = t * t * (3.0f - 2.0f * t);
             float dist = (float) Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
             graphics.pose().pushPose();
-            graphics.pose().translate(0, 0, 500);
             drawPulsePoint(graphics, x1, y1, x2, y2, pulsePos, dist);
+            graphics.pose().translate(0, 0, 500);
             graphics.pose().popPose();
         }
     }
@@ -584,7 +617,7 @@ public class WNodeScreen extends Screen {
             float segmentT = t - (i * step); if (segmentT < 0) continue;
             float mt = 1.0f - segmentT;
             float x = mt * mt * mt * x1 + 3 * mt * mt * segmentT * cx1 + 3 * mt * segmentT * segmentT * cx2 + segmentT * segmentT * segmentT * x2;
-            float y = mt * mt * mt * y1 + 3 * mt * mt * segmentT * cy1 + 3 * mt * segmentT * segmentT * cy2 + segmentT * segmentT * segmentT * y2;
+            float y = mt * mt * mt * y1 + 3 * mt * mt * segmentT * cy1 + 3 * mt * segmentT * segmentT * cy2 + segmentT * segmentT * segmentT * y2 + 1;
             int alpha = (int)(255 * (1.0f - (float)i / segments));
             int color = (alpha << 24) | 0x00FF88;
             graphics.fill((int)x - 3, (int)y - 3, (int)x + 3, (int)y + 3, (color & 0x00FFFFFF) | ((alpha / 5) << 24));
@@ -593,27 +626,38 @@ public class WNodeScreen extends Screen {
     }
 
     private void drawSmoothCurve(GuiGraphics graphics, int x1, int y1, int x2, int y2, int color, float thickness) {
-        int steps = 24; int lastX = x1; int lastY = y1;
+        // AI FIX/ADD START
+        int steps = 24; 
+        double lastX = x1; 
+        double lastY = y1;
         for (int i = 1; i <= steps; i++) {
-            float t = (float) i / steps;
-            float cx1 = x1 + (x2 - x1) * 0.5f; float cy1 = y1;
-            float cx2 = x1 + (x2 - x1) * 0.5f; float cy2 = y2;
-            float mt = 1.0f - t;
-            float x = mt * mt * mt * x1 + 3 * mt * mt * t * cx1 + 3 * mt * t * t * cx2 + t * t * t * x2;
-            float y = mt * mt * mt * y1 + 3 * mt * mt * t * cy1 + 3 * mt * t * t * cy2 + t * t * t * y2;
-            drawLine(graphics, lastX, lastY, (int)x, (int)y, color, thickness);
-            lastX = (int)x; lastY = (int)y;
+            double t = (double) i / steps;
+            double cx1 = x1 + (x2 - x1) * 0.5; double cy1 = y1;
+            double cx2 = x1 + (x2 - x1) * 0.5; double cy2 = y2;
+            double mt = 1.0 - t;
+            double x = mt * mt * mt * x1 + 3 * mt * mt * t * cx1 + 3 * mt * t * t * cx2 + t * t * t * x2;
+            double y = mt * mt * mt * y1 + 3 * mt * mt * t * cy1 + 3 * mt * t * t * cy2 + t * t * t * y2;
+            drawLine(graphics, (int)Math.round(lastX), (int)Math.round(lastY), (int)Math.round(x), (int)Math.round(y), color, thickness);
+            lastX = x; lastY = y;
         }
+        // AI FIX/ADD STOP
     }
 
     private void drawLine(GuiGraphics graphics, int x1, int y1, int x2, int y2, int color, float thickness) {
+        // AI FIX/ADD START
         int dx = x2 - x1; int dy = y2 - y1;
-        int steps = Math.max(Math.abs(dx), Math.abs(dy)); if (steps == 0) return;
+        int steps = Math.max(Math.abs(dx), Math.abs(dy)); 
+        if (steps == 0) {
+            graphics.fill(x1, y1, x1 + (int)Math.max(1, thickness), y1 + (int)Math.max(1, thickness), color);
+            return;
+        }
         for (int i = 0; i <= steps; i++) {
-            float t = (float) i / steps;
-            int px = x1 + (int)(dx * t); int py = y1 + (int)(dy * t);
+            double t = (double) i / steps;
+            int px = (int)Math.round(x1 + dx * t); 
+            int py = (int)Math.round(y1 + dy * t);
             graphics.fill(px, py, px + (int)Math.max(1, thickness), py + (int)Math.max(1, thickness), color);
         }
+        // AI FIX/ADD STOP
     }
 
     private void renderParticles(GuiGraphics graphics, float deltaTime) {
@@ -813,15 +857,24 @@ public class WNodeScreen extends Screen {
                     if (localY <= 15) {
                         pushUndo();
                         renamingNode = node;
-                        renameField = new dev.devce.websnodelib.api.elements.WTextField(100);
+                        // AI FIX/ADD START
+                        renameField = new dev.devce.websnodelib.api.elements.WTextField(node.getWidth() - 10)
+                            .setRenderBackground(false)
+                            .setTextColor(0xFF00FF88)
+                            .setCursorColor(0xFF00FF88);
                         renameField.setValue(node.getTitle());
-                        renameField.handleMouseClick(0, 0, 0); // Force focus
+                        renameField.setCursorToEnd();
+                        renameField.setFocused(true); // Force focus without resetting cursor
+                        // AI FIX/ADD STOP
                         return true;
                     } else if (node.getTypeId().getPath().equals("function")) {
                         minecraft.setScreen(new WNodeScreen(Component.literal(node.getTitle()), node.getInternalGraph(), (tag) -> {
                             node.getInternalGraph().load(tag);
                             if (this.onSave != null) this.onSave.accept(this.graph.save());
                         }, this));
+                        return true;
+                    } else if (node.getTypeId().getPath().equals("lua_script")) {
+                        minecraft.setScreen(new WLuaEditorScreen(node, this));
                         return true;
                     }
                 }
@@ -835,9 +888,17 @@ public class WNodeScreen extends Screen {
         }
         if (button == 0) {
             isSelecting = true; selStartX = nx; selStartY = ny; selEndX = nx; selEndY = ny;
-            if (!Screen.hasShiftDown()) graph.getNodes().forEach(n -> n.setSelected(false));
+            if (!Screen.hasShiftDown()) {
+                graph.getNodes().forEach(n -> n.setSelected(false));
+                // AI FIX/ADD START
+                if (selectedNode != null) selectedNode.mouseClicked(-1000, -1000, button); // Force unfocus elements
+                // AI FIX/ADD STOP
+            }
             return true;
         }
+        // AI FIX/ADD START
+        if (selectedNode != null) selectedNode.mouseClicked(-1000, -1000, button);
+        // AI FIX/ADD STOP
         selectedNode = null; if (!Screen.hasShiftDown()) graph.getNodes().forEach(n -> n.setSelected(false));
         return super.mouseClicked(mouseX, mouseY, button);
     }
@@ -899,6 +960,9 @@ public class WNodeScreen extends Screen {
             }
             return true;
         }
+
+        if (selectedNode != null && selectedNode.mouseDragged(nx, ny, button, dragX, dragY)) return true;
+
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
@@ -919,6 +983,10 @@ public class WNodeScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // AI FIX/ADD START
+        if (selectedNode != null && selectedNode.keyPressed(keyCode, scanCode, modifiers)) return true;
+        // AI FIX/ADD STOP
+        
         if (keyCode == 256) { // ESC
             if (renamingNode != null) { renamingNode = null; return true; }
             if (activeItemPicker != null) { activeItemPicker = null; return true; }
@@ -948,6 +1016,18 @@ public class WNodeScreen extends Screen {
             return renameField.handleKeyPress(keyCode, scanCode, modifiers);
         }
         
+        if (keyCode == 291 && renamingNode == null && !isSearching) { // F2
+            WNode node = graph.getNodes().stream().filter(WNode::isSelected).findFirst().orElse(null);
+            if (node != null) {
+                pushUndo();
+                renamingNode = node;
+                renameField = new dev.devce.websnodelib.api.elements.WTextField(100);
+                renameField.setValue(node.getTitle());
+                renameField.handleMouseClick(0, 0, 0); // Force focus
+                return true;
+            }
+        }
+
         if (Screen.hasControlDown()) {
             if (keyCode == 90) { undo(); return true; } // Ctrl+Z
             if (keyCode == 89) { redo(); return true; } // Ctrl+Y
@@ -1003,7 +1083,6 @@ public class WNodeScreen extends Screen {
         }
 
         // AI FIX/ADD START
-        if (selectedNode != null && selectedNode.keyPressed(keyCode, scanCode, modifiers)) return true;
         // AI FIX/ADD STOP
 
         // AI FIX/ADD START
@@ -1067,7 +1146,6 @@ public class WNodeScreen extends Screen {
         
         // AI FIX/ADD START
         // Removed to move priority up
-        // if (selectedNode != null && selectedNode.keyPressed(keyCode, scanCode, modifiers)) return true;
         // AI FIX/ADD STOP
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
@@ -1322,9 +1400,15 @@ public class WNodeScreen extends Screen {
                 if (node != null) {
                     pushUndo();
                     renamingNode = node;
-                    renameField = new dev.devce.websnodelib.api.elements.WTextField(100);
+                    // AI FIX/ADD START
+                    renameField = new dev.devce.websnodelib.api.elements.WTextField(node.getWidth() - 10)
+                        .setRenderBackground(false)
+                        .setTextColor(0xFF00FF88)
+                        .setCursorColor(0xFF00FF88);
                     renameField.setValue(node.getTitle());
-                    renameField.handleMouseClick(0, 0, 0); // Force focus
+                    renameField.setCursorToEnd();
+                    renameField.setFocused(true); // Force focus without resetting cursor
+                    // AI FIX/ADD STOP
                 }
             }, false));
             currentActions.add(new ContextAction("Delete", () -> {

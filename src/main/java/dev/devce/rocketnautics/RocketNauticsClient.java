@@ -74,7 +74,7 @@ public class RocketNauticsClient {
         if (debugLogs.size() > MAX_DEBUG_LOGS) {
             debugLogs.remove(0);
         }
-        RocketNautics.LOGGER.info("[RENDER INFO] {}", message);
+        // RocketNautics.LOGGER.info("[RENDER INFO] {}", message);
     }
 
     /**

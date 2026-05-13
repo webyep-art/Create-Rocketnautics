@@ -34,6 +34,7 @@ public class RocketConfig {
         public final ModConfigSpec.DoubleValue jetpackSprintThrust;
         public final ModConfigSpec.IntValue ignitionFlow;
         public final ModConfigSpec.IntValue steamMinFlow;
+        public final ModConfigSpec.IntValue entitySpeedLimit;
         public final ModConfigSpec.BooleanValue enableEngineDebugLogging;
         public final ModConfigSpec.BooleanValue brokenBarrier;
 
@@ -48,6 +49,9 @@ public class RocketConfig {
             steamMinFlow = builder
                     .comment("Flow threshold for pre-ignition steam phase (mB/tick)")
                     .defineInRange("steamMinFlow", 2, 1, 100);
+            entitySpeedLimit = builder
+                    .comment("Maximum speed in m/s entities can reach in space before drag kicks in")
+                    .defineInRange("entitySpeedLimit", 80, 0, 320);
             enableEngineDebugLogging = builder
                     .comment("Enable debug logging for engine fuel and thrust (can cause spam)")
                     .define("enableEngineDebugLogging", false);

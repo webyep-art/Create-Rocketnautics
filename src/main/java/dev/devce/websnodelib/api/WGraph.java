@@ -138,10 +138,13 @@ public class WGraph {
             WNode source = findNode(conn.sourceNode());
             WNode target = findNode(conn.targetNode());
             if (source != null && target != null) {
-                double val = source.getOutputs().get(conn.sourcePin()).getValue();
-                target.getInputs().get(conn.targetPin()).setValue(val);
-                target.getInputs().get(conn.targetPin()).setConnected(true);
-                source.getOutputs().get(conn.sourcePin()).setConnected(true);
+                // Bounds checks to prevent crashes if pins were dynamically changed
+                if (conn.sourcePin() < source.getOutputs().size() && conn.targetPin() < target.getInputs().size()) {
+                    double val = source.getOutputs().get(conn.sourcePin()).getValue();
+                    target.getInputs().get(conn.targetPin()).setValue(val);
+                    target.getInputs().get(conn.targetPin()).setConnected(true);
+                    source.getOutputs().get(conn.sourcePin()).setConnected(true);
+                }
             }
         }
 
