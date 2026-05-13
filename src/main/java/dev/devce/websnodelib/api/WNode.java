@@ -18,6 +18,9 @@ public class WNode {
     private int width = 120;
     private int height = 40;
     private WGraph parentGraph;
+    private net.minecraft.nbt.CompoundTag customData = new net.minecraft.nbt.CompoundTag();
+
+    public net.minecraft.nbt.CompoundTag getCustomData() { return customData; }
 
     public void setParentGraph(WGraph graph) {
         this.parentGraph = graph;
@@ -154,14 +157,20 @@ public class WNode {
         graphics.fill(x, y, x + width, y + height, isHovered ? 0xEE252525 : 0xDD1A1A1A);
         
         // Title Bar
-        graphics.fill(x, y, x + width, y + 15, 0x44000000);
-        graphics.fill(x, y + 14, x + width, y + 15, 0xFF00FF88);
+        boolean isFailed = getCustomData().getBoolean("err") || getCustomData().getBoolean("failed");
+        graphics.fill(x, y, x + width, y + 15, isFailed ? 0xAAFF0000 : 0x44000000);
+        int headerCol = isFailed ? 0xFFFF0000 : 0xFF00FF88;
+        graphics.fill(x, y + 14, x + width, y + 15, headerCol);
         
         // Border
         int borderCol = selected ? 0xFFFFFFFF : (isHovered ? 0xFFAAAAAA : 0xFF444444);
+        if (isFailed) borderCol = 0xFFFF0000; 
         graphics.renderOutline(x, y, width, height, borderCol);
+        if (isFailed) {
+            graphics.renderOutline(x - 1, y - 1, width + 2, height + 2, 0xFFFF0000);
+        }
         
-        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, title, x + 5, y + 3, 0xFF00FF88, false);
+        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, title, x + 5, y + 3, isFailed ? 0xFFFF5555 : 0xFF00FF88, false);
 
         int maxInputLabelWidth = 0;
         for (WPin pin : inputs) {
@@ -265,6 +274,24 @@ public class WNode {
     }
 
     /**
+     * Forwards mouse drag events to internal UI elements.
+     */
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        int maxInputLabelWidth = 0;
+        for (WPin pin : inputs) {
+            maxInputLabelWidth = Math.max(maxInputLabelWidth, net.minecraft.client.Minecraft.getInstance().font.width(pin.getName()));
+        }
+        int leftMargin = maxInputLabelWidth > 0 ? maxInputLabelWidth + 15 : 5;
+
+        int currentY = 20;
+        for (WElement element : elements) {
+            if (element.handleMouseDrag(mouseX - leftMargin, mouseY - currentY, button, dragX, dragY)) return true;
+            currentY += element.getHeight();
+        }
+        return false;
+    }
+
+    /**
      * Forwards key press events to internal UI elements.
      */
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
@@ -313,6 +340,8 @@ public class WNode {
             tag.put("internalGraph", internalGraph.save());
         }
         
+        tag.put("customData", customData);
+        
         return tag;
     }
 
@@ -323,10 +352,26 @@ public class WNode {
         this.y = tag.getInt("y");
         
         net.minecraft.nbt.ListTag inputsTag = tag.getList("inputs", 10);
-        for (int i = 0; i < Math.min(inputs.size(), inputsTag.size()); i++) inputs.get(i).load(inputsTag.getCompound(i));
+        if (inputsTag.size() > 0 && inputs.isEmpty()) {
+            for (int i = 0; i < inputsTag.size(); i++) {
+                net.minecraft.nbt.CompoundTag pinTag = inputsTag.getCompound(i);
+                addInput(pinTag.getString("name"), pinTag.getInt("color"));
+                inputs.get(i).load(pinTag);
+            }
+        } else {
+            for (int i = 0; i < Math.min(inputs.size(), inputsTag.size()); i++) inputs.get(i).load(inputsTag.getCompound(i));
+        }
         
         net.minecraft.nbt.ListTag outputsTag = tag.getList("outputs", 10);
-        for (int i = 0; i < Math.min(outputs.size(), outputsTag.size()); i++) outputs.get(i).load(outputsTag.getCompound(i));
+        if (outputsTag.size() > 0 && outputs.isEmpty()) {
+            for (int i = 0; i < outputsTag.size(); i++) {
+                net.minecraft.nbt.CompoundTag pinTag = outputsTag.getCompound(i);
+                addOutput(pinTag.getString("name"), pinTag.getInt("color"));
+                outputs.get(i).load(pinTag);
+            }
+        } else {
+            for (int i = 0; i < Math.min(outputs.size(), outputsTag.size()); i++) outputs.get(i).load(outputsTag.getCompound(i));
+        }
         
         net.minecraft.nbt.ListTag elementsTag = tag.getList("elements", 10);
         for (int i = 0; i < Math.min(elements.size(), elementsTag.size()); i++) elements.get(i).load(elementsTag.getCompound(i));
@@ -334,6 +379,10 @@ public class WNode {
         if (tag.contains("internalGraph")) {
             if (internalGraph == null) internalGraph = new WGraph();
             internalGraph.load(tag.getCompound("internalGraph"));
+        }
+        
+        if (tag.contains("customData")) {
+            this.customData = tag.getCompound("customData");
         }
     }
 

@@ -71,4 +71,9 @@ public abstract class WElement {
      * Handles character input.
      */
     public boolean handleCharTyped(char codePoint, int modifiers) { return false; }
+
+    /**
+     * Handles mouse drag events local to the element.
+     */
+    public boolean handleMouseDrag(double localX, double localY, int button, double dragX, double dragY) { return false; }
 }

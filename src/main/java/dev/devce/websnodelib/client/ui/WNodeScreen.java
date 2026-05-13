@@ -128,9 +128,17 @@ public class WNodeScreen extends Screen {
         super.removed();
     }
 
+    public WNodeScreen getParentScreen() { return parentScreen; }
+    public Component getTitle() { return title; }
+
     @Override
     protected void init() {
         super.init();
+        // AI FIX/ADD START: Auto-evaluate nodes to trigger initial compilation/parsing
+        for (WNode node : graph.getNodes()) {
+            node.evaluate();
+        }
+        // AI FIX/ADD STOP
         screenAnimation = 0;
         // AI FIX/ADD START
         lastFrameTime = 0;
@@ -823,6 +831,9 @@ public class WNodeScreen extends Screen {
                             if (this.onSave != null) this.onSave.accept(this.graph.save());
                         }, this));
                         return true;
+                    } else if (node.getTypeId().getPath().equals("lua_script")) {
+                        minecraft.setScreen(new WLuaEditorScreen(node, this));
+                        return true;
                     }
                 }
                 // AI FIX/ADD STOP
@@ -899,6 +910,9 @@ public class WNodeScreen extends Screen {
             }
             return true;
         }
+
+        if (selectedNode != null && selectedNode.mouseDragged(nx, ny, button, dragX, dragY)) return true;
+
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 

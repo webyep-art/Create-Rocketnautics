@@ -2,6 +2,11 @@ plugins {
     id 'net.neoforged.moddev' version '1.0.1'
 }
 
+configurations {
+    luajRuntime
+    implementation.extendsFrom(luajRuntime)
+}
+
 repositories {
     mavenCentral()
     maven {
@@ -58,16 +63,19 @@ neoForge {
         client {
             client()
             systemProperty 'neoforge.enabledGameTestNamespaces', 'rocketnautics'
+            additionalRuntimeClasspathConfiguration.extendsFrom(configurations.luajRuntime)
         }
         server {
             server()
             programArgument '--nogui'
             systemProperty 'neoforge.enabledGameTestNamespaces', 'rocketnautics'
+            additionalRuntimeClasspathConfiguration.extendsFrom(configurations.luajRuntime)
         }
 
         data {
             data()
             programArguments.addAll '--mod', project.name, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+            additionalRuntimeClasspathConfiguration.extendsFrom(configurations.luajRuntime)
         }
     }
 
@@ -106,6 +114,25 @@ dependencies {
     
     compileOnly("cc.tweaked:cc-tweaked-${minecraft_version}-forge-api:${cc_version}")
     runtimeOnly("cc.tweaked:cc-tweaked-${minecraft_version}-forge:${cc_version}")
+
+    luajRuntime("org.luaj:luaj-jse:3.0.1")
+    jarJar("org.luaj:luaj-jse:3.0.1")
 }
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+// --- Fix for CreateMinecraftArtifacts missing manifest ---
+// Generates an empty manifest file expected by the NeoForge moddev plugin.
+tasks.register('generateDummyArtifactManifest') {
+    doLast {
+        def manifestFile = file("${buildDir}/moddev/nfrt_artifact_manifest.properties")
+        manifestFile.parentFile.mkdirs()
+        if (!manifestFile.exists()) {
+            manifestFile.createNewFile()
+        }
+    }
+}
+
+tasks.named('createMinecraftArtifacts') {
+    dependsOn tasks.named('generateDummyArtifactManifest')
+}

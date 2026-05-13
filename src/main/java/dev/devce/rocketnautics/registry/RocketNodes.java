@@ -8,6 +8,11 @@ import dev.devce.websnodelib.api.WNode;
 import dev.devce.websnodelib.api.WGraph;
 import net.minecraft.resources.ResourceLocation;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.luaj.vm2.*;
+import org.luaj.vm2.lib.jse.JsePlatform;
+import org.luaj.vm2.lib.*;
 
 public class RocketNodes {
     public static void register() {
@@ -456,6 +461,101 @@ public class RocketNodes {
             WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "frame"), "Comment Frame", x, y);
             node.setWidth(200);
             node.setHeight(150);
+            return node;
+        });
+
+        // --- THE SNAKE EATER: Lua Script Node ---
+        // Compact node — double-click opens WLuaEditorScreen for code editing.
+        NodeRegistry.register(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "lua_script"), "Programming", (x, y) -> {
+            WNode node = new WNode(ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "lua_script"), "Lua Script", x, y);
+
+            final Globals[]  globals  = {null};
+            final LuaValue[] chunk    = {null};
+            final String[]   lastCode = {null};
+
+            node.setEvaluator(n -> {
+                String code = n.getCustomData().getString("code");
+                if (code.isEmpty()) {
+                    code = dev.devce.websnodelib.client.ui.WLuaEditorScreen.NODE_CODE_MAP.get(n.getId());
+                }
+                
+                if (code == null || code.isBlank()) return;
+
+                // Recompile Lua if code changed or not yet initialized in this session
+                if (!code.equals(lastCode[0]) || globals[0] == null) {
+                    n.getCustomData().putBoolean("failed", false);
+                    
+                    // Always re-parse pins to stay in sync
+                    n.clearInputs();
+                    n.clearOutputs();
+                    Pattern pinPat = Pattern.compile("(input|output)\\(\\s*[\"']([^\"']+)[\"']");
+                    for (String line : code.split("\n")) {
+                        String codeOnly = line;
+                        int idx = line.indexOf("--");
+                        if (idx != -1) codeOnly = line.substring(0, idx);
+                        Matcher m = pinPat.matcher(codeOnly);
+                        while (m.find()) {
+                            String kind = m.group(1), name = m.group(2);
+                            if (kind.equals("input")) n.addInput(name, 0xFFFFFFFF);
+                            if (kind.equals("output")) n.addOutput(name, 0xFF00FF88);
+                        }
+                    }
+
+                    globals[0] = JsePlatform.standardGlobals();
+                    globals[0].set("os",      LuaValue.NIL);
+                    globals[0].set("io",      LuaValue.NIL);
+                    globals[0].set("luajava", LuaValue.NIL);
+                    globals[0].set("debug",   LuaValue.NIL);
+                    globals[0].set("require", LuaValue.NIL);
+                    try {
+                        chunk[0]    = globals[0].load(code);
+                        lastCode[0] = code;
+                        n.getCustomData().putBoolean("err", false);
+                    } catch (Throwable e) {
+                        n.getCustomData().putBoolean("err", true);
+                        chunk[0] = null;
+                        return;
+                    }
+                }
+                if (chunk[0] == null) {
+                    n.getCustomData().putBoolean("err", true);
+                    return;
+                }
+
+                // Bridge: input(name) → read static pin value
+                globals[0].set("input", new OneArgFunction() {
+                    @Override public LuaValue call(LuaValue arg) {
+                        String name = arg.tojstring();
+                        for (int i = 0; i < n.getInputs().size(); i++)
+                            if (n.getInputs().get(i).getName().equals(name))
+                                return LuaValue.valueOf(n.getInputs().get(i).getValue());
+                        return LuaValue.ZERO;
+                    }
+                });
+
+                // Bridge: output(name, value) → write static pin value
+                globals[0].set("output", new TwoArgFunction() {
+                    @Override public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                        String name  = arg1.tojstring();
+                        double value = arg2.todouble();
+                        for (int i = 0; i < n.getOutputs().size(); i++)
+                            if (n.getOutputs().get(i).getName().equals(name)) {
+                                n.getOutputs().get(i).setValue(value);
+                                return LuaValue.NIL;
+                            }
+                        return LuaValue.NIL;
+                    }
+                });
+
+                try {
+                    chunk[0].call();
+                    n.getCustomData().putBoolean("err", false);
+                } catch (Throwable e) {
+                    n.getCustomData().putBoolean("err", true);
+                    dev.devce.websnodelib.client.ui.WLuaEditorScreen.NODE_COMPILED_MAP.put(n.getId(), false);
+                }
+            });
+
             return node;
         });
     }
