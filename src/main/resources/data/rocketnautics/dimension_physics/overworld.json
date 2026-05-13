@@ -1,0 +1,5 @@
+{
+  "dimension": "minecraft:overworld",
+  "priority": 1100,
+  "universal_drag": 0.01
+}

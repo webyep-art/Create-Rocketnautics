@@ -94,10 +94,7 @@ public class GlobalSpacePhysicsHandler {
         applyZeroGravity(subLevel, handle, level, worldPos, timeStep);
         // applyReentryHeat(subLevel, handle, level, worldPos, timeStep);
         // applyMaxQStress(subLevel, handle, level, worldPos, timeStep);
-        applyGlobalSpeedLimit(subLevel, handle, timeStep);
     }
-
-
 
     /**
      * Applies an anti-gravity impulse to counter-act the world's gravity.
@@ -124,7 +121,7 @@ public class GlobalSpacePhysicsHandler {
      * Calculates the gravity reduction factor based on altitude.
      * @return 0.0 (full gravity) to 1.0 (zero gravity).
      */
-    private static double calculateGravityFactor(net.minecraft.world.level.Level level, double y) {
+    public static double calculateGravityFactor(net.minecraft.world.level.Level level, double y) {
         if (gravityOverride != null) {
             return 1.0 - gravityOverride;
         }
@@ -137,26 +134,6 @@ public class GlobalSpacePhysicsHandler {
         // Overworld transition logic: starts at 2000m, full at 5000m
         if (y <= SPACE_GRAVITY_START_Y) return 0.0;
         return Math.clamp((y - SPACE_GRAVITY_START_Y) / (SPACE_GRAVITY_FULL_Y - SPACE_GRAVITY_START_Y), 0.0, 1.0);
-    }
-
-    /**
-     * Enforces a global speed limit of 50m/s by applying braking force.
-     */
-    private static void applyGlobalSpeedLimit(ServerSubLevel subLevel, RigidBodyHandle handle, double timeStep) {
-        Vector3d velocity = new Vector3d(handle.getLinearVelocity());
-        double speed = velocity.length();
-        double limit = 50.0;
-
-        if (speed > limit) {
-            double mass = subLevel.getMassTracker().getMass();
-            // Apply a counter-impulse to bleed off excess speed
-            // Using 0.1 factor for smooth but firm braking
-            Vector3d brakingDir = new Vector3d(velocity).normalize().mul(-1.0);
-            double excessSpeed = speed - limit;
-            Vector3d brakingImpulse = brakingDir.mul(excessSpeed * mass * 0.1);
-            
-            handle.applyLinearImpulse(brakingImpulse);
-        }
     }
 
     /**
@@ -271,19 +248,9 @@ public class GlobalSpacePhysicsHandler {
     }
 
     @SubscribeEvent
-    public static void onEntityTickPre(EntityTickEvent.Pre event) {
-        Entity entity = event.getEntity();
-        double factor = calculateGravityFactor(entity.level(), entity.getY());
-        if (factor > 0.0) {
-            applyEntityZeroG(entity, factor);
-        }
-    }
-
-    @SubscribeEvent
     public static void onEntityTickPost(EntityTickEvent.Post event) {
         Entity entity = event.getEntity();
         if (entity instanceof LivingEntity living) {
-            updateLivingEntityGravityModifier(living);
             // applyFallingHeatDamage(living);
             applySpaceSuffocation(living);
         }
@@ -330,45 +297,6 @@ public class GlobalSpacePhysicsHandler {
                 if (entity.getAirSupply() <= -20) {
                     entity.setAirSupply(0);
                     entity.hurt(entity.level().damageSources().drown(), 2.0f);
-                }
-            }
-        }
-    }
-
-    private static void applyEntityZeroG(Entity entity, double factor) {
-        if (entity instanceof ItemEntity item) {
-            item.setDeltaMovement(item.getDeltaMovement().add(0, 0.039 * factor, 0));
-        }
-    }
-
-    /**
-     * Updates the gravity attribute modifier for living entities.
-     * This uses the vanilla gravity attribute to ensure smooth movement and physics.
-     */
-    private static void updateLivingEntityGravityModifier(LivingEntity living) {
-        double gravityFactor = calculateGravityFactor(living.level(), living.getY());
-        var gravityAttr = living.getAttribute(Attributes.GRAVITY);
-        
-        if (gravityAttr != null) {
-            if (gravityFactor > 0.0) {
-                double currentFactor = 0.0;
-                var currentMod = gravityAttr.getModifier(SPACE_GRAVITY_ID);
-                if (currentMod != null) {
-                    currentFactor = -currentMod.amount();
-                }
-                
-                // Only update if the factor has changed significantly to avoid attribute recalculation overhead
-                if (Math.abs(currentFactor - gravityFactor) > 0.01) {
-                    gravityAttr.removeModifier(SPACE_GRAVITY_ID);
-                    gravityAttr.addTransientModifier(new AttributeModifier(
-                            SPACE_GRAVITY_ID, 
-                            -gravityFactor, // Negative factor to reduce gravity
-                            AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
-                    ));
-                }
-            } else {
-                if (gravityAttr.hasModifier(SPACE_GRAVITY_ID)) {
-                    gravityAttr.removeModifier(SPACE_GRAVITY_ID);
                 }
             }
         }
