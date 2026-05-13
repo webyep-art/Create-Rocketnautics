@@ -948,6 +948,18 @@ public class WNodeScreen extends Screen {
             return renameField.handleKeyPress(keyCode, scanCode, modifiers);
         }
         
+        if (keyCode == 291 && renamingNode == null && !isSearching) { // F2
+            WNode node = graph.getNodes().stream().filter(WNode::isSelected).findFirst().orElse(null);
+            if (node != null) {
+                pushUndo();
+                renamingNode = node;
+                renameField = new dev.devce.websnodelib.api.elements.WTextField(100);
+                renameField.setValue(node.getTitle());
+                renameField.handleMouseClick(0, 0, 0); // Force focus
+                return true;
+            }
+        }
+
         if (Screen.hasControlDown()) {
             if (keyCode == 90) { undo(); return true; } // Ctrl+Z
             if (keyCode == 89) { redo(); return true; } // Ctrl+Y

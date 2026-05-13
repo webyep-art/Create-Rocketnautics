@@ -12,6 +12,7 @@ import net.neoforged.neoforge.client.event.ViewportEvent;
 import dev.devce.rocketnautics.content.physics.JetpackHandler;
 import net.minecraft.util.Mth;
 import dev.devce.rocketnautics.client.CameraShakeHandler;
+import dev.devce.rocketnautics.content.physics.SpaceTransitionHandler;
 import dev.devce.rocketnautics.RocketConfig;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
@@ -46,7 +47,8 @@ public class RocketNauticsClientEvents {
         if (RocketNauticsClient.originalRenderDistance == -1) {
             double y = mc.player.getY();
             String dim = mc.level.dimension().location().getPath();
-            boolean isAtForcedAltitude = (dim.equals("overworld") && y > 15000) || (dim.equals("space") && y < 800);
+            double threshold = SpaceTransitionHandler.OVERWORLD_SPACE_Y;
+            boolean isAtForcedAltitude = (dim.equals("overworld") && y > threshold - 5000) || (dim.equals("space") && y < 800);
             
             // Avoid capturing the 'forced' value of 2 as the original setting
             if (currentDist > 2 || !isAtForcedAltitude) {
@@ -68,12 +70,13 @@ public class RocketNauticsClientEvents {
             if (RocketConfig.CLIENT.enableDynamicRenderDistance.get()) {
                 double y = mc.player.getY();
                 String dim = mc.level.dimension().location().getPath();
+                double threshold = SpaceTransitionHandler.OVERWORLD_SPACE_Y;
                 
                 if (dim.equals("overworld")) {
-                    if (y > 19500) targetDist = 2;
-                    else if (y > 19000) targetDist = 4;
-                    else if (y > 18000) targetDist = 8;
-                    else if (y > 15000) targetDist = 12;
+                    if (y > threshold - 500) targetDist = 2;
+                    else if (y > threshold - 1000) targetDist = 4;
+                    else if (y > threshold - 2000) targetDist = 8;
+                    else if (y > threshold - 5000) targetDist = 12;
                 } else if (dim.equals("space")) {
                     if (y < 200) targetDist = 2;
                     else if (y < 400) targetDist = 4;

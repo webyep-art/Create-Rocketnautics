@@ -60,7 +60,7 @@ public class SeparatorBlock extends DirectionalBlock implements IWrenchable {
         if (!(state.getBlock() instanceof SeparatorBlock)) return;
 
         level.removeBlock(pos, false);
-        level.playSound(null, pos, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 0.5f, 1.5f + level.random.nextFloat());
+        level.playSound(null, pos, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 5.0f, 1.5f + level.random.nextFloat());
 
         if (level instanceof ServerLevel serverLevel) {
             for (int i = 0; i < 5; i++) {
