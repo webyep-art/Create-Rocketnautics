@@ -145,6 +145,7 @@ public class ParachuteCaseBlockEntity extends SmartBlockEntity implements BlockE
 
     // ── Physics tick (server-side Sable drag) ─────────────────────────────────
 
+    public boolean hasLanded = false;
     public float worldGroundY = -100.0f; // Track ground level for rendering
     public float minLocalY = -20.0f;    // Minimum local Y to stay above ground
 
