@@ -230,6 +230,8 @@ public final class DeepSpaceHandler {
 
         RenderSystem.defaultBlendFunc();
         RenderSystem.enableCull();
+        RenderSystem.depthMask(true);
+        RenderSystem.enableDepthTest();
 
         poseStack.popPose();
         return false;

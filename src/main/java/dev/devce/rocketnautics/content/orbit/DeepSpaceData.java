@@ -3,7 +3,9 @@ package dev.devce.rocketnautics.content.orbit;
 import dev.devce.rocketnautics.RocketNautics;
 import dev.devce.rocketnautics.content.orbit.universe.StandardUniverseProvider;
 import dev.devce.rocketnautics.content.orbit.universe.UniverseDefinition;
-import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
+import dev.ryanhcode.sable.platform.SableEventPlatform;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -26,9 +28,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeOffset;
-import org.orekit.utils.PVCoordinates;
 import org.orekit.utils.TimeStampedPVCoordinates;
 
 @EventBusSubscriber(modid = RocketNautics.MODID)
@@ -36,6 +38,7 @@ public class DeepSpaceData extends SavedData {
     // TODO move all dimension definitions to their own class (see SpaceTransitionHandler)
     public static final ResourceKey<Level> DEEP_SPACE_DIM = ResourceKey.create(Registries.DIMENSION,
             ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "deep_space"));
+    public static final int LOGICAL_INSTANCE_HEIGHT = 1000;
 
     public static final String ID = "cosmonautics_deep_space_data";
 
@@ -71,7 +74,7 @@ public class DeepSpaceData extends SavedData {
 
     private final UniverseDefinition universe = StandardUniverseProvider.createSunOverworldMoon().build();
 
-    private final Int2ObjectArrayMap<DeepSpaceInstance> instances = new Int2ObjectArrayMap<>();
+    private final Int2ObjectMap<InstanceList> instances = new Int2ObjectOpenHashMap<>();
 
     private long universeTicks;
     private int nextFreeID = 0;
@@ -83,10 +86,58 @@ public class DeepSpaceData extends SavedData {
     }
 
     private void debugInstance() {
-        // execute in rocketnautics:deep_space run tp Dev 48 16 16
-        DeepSpaceInstance instance = new DeepSpaceInstance(this, 32, 32, 0, 0);
-        instances.put(0, instance);
-        instance.getPosition().init(universe, "overworld", new TimeStampedPVCoordinates(EPOCH, new Vector3D(0, 0, 6_000_000D), new Vector3D(0, 20_000, 0)));
+        // execute in rocketnautics:deep_space run tp Dev 48 1016 16
+        DeepSpaceInstance instance = claimNewInstance(2);
+        instance.getPosition().init(universe, "overworld", new TimeStampedPVCoordinates(EPOCH, new Vector3D(0, 0, 6_000_000D), new Vector3D(0, 7_000, 0)));
+    }
+
+    public DeepSpaceInstance claimNewInstance(int chunkSize) {
+        setDirty();
+        int powerSize = (int) Math.ceil(Math.log(chunkSize) / Math.log(2)) - 1;
+        return instances.computeIfAbsent(powerSize, InstanceList::new).createInstance(this);
+    }
+
+    @Nullable
+    public DeepSpaceInstance getInstanceForPos(int xPos, int zPos) {
+        int[] params = getChunkPowerSizeIdWithinSizeForParameters(xPos, zPos);
+        return getInstance(params[0], params[1]);
+    }
+
+    @Nullable
+    public DeepSpaceInstance getInstance(long id) {
+        return getInstance(unpackSize(id), unpackIdWithinSize(id));
+    }
+
+    @Nullable
+    public DeepSpaceInstance getInstance(int chunkPowerSize, int idWithinSize) {
+        InstanceList l = instances.get(chunkPowerSize);
+        if (l == null) return null;
+        return l.getInstance(idWithinSize);
+    }
+
+    @Nullable
+    public DeepSpaceInstance retireInstance(long id) {
+        return retireInstance(unpackSize(id), unpackIdWithinSize(id));
+    }
+
+    @Nullable
+    public DeepSpaceInstance retireInstance(int chunkPowerSize, int idWithinSize) {
+        InstanceList l = instances.get(chunkPowerSize);
+        if (l == null) return null;
+        setDirty();
+        return l.retireInstance(idWithinSize);
+    }
+
+    public static long pack(int chunkPowSize, int idWithinSize) {
+        return ((long) chunkPowSize << 32) + (idWithinSize & 0xFFFFFFFFL);
+    }
+
+    public static int unpackSize(long id) {
+        return (int) (id >> 32);
+    }
+
+    public static int unpackIdWithinSize(long id) {
+        return (int) (id & 0xFFFFFFFFL);
     }
 
     public UniverseDefinition getUniverse() {
@@ -113,10 +164,10 @@ public class DeepSpaceData extends SavedData {
         compoundTag.putLong("UniverseTicks", universeTicks);
         compoundTag.putInt("NextID", nextFreeID);
         ListTag list = new ListTag();
-        for (DeepSpaceInstance instance : instances.values()) {
-            list.add(instance.write());
+        for (InstanceList instanceList : instances.values()) {
+            list.add(instanceList.write());
         }
-        compoundTag.put("Instances", list);
+        compoundTag.put("InstanceLists", list);
         return compoundTag;
     }
 
@@ -124,16 +175,12 @@ public class DeepSpaceData extends SavedData {
         DeepSpaceData data = new DeepSpaceData();
         data.universeTicks = tag.getLong("UniverseTicks");
         data.nextFreeID = tag.getInt("NextID");
-        ListTag list = tag.getList("Instances", ListTag.TAG_COMPOUND);
+        ListTag list = tag.getList("InstanceLists", ListTag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
-            DeepSpaceInstance instance = new DeepSpaceInstance(data, list.getCompound(i));
-            data.instances.put(instance.getId(), instance);
+            InstanceList instance = new InstanceList(data, list.getCompound(i));
+            data.instances.put(instance.getChunkPowerSize(), instance);
         }
         return data;
-    }
-
-    public DeepSpaceInstance getInstanceForPosition() {
-        return null;
     }
 
     // TODO mixin to CollisionGetter#borderCollision and Entity#collectColliders to add this
@@ -158,7 +205,7 @@ public class DeepSpaceData extends SavedData {
         );
     }
 
-    private static int[] getChunkPowerSizeIdWithinSizeForParameters(int negX, int negZ) {
+    public static int[] getChunkPowerSizeIdWithinSizeForParameters(int negX, int negZ) {
         if (negX < 0 || negZ < 0) return new int[] { 1, 0 };
         // convert to chunkpos
         negX /= 16;
@@ -168,7 +215,7 @@ public class DeepSpaceData extends SavedData {
         int chunkPowerSize = Math.max((int) (Math.log(negX * 1.1) / Math.log(2)) + 1, 1);
         // descend until we are below or equal to the target; at large scales, we will need to do this once.
         int size = chunkPowerSize * 16 + (2 << chunkPowerSize);
-        while (size > negX) {
+        while (size > negX && chunkPowerSize > 0) {
             chunkPowerSize--;
             size = chunkPowerSize * 16 + (2 << chunkPowerSize);
         }
@@ -176,7 +223,7 @@ public class DeepSpaceData extends SavedData {
         return new int[] { chunkPowerSize, negZ / (16 + size) };
     }
 
-    private static int[] getCornerXCornerZForParameters(int chunkPowerSize, int idWithinSize) {
+    public static int[] getCornerXCornerZForParameters(int chunkPowerSize, int idWithinSize) {
         int chunkSize = 2 << chunkPowerSize;
         return new int[] { 16 * (chunkPowerSize * 16 + chunkSize), 16 * (idWithinSize * (16 + chunkSize)) };
     }

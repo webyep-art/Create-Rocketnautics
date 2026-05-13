@@ -4,9 +4,10 @@
   "package": "dev.devce.rocketnautics.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "LevelRendererMixin",
     "ClientLevelMixin",
-    "LivingEntityAccessor"
+    "LevelRendererMixin",
+    "LivingEntityAccessor",
+    "SubLevelPhysicsSystemMixin"
   ],
   "client": [
     "ClientPacketListenerMixin",

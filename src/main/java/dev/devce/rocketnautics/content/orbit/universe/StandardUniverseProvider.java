@@ -18,7 +18,7 @@ public final class StandardUniverseProvider {
         final int overworldDaynightCycleLengthSeconds = 1200;
         final int lunarMonthInOverworldDays = 8;
         final double overworldDistance = solRadius * 40 / 3; // roughly based on the angular size of the sun in the overworld
-        double earthMu = 32 * overworldRadius * overworldRadius;
+        double earthMu = 11 * overworldRadius * overworldRadius;
         // orbit duration in seconds = 2pi * sqrt(r^3 / mu)
         // mu = r^3 * (2pi / orbit duration in seconds)^2
         // compute solar mu based on this
@@ -27,10 +27,8 @@ public final class StandardUniverseProvider {
         // r^3 = mu * (orbit duration in seconds / 2pi)^2
         // compute moon distance based on this
         comp = lunarMonthInOverworldDays * overworldDaynightCycleLengthSeconds / Math.PI;
-        // this should resolve to roughly 9 million meters away
         double moonDistance = Math.cbrt(earthMu * comp * comp / 4);
-        // this should resolve to roughly 650 thousand meters
-        double moonRadius = moonDistance * 3 / 40; // roughly based on the angular size of the moon in the overworld
+        double moonRadius = (moonDistance - overworldRadius) * 3 / 40; // roughly based on the angular size of the moon in the overworld
 
         return UniverseDefinition.builder()
                 .cubePlanet(p -> p
@@ -59,7 +57,7 @@ public final class StandardUniverseProvider {
                         .setTicksPerRevolution(overworldDaynightCycleLengthTicks))
                 .cubePlanet(p -> p
                         .setFrameName("moon")
-                        .setAccelerationAtSurface(8)
+                        .setAccelerationAtSurface(2)
                         .setRenderDataOverride(i -> {
                             byte[] data = new byte[PlanetColors.ARRAY_SIZE];
                             for (int j = 0; j < 256; j++) {

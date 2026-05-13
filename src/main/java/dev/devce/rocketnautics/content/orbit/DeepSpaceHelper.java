@@ -13,7 +13,9 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaterniond;
+import org.joml.Quaterniondc;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeOffset;
 import org.orekit.utils.AngularCoordinates;
@@ -210,15 +212,15 @@ public class DeepSpaceHelper {
         return new Vector3d(vec.getX(), vec.getY(), vec.getZ());
     }
 
-    public static Vector3D adapt(Vector3d vec) {
-        return new Vector3D(vec.x, vec.y, vec.z);
+    public static Vector3D adapt(Vector3dc vec) {
+        return new Vector3D(vec.x(), vec.y(), vec.z());
     }
 
     public static Quaterniond adapt(Rotation rot) {
         return new Quaterniond(rot.getQ1(), rot.getQ2(), rot.getQ3(), rot.getQ0());
     }
 
-    public static Rotation adapt(Quaterniond rot) {
-        return new Rotation(rot.w, rot.x, rot.y, rot.z, true);
+    public static Rotation adapt(Quaterniondc rot) {
+        return new Rotation(rot.w(), rot.x(), rot.y(), rot.z(), true);
     }
 }

@@ -43,7 +43,8 @@ public class DeepSpacePosition {
         return currentOrbit == FALLBACK;
     }
 
-    public void tick(UniverseDefinition universe) {
+    public boolean tick(UniverseDefinition universe) {
+        boolean modified = false;
         // check if we have entered the domain of a different gravity source;
         // if so, find out exactly when and update our orbit.
         Frame currentFrame = currentOrbit.getFrame();
@@ -80,8 +81,10 @@ public class DeepSpacePosition {
 
             }
             currentOrbit = createOrbitAroundSource(transitionCoords, shouldControlling.orekitFrame(), shouldControlling);
+            modified = true;
         }
         localUniverseTicks += timescale;
+        return modified;
     }
 
     private PointGravitySource determineControllingGravitySource(TimeStampedPVCoordinates coords, Frame frame, UniverseDefinition universe) {
@@ -147,6 +150,10 @@ public class DeepSpacePosition {
 
     public Frame getFrame() {
         return getCurrentOrbit().getFrame();
+    }
+
+    public TimeStampedPVCoordinates getCurrentPVCoords() {
+        return getPVCoords(getLocalUniverseTime());
     }
 
     public TimeStampedPVCoordinates getPVCoords(AbsoluteDate date) {
