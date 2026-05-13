@@ -24,7 +24,8 @@ import net.minecraft.world.level.block.RenderShape;
 import org.jetbrains.annotations.Nullable;
 
 public class ParachuteCaseBlock extends BaseEntityBlock {
-    public static final com.mojang.serialization.MapCodec<ParachuteCaseBlock> CODEC = simpleCodec(ParachuteCaseBlock::new);
+    public static final com.mojang.serialization.MapCodec<ParachuteCaseBlock> CODEC = simpleCodec(
+            ParachuteCaseBlock::new);
     public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
     public static final BooleanProperty HAS_PARACHUTE = BooleanProperty.create("has_parachute");
     public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING = BlockStateProperties.FACING;
@@ -32,9 +33,9 @@ public class ParachuteCaseBlock extends BaseEntityBlock {
     public ParachuteCaseBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
-            .setValue(OPEN, false)
-            .setValue(HAS_PARACHUTE, false)
-            .setValue(FACING, net.minecraft.core.Direction.UP));
+                .setValue(OPEN, false)
+                .setValue(HAS_PARACHUTE, false)
+                .setValue(FACING, net.minecraft.core.Direction.UP));
     }
 
     @Override
@@ -74,7 +75,8 @@ public class ParachuteCaseBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (level.getBlockEntity(pos) instanceof ParachuteCaseBlockEntity be) {
             if (stack.is(RocketItems.PARACHUTE.get()) && !be.hasParachute()) {
                 if (!level.isClientSide) {
@@ -93,13 +95,14 @@ public class ParachuteCaseBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos,
+            boolean isMoving) {
         if (!level.isClientSide) {
             boolean isPowered = level.hasNeighborSignal(pos);
             if (isPowered && !state.getValue(OPEN)) {
                 if (level.getBlockEntity(pos) instanceof ParachuteCaseBlockEntity be && be.hasParachute()) {
                     level.setBlock(pos, state.setValue(OPEN, true), 3);
-                    level.playSound(null, pos, SoundEvents.IRON_DOOR_OPEN, SoundSource.BLOCKS, 1.0F, 1.0F);
+                    level.playSound(null, pos, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 1.0F, 1.0F);
                 }
             } else if (!isPowered && state.getValue(OPEN)) {
                 level.setBlock(pos, state.setValue(OPEN, false), 3);

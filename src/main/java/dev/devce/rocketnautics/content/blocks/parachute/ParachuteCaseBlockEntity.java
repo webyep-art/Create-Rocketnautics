@@ -145,26 +145,45 @@ public class ParachuteCaseBlockEntity extends SmartBlockEntity implements BlockE
 
     // ── Physics tick (server-side Sable drag) ─────────────────────────────────
 
-    public boolean hasLanded = false;
+    public float worldGroundY = -100.0f; // Track ground level for rendering
+    public float minLocalY = -20.0f;    // Minimum local Y to stay above ground
 
     @Override
     public void sable$physicsTick(ServerSubLevel subLevel, RigidBodyHandle handle, double dt) {
         BlockState state = getBlockState();
-        if (!state.hasProperty(ParachuteCaseBlock.OPEN) || !state.getValue(ParachuteCaseBlock.OPEN)) return;
+        if (!state.hasProperty(ParachuteCaseBlock.OPEN) || !state.getValue(ParachuteCaseBlock.OPEN)) {
+            this.hasLanded = false; 
+            return;
+        }
         if (!hasParachute()) return;
 
         Vector3d vel   = new Vector3d(handle.getLinearVelocity());
         double   speed = vel.length();
         
+        // Height check to allow re-usability (reset hasLanded if high enough)
+        Vector3d worldPos = subLevel.logicalPose().position();
+        double groundY = subLevel.getLevel().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, (int)worldPos.x, (int)worldPos.z);
+        double height = worldPos.y - groundY;
+        
+        // Update minLocalY for visual ground clamping
+        this.minLocalY = (float)(groundY - worldPos.y);
+
+        if (height > 25.0) {
+            this.hasLanded = false;
+        }
+
         // Falling if vertical velocity is downward and speed is significant
         boolean nowFalling = (vel.y() < -0.1) && (speed > 0.05);
         
-        // If we were falling and now we stopped, we have hit the ground.
-        if (this.isFalling && !nowFalling) {
+        // If we were falling and now we stopped while near ground, we have landed.
+        if (this.isFalling && !nowFalling && height < 15.0) {
             this.hasLanded = true;
+            this.worldGroundY = (float) groundY;
+            setChanged();
+            subLevel.getLevel().sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
         
-        // Once landed, never deploy again during this flight
+        // Lock to collapsed state if landed
         if (this.hasLanded) {
             nowFalling = false;
         }
@@ -173,6 +192,31 @@ public class ParachuteCaseBlockEntity extends SmartBlockEntity implements BlockE
             this.isFalling = nowFalling;
             setChanged();
             subLevel.getLevel().sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+
+        // --- Interactive Breaking Logic ---
+        if (this.isFalling && this.canopyY > 7.8f) {
+            BlockPos canopyPos = worldPosition.above(8);
+            Level shipLevel = subLevel.getLevel();
+            if (shipLevel.getBlockState(canopyPos).isAir()) {
+                // If the canopy was already placed and now it's air, it was broken!
+                if (shipLevel.getGameTime() % 10 == 0) { // Slight delay to allow placement
+                     this.destroyParachute();
+                     return;
+                }
+            } else if (shipLevel.getBlockState(canopyPos).is(net.minecraft.world.level.block.Blocks.AIR)) {
+                 // redundant check
+            } else if (!shipLevel.getBlockState(canopyPos).is(net.minecraft.world.level.block.Blocks.WHITE_WOOL)) {
+                // Place wool if not there yet
+                for (int x = -2; x <= 2; x++) {
+                    for (int z = -2; z <= 2; z++) {
+                        BlockPos p = canopyPos.offset(x, 0, z);
+                        if (shipLevel.getBlockState(p).isAir()) {
+                            shipLevel.setBlock(p, net.minecraft.world.level.block.Blocks.WHITE_WOOL.defaultBlockState(), 3);
+                        }
+                    }
+                }
+            }
         }
 
         if (speed < 0.05) return;
@@ -189,6 +233,26 @@ public class ParachuteCaseBlockEntity extends SmartBlockEntity implements BlockE
         handle.applyImpulseAtPoint(center, local);
     }
 
+    private void destroyParachute() {
+        if (parachute.isEmpty()) return;
+        
+        // Drop composite parts
+        Level world = this.level;
+        if (world != null) {
+            BlockPos p = worldPosition;
+            net.minecraft.world.Containers.dropItemStack(world, p.getX(), p.getY(), p.getZ(), new ItemStack(net.minecraft.world.level.block.Blocks.WHITE_WOOL, 12));
+            net.minecraft.world.Containers.dropItemStack(world, p.getX(), p.getY(), p.getZ(), new ItemStack(net.minecraft.world.item.Items.LEAD, 4));
+        }
+        
+        this.parachute = ItemStack.EMPTY;
+        this.isFalling = false;
+        this.hasLanded = false;
+        setChanged();
+        if (level != null) {
+             level.setBlock(worldPosition, getBlockState().setValue(ParachuteCaseBlock.HAS_PARACHUTE, false).setValue(ParachuteCaseBlock.OPEN, false), 3);
+        }
+    }
+
     // ── Serialization ─────────────────────────────────────────────────────────
 
     @Override
@@ -196,6 +260,9 @@ public class ParachuteCaseBlockEntity extends SmartBlockEntity implements BlockE
         super.write(tag, reg, clientPacket);
         if (!parachute.isEmpty()) tag.put("Parachute", parachute.saveOptional(reg));
         tag.putBoolean("IsFalling", isFalling);
+        tag.putBoolean("HasLanded", hasLanded);
+        tag.putFloat("WorldGroundY", worldGroundY);
+        tag.putFloat("MinLocalY", minLocalY);
     }
 
     @Override
@@ -205,6 +272,9 @@ public class ParachuteCaseBlockEntity extends SmartBlockEntity implements BlockE
             ? ItemStack.parseOptional(reg, tag.getCompound("Parachute"))
             : ItemStack.EMPTY;
         isFalling = tag.getBoolean("IsFalling");
+        hasLanded = tag.getBoolean("HasLanded");
+        worldGroundY = tag.getFloat("WorldGroundY");
+        minLocalY = tag.getFloat("MinLocalY");
     }
 
     @Override
