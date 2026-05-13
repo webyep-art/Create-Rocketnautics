@@ -92,8 +92,8 @@ public class GlobalSpacePhysicsHandler {
         if (worldPos == null) return;
 
         applyZeroGravity(subLevel, handle, level, worldPos, timeStep);
-        applyReentryHeat(subLevel, handle, level, worldPos, timeStep);
-        applyMaxQStress(subLevel, handle, level, worldPos, timeStep);
+        // applyReentryHeat(subLevel, handle, level, worldPos, timeStep);
+        // applyMaxQStress(subLevel, handle, level, worldPos, timeStep);
     }
 
     /**
@@ -251,10 +251,12 @@ public class GlobalSpacePhysicsHandler {
     public static void onEntityTickPost(EntityTickEvent.Post event) {
         Entity entity = event.getEntity();
         if (entity instanceof LivingEntity living) {
-            applyFallingHeatDamage(living);
+            // applyFallingHeatDamage(living);
             applySpaceSuffocation(living);
         }
     }
+
+
 
     /**
      * Applies suffocation damage to entities in space or at high altitudes 

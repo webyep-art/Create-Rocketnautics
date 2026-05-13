@@ -10,6 +10,9 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.data.recipes.RecipeCategory;
+import net.minecraft.data.recipes.ShapedRecipeBuilder;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
@@ -65,7 +68,18 @@ public class RocketBlocks {
             .initialProperties(() -> Blocks.IRON_BLOCK)
             .properties(BlockBehaviour.Properties::noOcclusion)
             .transform(pickaxeOnly())
-            .item(RocketBlockItem::new).build().register();
+            .item(RocketBlockItem::new)
+            .recipe((ctx, prov) -> ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ctx.get())
+                    .pattern("L L")
+                    .pattern("IBI")
+                    .pattern("L L")
+                    .define('L', Items.LIGHTNING_ROD)
+                    .define('I', Items.IRON_INGOT)
+                    .define('B', Items.IRON_BLOCK)
+                    .unlockedBy("has_iron_block", prov.has(Items.IRON_BLOCK))
+                    .save(prov))
+            .build()
+            .register();
 
     static { REGISTRATE.setCreativeTab(RocketTabs.WORLD_TAB); }
 

@@ -1,4 +1,4 @@
-// 1.21.1	2026-05-11T05:54:40.0606918	Registrate Provider for rocketnautics [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, generic_client_provider]
+// 1.21.1	2026-05-13T04:43:38.6680707	Registrate Provider for rocketnautics [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, generic_client_provider]
 4034bd38f796bab50b47094868f3a12780f311a0 data/c/tags/block/ores.json
 4034bd38f796bab50b47094868f3a12780f311a0 data/c/tags/block/ores/titanium.json
 583810354b905e30a40239d70423869999aba616 data/c/tags/block/ores_in_ground/deepslate.json
@@ -31,6 +31,7 @@ f54b3b8427a1710a7b065d1d3cf3435650d5f049 data/c/tags/item/storage_blocks/titaniu
 3d2c111d0cff30b71f0cbcfb560a1b888122bec9 data/minecraft/tags/block/mineable/pickaxe.json
 4034bd38f796bab50b47094868f3a12780f311a0 data/minecraft/tags/block/needs_diamond_tool.json
 74ba453807fd76e0d338b2bd26e615e0d553e261 data/minecraft/tags/block/needs_iron_tool.json
+5bfac3b46a7cb0f28b43290c17f449218c0b2138 data/rocketnautics/advancement/recipes/misc/sputnik.json
 c65054ecd6dfeff08c6a76d186edfa41c61b158e data/rocketnautics/loot_table/blocks/booster_thruster.json
 62f6be740f8f666e65614314b0d9e9ba4ea7e2d3 data/rocketnautics/loot_table/blocks/deepslate_titanium_ore.json
 c8a3cb83c53263240d528a20b27bcd382bd4aeff data/rocketnautics/loot_table/blocks/raw_titanium_block.json
@@ -42,5 +43,6 @@ a6550fdd83f3d4c7c1e0a0ea7e6ee99add13e486 data/rocketnautics/loot_table/blocks/ro
 709b082c4da787bf4f375026735374558bdb37c4 data/rocketnautics/loot_table/blocks/titanium_block.json
 84f5c1817521118b4d3e42ebed60a02f7a2ce248 data/rocketnautics/loot_table/blocks/titanium_ore.json
 f66053062ab971c2856d286f60a3531bade173df data/rocketnautics/loot_table/blocks/vector_thruster.json
+50497368d6ec0c62c2fd0132b48ed108211e541d data/rocketnautics/recipe/sputnik.json
 3b3d73a9ced1fed08a55e55c4b0b8e8f46876a88 data/rocketnautics/tags/block/thrusters.json
 809a97d05f7c104868b742c75be6a182f522e631 data/rocketnautics/tags/item/nozzles.json

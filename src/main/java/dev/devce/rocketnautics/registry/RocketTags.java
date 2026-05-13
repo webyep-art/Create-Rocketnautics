@@ -112,6 +112,22 @@ public class RocketTags {
                 this(itemTag(path), blockTag(path));
             }
         }
+
+        public TagKey<Item> ingots() {
+            return ingots;
+        }
+
+        public TagKey<Item> nuggets() {
+            return nuggets;
+        }
+
+        public TagKey<Item> plates() {
+            return plates;
+        }
+
+        public TagKey<Item> rawOres() {
+            return rawOres;
+        }
     }
 
     public enum BlockTags {

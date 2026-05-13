@@ -30,7 +30,7 @@ public class RocketItems {
             .register();
 
     public static final ItemEntry<JetpackItem> JETPACK = REGISTRATE.item("jetpack", JetpackItem::new)
-            .properties(p -> p.stacksTo(1))
+            .properties(p -> p.stacksTo(1).fireResistant())
             .register();
 
     static { REGISTRATE.setCreativeTab(RocketTabs.RESOURCE_TAB); }
