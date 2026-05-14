@@ -78,6 +78,10 @@
   "item.rocketnautics.raw_titanium": "Raw Titanium",
   "item.rocketnautics.raw_titanium.funny": "Looks like a potato, but it's actually metal. Don't eat it.",
   "item.rocketnautics.raw_titanium.summary": "Unrefined titanium ore. Must be smelted or processed in a blast furnace.",
+
+  "item.rocketnautics.crushed_raw_titanium": "Crushed Titanium",
+  "item.rocketnautics.crushed_raw_titanium.funny": "Looks like diced potato, but it's still metal. Seriously, don't eat it.",
+  "item.rocketnautics.crushed_raw_titanium.summary": "Unrefined crushed titanium ore. Must be smelted or processed in a blast furnace.",
   
   "item.rocketnautics.titanium_alloy": "Titanium Alloy",
   "item.rocketnautics.titanium_alloy.funny": "Double the toughness, double the weight, double the insurance cost.",
