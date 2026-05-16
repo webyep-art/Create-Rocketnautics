@@ -475,10 +475,6 @@ public class RocketNodes {
 
             node.setEvaluator(n -> {
                 String code = n.getCustomData().getString("code");
-                if (code.isEmpty()) {
-                    code = dev.devce.websnodelib.client.ui.WLuaEditorScreen.NODE_CODE_MAP.get(n.getId());
-                }
-                
                 if (code == null || code.isBlank()) return;
 
                 // Recompile Lua if code changed or not yet initialized in this session
@@ -552,7 +548,8 @@ public class RocketNodes {
                     n.getCustomData().putBoolean("err", false);
                 } catch (Throwable e) {
                     n.getCustomData().putBoolean("err", true);
-                    dev.devce.websnodelib.client.ui.WLuaEditorScreen.NODE_COMPILED_MAP.put(n.getId(), false);
+                    // Compilation failed or state needs reset
+                    n.getCustomData().putBoolean("failed", true);
                 }
             });
 

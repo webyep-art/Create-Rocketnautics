@@ -15,7 +15,9 @@ public class WLabel extends WElement {
     public WLabel(String text, int color) {
         this.text = text;
         this.color = color;
-        this.width = Minecraft.getInstance().font.width(text);
+        if (!net.neoforged.fml.loading.FMLEnvironment.dist.isDedicatedServer()) {
+            this.width = Minecraft.getInstance().font.width(text);
+        }
         this.height = 10;
     }
 
@@ -26,6 +28,8 @@ public class WLabel extends WElement {
 
     public void setText(String text) {
         this.text = text;
-        this.width = Minecraft.getInstance().font.width(text);
+        if (!net.neoforged.fml.loading.FMLEnvironment.dist.isDedicatedServer()) {
+            this.width = Minecraft.getInstance().font.width(text);
+        }
     }
 }

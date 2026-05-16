@@ -1,11 +1,6 @@
 package dev.devce.websnodelib.api.elements;
 
-import com.mojang.blaze3d.platform.Lighting;
 import dev.devce.websnodelib.api.WElement;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -36,13 +31,14 @@ public class WViewport3D extends WElement {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int x, int y, int mouseX, int mouseY, float partialTick) {
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    public void render(net.minecraft.client.gui.GuiGraphics graphics, int x, int y, int mouseX, int mouseY, float partialTick) {
         // Background/Frame
         graphics.fill(x, y, x + width, y + height, 0xAA000000);
         graphics.renderOutline(x, y, width, height, 0xFF666666);
 
         // Scissor to prevent bleeding out of the viewport
-        double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        double guiScale = net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale();
         int sx = (int) (graphics.pose().last().pose().get(3, 0) * guiScale);
         int sy = (int) (graphics.pose().last().pose().get(3, 1) * guiScale);
         int sw = (int) (width * graphics.pose().last().pose().get(0, 0) * guiScale);
@@ -68,7 +64,7 @@ public class WViewport3D extends WElement {
         ));
 
         // Setup Lighting for 3D objects
-        Lighting.setupFor3DItems();
+        com.mojang.blaze3d.platform.Lighting.setupFor3DItems();
 
         for (ModelEntry entry : models) {
             graphics.pose().pushPose();
@@ -85,18 +81,18 @@ public class WViewport3D extends WElement {
 
             // Render Item/Block or Custom OBJ
             if (entry.stack != null) {
-                Minecraft.getInstance().getItemRenderer().renderStatic(
+                net.minecraft.client.Minecraft.getInstance().getItemRenderer().renderStatic(
                     entry.stack, 
-                    ItemDisplayContext.FIXED, 
+                    net.minecraft.world.item.ItemDisplayContext.FIXED, 
                     0xF000F0, 
-                    OverlayTexture.NO_OVERLAY, 
+                    net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 
                     graphics.pose(), 
                     graphics.bufferSource(), 
-                    Minecraft.getInstance().level, 
+                    net.minecraft.client.Minecraft.getInstance().level, 
                     0
                 );
             } else if (entry.objModel != null) {
-                entry.objModel.render(graphics.pose(), graphics.bufferSource(), 0xF000F0, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+                entry.objModel.render(graphics.pose(), graphics.bufferSource(), 0xF000F0, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
             }
             
             graphics.pose().popPose();
@@ -108,7 +104,7 @@ public class WViewport3D extends WElement {
         graphics.disableScissor();
         
         // Reset Lighting for flat GUI
-        Lighting.setupForFlatItems();
+        com.mojang.blaze3d.platform.Lighting.setupForFlatItems();
     }
 
     public void setZoom(float zoom) { this.zoom = zoom; }

@@ -81,6 +81,7 @@ public class WNode {
      * @param element The element to add.
      */
     public void addElement(WElement element) {
+        element.setParentNode(this);
         this.elements.add(element);
         updateLayout();
     }
@@ -112,6 +113,7 @@ public class WNode {
      * Automatically adjusts the width and height for a clean look.
      */
     public void updateLayout() {
+        if (net.neoforged.fml.loading.FMLEnvironment.dist.isDedicatedServer()) return;
         int headerHeight = 16;
         int maxInputLabelWidth = 0;
         for (WPin pin : inputs) {
@@ -170,7 +172,9 @@ public class WNode {
             graphics.renderOutline(x - 1, y - 1, width + 2, height + 2, 0xFFFF0000);
         }
         
-        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, title, x + 5, y + 3, isFailed ? 0xFFFF5555 : 0xFF00FF88, false);
+        if (!net.neoforged.fml.loading.FMLEnvironment.dist.isDedicatedServer()) {
+            graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, title, x + 5, y + 3, isFailed ? 0xFFFF5555 : 0xFF00FF88, false);
+        }
 
         int maxInputLabelWidth = 0;
         for (WPin pin : inputs) {
@@ -216,8 +220,10 @@ public class WNode {
 
         // Pin Label
         String name = pin.getName();
-        int tx = isInput ? px + 8 : px - 4 - net.minecraft.client.Minecraft.getInstance().font.width(name);
-        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, "§8" + name, tx, py - 2, 0xFFFFFFFF);
+        if (!net.neoforged.fml.loading.FMLEnvironment.dist.isDedicatedServer()) {
+            int tx = isInput ? px + 8 : px - 4 - net.minecraft.client.Minecraft.getInstance().font.width(name);
+            graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, "§8" + name, tx, py - 2, 0xFFFFFFFF);
+        }
     }
 
     /**
@@ -247,6 +253,7 @@ public class WNode {
      * Forwards mouse click events to internal UI elements.
      */
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (net.neoforged.fml.loading.FMLEnvironment.dist.isDedicatedServer()) return false;
         int maxInputLabelWidth = 0;
         for (WPin pin : inputs) {
             maxInputLabelWidth = Math.max(maxInputLabelWidth, net.minecraft.client.Minecraft.getInstance().font.width(pin.getName()));
@@ -268,6 +275,7 @@ public class WNode {
      * Forwards mouse release events to internal UI elements.
      */
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (net.neoforged.fml.loading.FMLEnvironment.dist.isDedicatedServer()) return false;
         int maxInputLabelWidth = 0;
         for (WPin pin : inputs) {
             maxInputLabelWidth = Math.max(maxInputLabelWidth, net.minecraft.client.Minecraft.getInstance().font.width(pin.getName()));
@@ -286,6 +294,7 @@ public class WNode {
      * Forwards mouse drag events to internal UI elements.
      */
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (net.neoforged.fml.loading.FMLEnvironment.dist.isDedicatedServer()) return false;
         int maxInputLabelWidth = 0;
         for (WPin pin : inputs) {
             maxInputLabelWidth = Math.max(maxInputLabelWidth, net.minecraft.client.Minecraft.getInstance().font.width(pin.getName()));
@@ -419,4 +428,8 @@ public class WNode {
 
     public void clearInputs() { inputs.clear(); updateLayout(); }
     public void clearOutputs() { outputs.clear(); updateLayout(); }
+
+    public net.minecraft.core.HolderLookup.Provider getRegistryAccess() {
+        return (parentGraph != null) ? parentGraph.getRegistries() : null;
+    }
 }

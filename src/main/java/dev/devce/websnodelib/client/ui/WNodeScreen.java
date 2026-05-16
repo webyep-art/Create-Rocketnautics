@@ -116,6 +116,9 @@ public class WNodeScreen extends Screen {
         this.graph = graph;
         this.onSave = onSave;
         this.parentScreen = parentScreen;
+        if (net.minecraft.client.Minecraft.getInstance().level != null) {
+            this.graph.setRegistries(net.minecraft.client.Minecraft.getInstance().level.registryAccess());
+        }
     }
 
     public WNodeScreen(WGraph graph) {

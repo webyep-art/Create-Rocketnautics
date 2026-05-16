@@ -4,13 +4,13 @@
   "package": "dev.devce.rocketnautics.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "ClientLevelMixin",
     "EntityMixin",
-    "LevelRendererMixin",
     "LivingEntityAccessor",
     "LivingEntityMixin"
   ],
   "client": [
+    "ClientLevelMixin",
+    "LevelRendererMixin",
     "ClientPacketListenerMixin",
     "MinecraftMixin"
   ],

@@ -52,6 +52,16 @@ public class SputnikBlockEntity extends BlockEntity {
     public SputnikBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
         graph.setContext(this);
+        if (level != null) graph.setRegistries(level.registryAccess());
+    }
+
+    @Override
+    public void setLevel(Level level) {
+        super.setLevel(level);
+        if (level != null) {
+            graph.setRegistries(level.registryAccess());
+            graph.setContext(this);
+        }
     }
 
     private SubLevel getSubLevel() {
@@ -82,10 +92,8 @@ public class SputnikBlockEntity extends BlockEntity {
         dev.devce.rocketnautics.content.blocks.LinkedSignalHandler.tick(level);
         graph.tick();
 
-        // Sync graph values to client periodically for UI display
-        if (level.getGameTime() % 5 == 0) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
+        // Removed aggressive periodic sync to prevent "snap back" during editing
+        // The graph will sync when the UI is closed or when structural changes occur
     }
 
     private final List<UUID> peripheralIds = new ArrayList<>();
@@ -409,6 +417,7 @@ public class SputnikBlockEntity extends BlockEntity {
         if (tag.contains("NodeGraph")) {
             CompoundTag graphTag = tag.getCompound("NodeGraph");
             // Merging load handles both full load and periodic sync without wiping state
+            graph.setRegistries(registries);
             graph.load(graphTag);
             graph.setContext(this);
         }
