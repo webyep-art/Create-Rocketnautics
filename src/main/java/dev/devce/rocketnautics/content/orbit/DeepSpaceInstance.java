@@ -1,10 +1,8 @@
 package dev.devce.rocketnautics.content.orbit;
 
+import dev.devce.rocketnautics.api.orbit.DeepSpaceHelper;
 import dev.devce.rocketnautics.content.orbit.universe.DeepSpacePosition;
-import dev.devce.rocketnautics.content.orbit.universe.UniverseDefinition;
 import dev.devce.rocketnautics.network.DeepSpacePositionPayload;
-import dev.devce.rocketnautics.network.UniverseDefinitionPayload;
-import it.unimi.dsi.fastutil.doubles.DoubleObjectMutablePair;
 import it.unimi.dsi.fastutil.doubles.DoubleObjectPair;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.nbt.CompoundTag;
@@ -18,7 +16,6 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.TimeStampedPVCoordinates;
 
 import java.util.List;
@@ -109,7 +106,7 @@ public final class DeepSpaceInstance {
                 value.right().mulAdd(value.firstDouble(), momentum, momentum);
             }
             pendingPhysics.clear();
-            if (mass != 0) {
+            if (mass != 0 && momentum.lengthSquared() > 1e-20) {
                 Vector3D velocityChange = DeepSpaceHelper.adapt(momentum.div(mass));
                 position.init(manager.getUniverse(), position.getFrame(),
                         new TimeStampedPVCoordinates(coords.getDate(), coords.getPosition(), coords.getVelocity().add(velocityChange)));
@@ -117,16 +114,12 @@ public final class DeepSpaceInstance {
             }
         }
         // update position
-        if (position.tick(manager.getUniverse())) {
-            manager.setDirty();
-        }
+        position.propagate(manager.getUniverse());
         // handle render data
         if (server.getTickCount() % 20 == 0) {
             ServerLevel deepSpace = server.getLevel(DeepSpaceData.DEEP_SPACE_DIM);
             List<ServerPlayer> players = deepSpace.getPlayers(p -> boundingBox().contains(p.position()));
             for (ServerPlayer player : players) {
-                // TODO only send the universe only once
-                PacketDistributor.sendToPlayer(player, new UniverseDefinitionPayload(manager.getUniverse()));
                 PacketDistributor.sendToPlayer(player, DeepSpacePositionPayload.of(position, manager.getUniverse()));
             }
         }

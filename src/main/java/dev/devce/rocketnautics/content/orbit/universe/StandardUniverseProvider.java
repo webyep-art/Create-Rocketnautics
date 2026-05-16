@@ -2,7 +2,7 @@ package dev.devce.rocketnautics.content.orbit.universe;
 
 import dev.devce.rocketnautics.client.PlanetColors;
 import dev.devce.rocketnautics.content.orbit.universe.builder.UniverseDefinitionBuilder;
-import dev.devce.rocketnautics.content.physics.SpaceTransitionHandler;
+import net.minecraft.world.level.Level;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.joml.Vector3d;
 
@@ -13,7 +13,7 @@ public final class StandardUniverseProvider {
         final Vector3d up = new Vector3d(0, 1, 0);
         final double solRadius = 300_000_000D;
         final double overworldRadius = 3_000_000D; // 1 / 10th of the dimension radius
-        final int overworldOrbitalYearInOverworldDays = 72; // one real-life day
+        final int overworldOrbitalYearInOverworldDays = 72 * 7; // one real-life week. Balance between a shorter time and having a large sphere of influence.
         final int overworldDaynightCycleLengthTicks = 24_000;
         final int overworldDaynightCycleLengthSeconds = 1200;
         final int lunarMonthInOverworldDays = 8;
@@ -31,44 +31,45 @@ public final class StandardUniverseProvider {
         double moonRadius = (moonDistance - overworldRadius) * 3 / 40; // roughly based on the angular size of the moon in the overworld
 
         return UniverseDefinition.builder()
+            .cubePlanet(p -> p
+                .setFrameName("sol")
+                .setMu(solMu)
+                .setRenderDataOverride(i -> {
+                    byte[] data = new byte[PlanetColors.ARRAY_SIZE];
+                    for (int j = 0; j < 256; j++) {
+                        for (int k = 0; k < 256; k++) {
+                            data[j + 256 * k] = PlanetColors.SUN_1;
+                        }
+                    }
+                    return data;
+                })
+                .setRadius(solRadius)
+                .setRotationAxis(up)
+                .setTicksPerRevolution(overworldDaynightCycleLengthTicks * 32)
+                .setFixedPosition("root", Vector3D.ZERO))
                 .cubePlanet(p -> p
-                        .setFrameName("sol")
-                        .setMu(solMu)
-                        .setRenderDataOverride(i -> {
-                            byte[] data = new byte[PlanetColors.ARRAY_SIZE];
-                            for (int j = 0; j < 256; j++) {
-                                for (int k = 0; k < 256; k++) {
-                                    data[j + 256 * k] = PlanetColors.SUN_1;
-                                }
+                    .setFrameName("overworld")
+                    .setMu(earthMu)
+                    .setClouds(true)
+                    .setLinkedDimension(Level.OVERWORLD)
+                    .setRadius(overworldRadius)
+                    .setCircularOrbit("sol", Vector3D.PLUS_I.scalarMultiply(overworldDistance), Vector3D.PLUS_J)
+                    .setRotationAxis(up)
+                    .setTicksPerRevolution(overworldDaynightCycleLengthTicks))
+                .cubePlanet(p -> p
+                    .setFrameName("moon")
+                    .setAccelerationAtSurface(2)
+                    .setRenderDataOverride(i -> {
+                        byte[] data = new byte[PlanetColors.ARRAY_SIZE];
+                        for (int j = 0; j < 256; j++) {
+                            for (int k = 0; k < 256; k++) {
+                                data[j + 256 * k] = PlanetColors.MOON_1;
                             }
-                            return data;
-                        })
-                        .setRadius(solRadius)
-                        .setRotationAxis(up)
-                        .setTicksPerRevolution(overworldDaynightCycleLengthTicks * 32)
-                        .setFixedPosition("root", Vector3D.ZERO))
-                .cubePlanet(p -> p
-                        .setFrameName("overworld")
-                        .setMu(earthMu)
-                        .setLocalSpace(SpaceTransitionHandler.SPACE_DIM)
-                        .setRadius(overworldRadius)
-                        .setCircularOrbit("sol", Vector3D.PLUS_I.scalarMultiply(overworldDistance), Vector3D.PLUS_J)
-                        .setRotationAxis(up)
-                        .setTicksPerRevolution(overworldDaynightCycleLengthTicks))
-                .cubePlanet(p -> p
-                        .setFrameName("moon")
-                        .setAccelerationAtSurface(2)
-                        .setRenderDataOverride(i -> {
-                            byte[] data = new byte[PlanetColors.ARRAY_SIZE];
-                            for (int j = 0; j < 256; j++) {
-                                for (int k = 0; k < 256; k++) {
-                                    data[j + 256 * k] = PlanetColors.MOON_1;
-                                }
-                            }
-                            return data;
-                        })
-                        .setRadius(moonRadius)
-                        .setCircularOrbit("overworld", Vector3D.PLUS_I.scalarMultiply(moonDistance), Vector3D.PLUS_J)
-                        .setTidalLocked());
+                        }
+                        return data;
+                    })
+                    .setRadius(moonRadius)
+                    .setCircularOrbit("overworld", Vector3D.PLUS_I.scalarMultiply(moonDistance), Vector3D.PLUS_J)
+                    .setTidalLocked());
     }
 }

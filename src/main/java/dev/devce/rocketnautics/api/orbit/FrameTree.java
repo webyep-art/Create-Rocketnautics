@@ -1,4 +1,4 @@
-package dev.devce.rocketnautics.content.orbit;
+package dev.devce.rocketnautics.api.orbit;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;

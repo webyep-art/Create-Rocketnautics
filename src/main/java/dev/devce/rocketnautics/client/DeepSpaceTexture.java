@@ -1,18 +1,19 @@
 package dev.devce.rocketnautics.client;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
-public final class DeepSpaceTexture extends DynamicTexture {
-    private static final int TEX_SIZE = 1024;
+import java.util.function.Function;
 
-    private static DeepSpaceTexture INSTANCE;
-    private static ResourceLocation ID;
+@OnlyIn(Dist.CLIENT)
+public final class DeepSpaceTexture {
+    private static final int TEX_SIZE = 1024;
 
     private static final int[] warpSampling = new int[TEX_SIZE * TEX_SIZE];
 
@@ -41,42 +42,41 @@ public final class DeepSpaceTexture extends DynamicTexture {
         }
     }
 
-    public static DeepSpaceTexture getInstance() {
-        if (INSTANCE == null) {
-            Minecraft mc = Minecraft.getInstance();
+    private final DynamicTexture tex; // keep this just to make sure nothing garbage-collector shaped happens to it
+    private final ResourceLocation id;
 
-            NativeImage image = new NativeImage(TEX_SIZE, TEX_SIZE, false);
-
-            for (int x = 0; x < TEX_SIZE; x++) {
-                for (int y = 0; y < TEX_SIZE; y++) {
-                    image.setPixelRGBA(x, y, 0);
-                }
-            }
-
-            INSTANCE = new DeepSpaceTexture(image);
-            ID = mc.getTextureManager().register("rocketnautics_deep_space_planet", INSTANCE);
-            INSTANCE.setFilter(true, false);
-        }
-        return INSTANCE;
+    public DeepSpaceTexture(DynamicTexture tex, ResourceLocation id) {
+        this.tex = tex;
+        this.id = id;
     }
 
-    public static ResourceLocation getInstanceID() {
-        getInstance(); // ensure the instance is loaded
-        return ID;
-    }
+    public static DeepSpaceTexture construct(int renderID, byte[] renderData) {
+        Minecraft mc = Minecraft.getInstance();
 
-    private DeepSpaceTexture(NativeImage p_117984_) {
-        super(p_117984_);
-    }
+        NativeImage image = new NativeImage(TEX_SIZE, TEX_SIZE, false);
 
-    public void loadData(byte[] data) {
         for (int x = 0; x < TEX_SIZE; x++) {
             for (int y = 0; y < TEX_SIZE; y++) {
-                getPixels().setPixelRGBA(x, y, PlanetColors.getPackedColor(data[warpSampling[x + y * TEX_SIZE]]));
+                image.setPixelRGBA(x, y, PlanetColors.getPackedColor(renderData[warpSampling[x + y * TEX_SIZE]]));
             }
         }
 
-        upload();
-        setFilter(false, false);
+        DynamicTexture constructed = new DynamicTexture(image);
+        ResourceLocation claimed = mc.getTextureManager().register("rocketnautics_deep_space_planet", constructed);
+        constructed.setFilter(true, false);
+        image.close();
+        return new DeepSpaceTexture(constructed, claimed);
+    }
+
+    public ResourceLocation getId() {
+        return id;
+    }
+
+    public void setShaderTexture() {
+        RenderSystem.setShaderTexture(0, getId());
+    }
+
+    public RenderType attachType(Function<ResourceLocation, RenderType> renderType) {
+        return renderType.apply(getId());
     }
 }

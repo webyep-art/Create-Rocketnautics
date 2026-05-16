@@ -3,6 +3,7 @@ package dev.devce.rocketnautics.content.orbit;
 import dev.devce.rocketnautics.RocketNautics;
 import dev.devce.rocketnautics.content.orbit.universe.StandardUniverseProvider;
 import dev.devce.rocketnautics.content.orbit.universe.UniverseDefinition;
+import dev.devce.rocketnautics.network.UniverseDefinitionPayload;
 import dev.ryanhcode.sable.platform.SableEventPlatform;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -15,6 +16,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.Vec3;
@@ -25,7 +27,9 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,7 +39,6 @@ import org.orekit.utils.TimeStampedPVCoordinates;
 
 @EventBusSubscriber(modid = RocketNautics.MODID)
 public class DeepSpaceData extends SavedData {
-    // TODO move all dimension definitions to their own class (see SpaceTransitionHandler)
     public static final ResourceKey<Level> DEEP_SPACE_DIM = ResourceKey.create(Registries.DIMENSION,
             ResourceLocation.fromNamespaceAndPath(RocketNautics.MODID, "deep_space"));
     public static final int LOGICAL_INSTANCE_HEIGHT = 1000;
@@ -70,6 +73,12 @@ public class DeepSpaceData extends SavedData {
         getInstance(event.getServer()).tick(event.getServer());
     }
 
+    @SubscribeEvent
+    public static void syncUniverse(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer splayer)) return;
+        PacketDistributor.sendToPlayer(splayer, new UniverseDefinitionPayload(getInstance(splayer.server).getUniverse()));
+    }
+
     // end static //
 
     private final UniverseDefinition universe = StandardUniverseProvider.createSunOverworldMoon().build();
@@ -82,13 +91,14 @@ public class DeepSpaceData extends SavedData {
     public void tick(MinecraftServer server) {
         universeTicks += 1;
         instances.values().forEach(i -> i.tick(server));
+        setDirty();
         if (instances.isEmpty()) debugInstance();
     }
 
     private void debugInstance() {
         // execute in rocketnautics:deep_space run tp Dev 48 1016 16
         DeepSpaceInstance instance = claimNewInstance(2);
-        instance.getPosition().init(universe, "overworld", new TimeStampedPVCoordinates(EPOCH, new Vector3D(0, 0, 6_000_000D), new Vector3D(0, 7_000, 0)));
+        instance.getPosition().init(universe, "overworld", new TimeStampedPVCoordinates(EPOCH, new Vector3D(0, 0, 9_000_000D), new Vector3D(0, 3_300, 0)));
     }
 
     public DeepSpaceInstance claimNewInstance(int chunkSize) {
@@ -195,10 +205,10 @@ public class DeepSpaceData extends SavedData {
                 Shapes.INFINITY,
                 Shapes.box(
                         corners[0],
-                        0,
+                        LOGICAL_INSTANCE_HEIGHT,
                         corners[1],
                         corners[0] + blockSize + 1,
-                        blockSize + 1,
+                        LOGICAL_INSTANCE_HEIGHT + blockSize + 1,
                         corners[1] + blockSize + 1
                 ),
                 BooleanOp.ONLY_FIRST

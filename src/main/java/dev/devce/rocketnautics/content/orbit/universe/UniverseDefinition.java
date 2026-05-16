@@ -1,10 +1,13 @@
 package dev.devce.rocketnautics.content.orbit.universe;
 
-import dev.devce.rocketnautics.content.orbit.FrameTree;
+import dev.devce.rocketnautics.api.orbit.FrameTree;
 import dev.devce.rocketnautics.content.orbit.universe.builder.UniverseDefinitionBuilder;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnmodifiableView;
@@ -16,6 +19,7 @@ public class UniverseDefinition {
     private final FrameTree tree;
     private final Int2ObjectAVLTreeMap<PointGravitySource> gravitySources;
     private final Int2ObjectAVLTreeMap<CubePlanet> planets;
+    private final Map<ResourceKey<Level>, CubePlanet> planetsByDimension = new Object2ObjectOpenHashMap<>();
 
     public static UniverseDefinitionBuilder builder() {
         return new UniverseDefinitionBuilder();
@@ -30,6 +34,9 @@ public class UniverseDefinition {
         this.planets = new Int2ObjectAVLTreeMap<>();
         for (CubePlanet planet : planets) {
             this.planets.put(planet.id(), planet);
+            if (planet.linkedDimension() != null) {
+                this.planetsByDimension.put(planet.linkedDimension(), planet);
+            }
         }
     }
 
@@ -71,6 +78,10 @@ public class UniverseDefinition {
         return planets.get(id);
     }
 
+    public @Nullable CubePlanet getPlanetByDimension(ResourceKey<Level> dimension) {
+        return planetsByDimension.get(dimension);
+    }
+
     public void write(FriendlyByteBuf buf) {
         tree.writeTree(buf);
         buf.writeVarInt(gravitySources.size());
@@ -93,7 +104,8 @@ public class UniverseDefinition {
         count = buf.readVarInt();
         List<CubePlanet> planets = new ObjectArrayList<>();
         for (int i = 0; i < count; i++) {
-            planets.add(CubePlanet.read(buf, tree));
+            CubePlanet planet = CubePlanet.read(buf, tree);
+            planets.add(planet);
         }
         return new UniverseDefinition(tree, gravity, planets);
     }

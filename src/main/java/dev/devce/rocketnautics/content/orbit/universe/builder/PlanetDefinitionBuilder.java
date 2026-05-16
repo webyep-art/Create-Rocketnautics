@@ -1,6 +1,8 @@
 package dev.devce.rocketnautics.content.orbit.universe.builder;
 
 import dev.devce.rocketnautics.SkyDataHandler;
+import dev.devce.rocketnautics.api.orbit.DeepSpaceHelper;
+import dev.devce.rocketnautics.api.orbit.FrameTree;
 import dev.devce.rocketnautics.content.orbit.*;
 import dev.devce.rocketnautics.content.orbit.universe.CubePlanet;
 import dev.devce.rocketnautics.content.orbit.universe.PointGravitySource;
@@ -22,8 +24,9 @@ import java.util.function.IntFunction;
 
 public class PlanetDefinitionBuilder {
     private final UniverseDefinitionBuilder parent;
-    private @Nullable ResourceKey<Level> localSpace;
+    private @Nullable ResourceKey<Level> linkedDimension;
     private @Nullable IntFunction<byte[]> renderDataOverride;
+    private boolean clouds = false;
 
     private double radius;
     private String frameName;
@@ -64,7 +67,7 @@ public class PlanetDefinitionBuilder {
         if (orbited != null) {
             orbit = new KeplerianOrbit(orbitCoords, orbited.orekitFrame(), orbited.mu());
             ourFrame = orbited.frame().createChild(frameName, orbit);
-            roi = orbitCoords.getPosition().getNorm() * Math.pow(mu / orbited.mu(), 2/5d);
+            roi = orbit.getA() * Math.pow(mu / orbited.mu(), 2/5d);
         } else if (fixedPositionParentFrame != null) {
             ourFrame = fixedPositionParentFrame.createChild(frameName, fixedPosition);
             roi = Double.POSITIVE_INFINITY;
@@ -91,26 +94,31 @@ public class PlanetDefinitionBuilder {
             this.angularCoordinates = new TimeStampedAngularCoordinates(DeepSpaceData.EPOCH, Rotation.IDENTITY, angVel, Vector3D.ZERO);
         }
         if (renderDataOverride == null) {
-            if (localSpace == null) {
+            if (linkedDimension == null) {
                 throw new IllegalStateException("Builder does not have a render option available!");
             }
-            ResourceKey<Level> v = localSpace;
+            ResourceKey<Level> v = linkedDimension;
             renderDataOverride = i -> {
                 ServerLevel level = ServerLifecycleHooks.getCurrentServer().getLevel(v);
                 return SkyDataHandler.getHandlerForLevel(level).getRenderDataForDeepSpace(i);
             };
         }
         parent.gravitySource(new PointGravitySource(ourFrame, mu, roi));
-        parent.cubePlanet(new CubePlanet(ourFrame, radius, angularCoordinates, localSpace, renderDataOverride));
+        parent.cubePlanet(new CubePlanet(ourFrame, radius, angularCoordinates, linkedDimension, renderDataOverride, clouds));
     }
 
-    public PlanetDefinitionBuilder setLocalSpace(@Nullable ResourceKey<Level> localSpace) {
-        this.localSpace = localSpace;
+    public PlanetDefinitionBuilder setLinkedDimension(@Nullable ResourceKey<Level> linkedDimension) {
+        this.linkedDimension = linkedDimension;
         return this;
     }
 
     public PlanetDefinitionBuilder setRenderDataOverride(@NotNull IntFunction<byte[]> override) {
         this.renderDataOverride = override;
+        return this;
+    }
+
+    public PlanetDefinitionBuilder setClouds(boolean clouds) {
+        this.clouds = clouds;
         return this;
     }
 

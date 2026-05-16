@@ -38,12 +38,12 @@ public abstract class SubLevelPhysicsSystemMixin {
         Vector3d offset = position.sub(center, new Vector3d());
         RigidBodyHandle handle = this.getPhysicsHandle(subLevel);
         Vector3d correction = handle.getLinearVelocity(new Vector3d());
-        double dot = offset.dot(correction);
-        if (correction.lengthSquared() <= 0) {
+        if (correction.lengthSquared() <= 1e-10) {
             // just register our mass, skipping any calculation
             handling.applyVelocity(subLevel.getUniqueId(), correction.zero(), subLevel.getMassTracker().getMass());
             return;
         }
+        double dot = offset.dot(correction);
         double radiusFactor = 4d / (handling.getSideLength() * handling.getSideLength());
         // part 1 of our correction is a damping factor based on the actual velocity and distance to instance edge.
         // part 2 of our correction is a reduction of the component moving away from the center.

@@ -1,9 +1,10 @@
 package dev.devce.rocketnautics.content.orbit.universe;
 
 import dev.devce.rocketnautics.client.PlanetColors;
-import dev.devce.rocketnautics.content.orbit.DeepSpaceHelper;
-import dev.devce.rocketnautics.content.orbit.FrameTree;
-import dev.devce.rocketnautics.content.orbit.FrameTreeOwner;
+import dev.devce.rocketnautics.api.orbit.DeepSpaceHelper;
+import dev.devce.rocketnautics.api.orbit.FrameTree;
+import dev.devce.rocketnautics.api.orbit.FrameTreeOwner;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -15,9 +16,9 @@ import org.orekit.utils.TimeStampedAngularCoordinates;
 
 import java.util.function.IntFunction;
 
-// note -- local space dimension and render data supplier are never synced to client
+// note -- render data supplier is never synced to client
 public record CubePlanet(@NotNull FrameTree frame, double radius, TimeStampedAngularCoordinates rotationDescription,
-                         @Nullable ResourceKey<Level> localSpaceDimension, @Nullable IntFunction<byte[]> renderDataSupplier) implements FrameTreeOwner {
+                         @Nullable ResourceKey<Level> linkedDimension, @Nullable IntFunction<byte[]> renderDataSupplier, boolean clouds) implements FrameTreeOwner {
 
     public byte[] getRenderData(int powerScaleClamp) {
         if (renderDataSupplier == null) return PlanetColors.BLANK;
@@ -32,12 +33,22 @@ public record CubePlanet(@NotNull FrameTree frame, double radius, TimeStampedAng
         buf.writeVarInt(frame.getId());
         buf.writeDouble(radius);
         DeepSpaceHelper.STAMPED_ANGULARCOORDS_CODEC_S.encode(buf, rotationDescription);
+        buf.writeBoolean(clouds);
+        buf.writeBoolean(linkedDimension != null);
+        if (linkedDimension != null) {
+            buf.writeResourceKey(linkedDimension);
+        }
     }
 
     public static CubePlanet read(FriendlyByteBuf buf, FrameTree frameSource) {
         int id = buf.readVarInt();
         double radius = buf.readDouble();
         TimeStampedAngularCoordinates coords = DeepSpaceHelper.STAMPED_ANGULARCOORDS_CODEC_S.decode(buf);
-        return new CubePlanet(frameSource.getInTreeByID(id).get(), radius, coords, null, null);
+        boolean clouds = buf.readBoolean();
+        ResourceKey<Level> localSpaceDimension = null;
+        if (buf.readBoolean()) {
+            localSpaceDimension = buf.readResourceKey(Registries.DIMENSION);
+        }
+        return new CubePlanet(frameSource.getInTreeByID(id).get(), radius, coords, localSpaceDimension, null, clouds);
     }
 }

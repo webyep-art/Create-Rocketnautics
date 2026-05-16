@@ -1,6 +1,6 @@
 package dev.devce.rocketnautics.content.orbit.universe.builder;
 
-import dev.devce.rocketnautics.content.orbit.FrameTree;
+import dev.devce.rocketnautics.api.orbit.FrameTree;
 import dev.devce.rocketnautics.content.orbit.universe.CubePlanet;
 import dev.devce.rocketnautics.content.orbit.universe.PointGravitySource;
 import dev.devce.rocketnautics.content.orbit.universe.UniverseDefinition;

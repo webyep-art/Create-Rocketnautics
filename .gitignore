@@ -50,4 +50,5 @@ scratch/
 compile_output.txt
 .idea
 .eclipse
+.editorconfig
 **/.cache

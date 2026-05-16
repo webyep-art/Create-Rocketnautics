@@ -1,7 +1,7 @@
 package dev.devce.rocketnautics.content.orbit.universe;
 
 import dev.devce.rocketnautics.content.orbit.DeepSpaceData;
-import dev.devce.rocketnautics.content.orbit.DeepSpaceHelper;
+import dev.devce.rocketnautics.api.orbit.DeepSpaceHelper;
 import net.minecraft.network.FriendlyByteBuf;
 import org.hipparchus.analysis.UnivariateFunction;
 import org.hipparchus.analysis.solvers.BrentSolver;
@@ -21,7 +21,11 @@ public class DeepSpacePosition {
     private static final Orbit FALLBACK = new CartesianOrbit(new TimeStampedPVCoordinates(DeepSpaceData.EPOCH, Vector3D.PLUS_I, Vector3D.PLUS_J), Frame.getRoot(), 1);
     private static final BrentSolver SOLVER = new BrentSolver();
 
+    // generated fields (for read/write operations)
     private @NotNull Orbit currentOrbit = FALLBACK;
+    private double roi = Double.NaN;
+
+    // saved fields (for read/write operations)
     private int timescale = 1;
     private long localUniverseTicks;
 
@@ -36,33 +40,33 @@ public class DeepSpacePosition {
 
     public void init(UniverseDefinition universe, @NotNull Frame frame, @NotNull TimeStampedPVCoordinates coords) {
         PointGravitySource controlling = determineControllingGravitySource(coords, frame, universe);
-        setCurrentOrbit(createOrbitAroundSource(coords, frame, controlling));
+        setCurrentOrbit(createOrbitAroundSource(coords, frame, controlling), controlling.roi());
     }
 
     public boolean isCorrupted() {
         return currentOrbit == FALLBACK;
     }
 
-    public boolean tick(UniverseDefinition universe) {
-        boolean modified = false;
+    /**
+     * Do the complete calculations to propagate this position forward in time. Note that this is a <b>mutating</b> operation;
+     * if modification is not desired, use {@link #copy()} first.
+     * @param universe the universe to propagate through.
+     * @return this object, mutated, for convenience.
+     */
+    public DeepSpacePosition propagate(UniverseDefinition universe) {
         // check if we have entered the domain of a different gravity source;
         // if so, find out exactly when and update our orbit.
         Frame currentFrame = currentOrbit.getFrame();
         PointGravitySource shouldControlling = determineControllingGravitySource(currentOrbit.getPVCoordinates(DeepSpaceData.getTime(localUniverseTicks + timescale), currentFrame), currentFrame, universe);
         if (shouldControlling.orekitFrame() != currentFrame) {
-            // between the two bodies, there is a "transition plane" where their induced acceleration is equivalent.
-            // mu(obj1) / d2(obj1.r(t), r(t)) = mu(obj2) / d2(obj2.r(t), r(t))
-            // equivalently, mu(obj2) * d2(obj1.r(t), r(t)) = mu(obj1) * d2(obj2.r(t), r(t))
-            // we want to find the point on the current orbit that intersects this plane.
+            // we want to find the point on the current orbit that intersects the smaller sphere of influence.
             // we know the point is between the time we were at and the time we are now at.
             // we solve this numerically via Brent's Method.
             AbsoluteDate startTime = DeepSpaceData.getTime(localUniverseTicks);
+            double roi = Math.min(this.roi, shouldControlling.roi());
             UnivariateFunction func = t -> {
-                double mu1 = currentOrbit.getMu();
-                double mu2 = shouldControlling.mu();
                 AbsoluteDate time = startTime.shiftedBy(t / 20); // convert from floating ticks to seconds
-                return mu2 * currentOrbit.getPosition(time, currentOrbit.getFrame()).getNormSq() // our position in our orbital frame
-                        - mu1 * currentOrbit.getPosition(time, shouldControlling.orekitFrame()).getNormSq(); // our position in their orbital frame
+                return currentOrbit.getPosition(time, currentOrbit.getFrame()).getNormSq() - roi * roi;
             };
             // verify that there is supposed to be a zero
             double lower = func.value(0);
@@ -80,11 +84,10 @@ public class DeepSpacePosition {
                 transitionCoords = currentOrbit.getPVCoordinates(startTime, shouldControlling.orekitFrame());
 
             }
-            currentOrbit = createOrbitAroundSource(transitionCoords, shouldControlling.orekitFrame(), shouldControlling);
-            modified = true;
+            setCurrentOrbit(createOrbitAroundSource(transitionCoords, shouldControlling.orekitFrame(), shouldControlling), shouldControlling.roi());
         }
         localUniverseTicks += timescale;
-        return modified;
+        return this;
     }
 
     private PointGravitySource determineControllingGravitySource(TimeStampedPVCoordinates coords, Frame frame, UniverseDefinition universe) {
@@ -95,7 +98,7 @@ public class DeepSpacePosition {
         double controllingDistance2 = Double.NaN;
         for (PointGravitySource source : sources) {
             if (source.roi() > smallestRoi) continue; // cannot win
-            Vector3D ourPositionInBodyFrame = frame.getStaticTransformTo(source.orekitFrame(), coords.getDate()).transformPosition(coords.getPosition());
+            Vector3D ourPositionInBodyFrame = source.posInMyFrame(coords.getDate(), coords.getPosition(), frame);
             double d2 = ourPositionInBodyFrame.getNormSq();
             if (source.roi() * source.roi() >= d2) {
                 // tiebreaker, mostly for objects whose ROI is infinite
@@ -112,16 +115,40 @@ public class DeepSpacePosition {
         return controlling;
     }
 
+    /**
+     * Constructs a new keplerian orbit around the gravity source.
+     * @param currentCoords The current coordinates with which to generate the orbit.
+     * @param currentFrame the frame in which currentCoords is defined.
+     * @param source The gravity source to orbit.
+     * @return an orbit centered around the source's frame.
+     */
     private Orbit createOrbitAroundSource(TimeStampedPVCoordinates currentCoords, Frame currentFrame, PointGravitySource source) {
+        return createOrbitAroundSource(currentCoords, currentFrame, source, Vector3D.ZERO);
+    }
+
+    /**
+     * Constructs a new keplerian orbit around the gravity source.
+     * @param currentCoords The current coordinates with which to generate the orbit.
+     * @param currentFrame the frame in which currentCoords is defined.
+     * @param source The gravity source to orbit.
+     * @param nonKeplerianAcceleration the non-keplerian acceleration to introduce to the orbit.
+     *                                 The acceleration in currentCoords will be ignored.
+     * @return an orbit centered around the source's frame.
+     */
+    private Orbit createOrbitAroundSource(TimeStampedPVCoordinates currentCoords, Frame currentFrame, PointGravitySource source, Vector3D nonKeplerianAcceleration) {
         // revise coordinates to be in the gravity source's frame.
         if (currentFrame != source.orekitFrame()) {
             currentCoords = currentFrame.getTransformTo(source.orekitFrame(), currentCoords.getDate()).transformPVCoordinates(currentCoords);
         }
+        if (!nonKeplerianAcceleration.equals(currentCoords.getAcceleration())) {
+            currentCoords = new TimeStampedPVCoordinates(currentCoords.getDate(), currentCoords.getPosition(), currentCoords.getVelocity());
+        }
         return new KeplerianOrbit(currentCoords, source.orekitFrame(), source.mu());
     }
 
-    public void setCurrentOrbit(@NotNull Orbit currentOrbit) {
+    public void setCurrentOrbit(@NotNull Orbit currentOrbit, double roi) {
         this.currentOrbit = currentOrbit;
+        this.roi = roi;
     }
 
     public @NotNull Orbit getCurrentOrbit() {
@@ -156,8 +183,28 @@ public class DeepSpacePosition {
         return getPVCoords(getLocalUniverseTime());
     }
 
+    public Vector3D getCurrentPosition() {
+        return getPosition(getLocalUniverseTime());
+    }
+
+    /**
+     * Performs simple calculation of where we would be on our current orbit at the target date.
+     * For full physics propagation, use {@link #propagate(UniverseDefinition)} instead.
+     */
     public TimeStampedPVCoordinates getPVCoords(AbsoluteDate date) {
         return getCurrentOrbit().getPVCoordinates(date, getCurrentOrbit().getFrame());
+    }
+
+    public Vector3D getPosition(Frame inFrame) {
+        return getCurrentOrbit().getPosition(getLocalUniverseTime(), inFrame);
+    }
+
+    /**
+     * Performs simple calculation of where we would be on our current orbit at the target date.
+     * For full physics propagation, use {@link #propagate(UniverseDefinition)} instead.
+     */
+    public Vector3D getPosition(AbsoluteDate date) {
+        return getCurrentOrbit().getPosition(date, getCurrentOrbit().getFrame());
     }
 
     public void write(FriendlyByteBuf buf, UniverseDefinition universe) {
@@ -179,5 +226,26 @@ public class DeepSpacePosition {
         setTimescale(buf.readVarInt());
         setLocalUniverseTicks(buf.readVarLong());
         return true;
+    }
+
+    public DeepSpacePosition copy() {
+        DeepSpacePosition pos = new DeepSpacePosition();
+        copyTo(pos);
+        return pos;
+    }
+
+
+    public void copyTo(DeepSpacePosition dest) {
+        dest.currentOrbit = this.currentOrbit; // orbits are immutable, so this is safe
+        dest.roi = this.roi;
+        dest.timescale = this.timescale;
+        dest.localUniverseTicks = this.localUniverseTicks;
+    }
+
+    public void reset() {
+        this.currentOrbit = FALLBACK;
+        this.roi = Double.NaN;
+        this.timescale = 1;
+        this.localUniverseTicks = 0;
     }
 }
