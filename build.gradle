@@ -117,6 +117,17 @@ dependencies {
 
     luajRuntime("org.luaj:luaj-jse:3.0.1")
     jarJar("org.luaj:luaj-jse:3.0.1")
+
+    // orekit
+
+    jarJar(implementation('org.orekit:orekit')) {
+        version {
+            strictly '[13.1.4,)'
+            prefer '13.1.4'
+        }
+    }
+    additionalRuntimeClasspath 'org.orekit:orekit:13.1.4'
+
 }
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }

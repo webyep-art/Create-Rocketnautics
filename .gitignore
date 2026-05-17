@@ -51,4 +51,5 @@ compile_output.txt
 .editorconfig
 .idea
 .eclipse
+.editorconfig
 **/.cache

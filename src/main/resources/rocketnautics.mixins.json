@@ -6,7 +6,8 @@
   "mixins": [
     "EntityMixin",
     "LivingEntityAccessor",
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "SubLevelPhysicsSystemMixin"
   ],
   "client": [
     "ClientLevelMixin",

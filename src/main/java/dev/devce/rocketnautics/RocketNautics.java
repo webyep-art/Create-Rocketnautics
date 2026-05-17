@@ -7,6 +7,7 @@ import dev.devce.rocketnautics.content.blocks.LinkedSignalHandler;
 import dev.devce.rocketnautics.content.commands.GravityCommand;
 import dev.devce.rocketnautics.content.commands.JetpackCommand;
 import dev.devce.rocketnautics.content.commands.ShipCopyPasteCommand;
+import dev.devce.rocketnautics.content.commands.TimescaleCommand;
 import dev.devce.rocketnautics.content.physics.GlobalSpacePhysicsHandler;
 import dev.devce.rocketnautics.data.RocketDatagen;
 import dev.devce.rocketnautics.network.NetworkHandler;
@@ -133,6 +134,7 @@ public class RocketNautics {
         JetpackCommand.register(event.getDispatcher());
         dev.devce.rocketnautics.content.commands.AsteroidCommand.register(event.getDispatcher());
         dev.devce.rocketnautics.content.commands.BreakBarrierCommand.register(event.getDispatcher());
+        TimescaleCommand.register(event.getDispatcher());
     }
     @SubscribeEvent
     public void onLevelTick(LevelTickEvent.Post event) {
