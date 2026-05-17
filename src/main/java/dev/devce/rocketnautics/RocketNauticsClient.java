@@ -81,12 +81,12 @@ public class RocketNauticsClient {
      * maintain performance during world/dimension swaps.
      */
     public static void startSeamlessTransition() {
-        Minecraft mc = Minecraft.getInstance();
-        if (originalRenderDistance == -1) {
-            originalRenderDistance = mc.options.renderDistance().get();
-        }
-        mc.options.renderDistance().set(2);
-        lastAppliedRenderDistance = 2;
+//        Minecraft mc = Minecraft.getInstance();
+//        if (originalRenderDistance == -1) {
+//            originalRenderDistance = mc.options.renderDistance().get();
+//        }
+//        mc.options.renderDistance().set(2);
+//        lastAppliedRenderDistance = 2;
         seamlessTransitionTicks = 100;
     }
 

@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.*;
 import dev.devce.rocketnautics.RocketConfig;
 import dev.devce.rocketnautics.RocketNautics;
 import dev.devce.rocketnautics.api.orbit.DeepSpaceHelper;
+import dev.devce.rocketnautics.content.orbit.DeepSpaceData;
 import dev.devce.rocketnautics.content.orbit.universe.CubePlanet;
 import dev.devce.rocketnautics.content.orbit.universe.DeepSpacePosition;
 import dev.devce.rocketnautics.content.orbit.universe.UniverseDefinition;
@@ -19,6 +20,7 @@ import net.minecraft.Util;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.*;
+import net.minecraft.client.renderer.debug.DebugRenderer;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ArrayListDeque;
@@ -27,6 +29,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.hipparchus.geometry.euclidean.threed.Rotation;
+import org.hipparchus.geometry.euclidean.threed.RotationConvention;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -170,7 +174,7 @@ public final class DeepSpaceHandler {
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY || UNIVERSE == null) return;
-
+        if (!DeepSpaceData.isDeepSpace()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         if (receivedPositionTick == -1) return;
@@ -368,6 +372,8 @@ public final class DeepSpaceHandler {
         VertexConsumer bufferbuilder = source.getBuffer(render.right().attachType(HOLOGRAM_TYPE));
 
         Matrix4f matrix = poseStack.last().pose();
+
+        // u,v of 0,0 corresponds to negX,negZ (u is x, v is z)
 
         // align top of texture for top/bottom faces with the north face
 

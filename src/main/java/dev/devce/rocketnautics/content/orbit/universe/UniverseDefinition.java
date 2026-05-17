@@ -35,7 +35,7 @@ public class UniverseDefinition {
         for (CubePlanet planet : planets) {
             this.planets.put(planet.id(), planet);
             if (planet.linkedDimension() != null) {
-                this.planetsByDimension.put(planet.linkedDimension(), planet);
+                this.planetsByDimension.put(planet.linkedDimension().key(), planet);
             }
         }
     }
@@ -54,6 +54,12 @@ public class UniverseDefinition {
     public Optional<Frame> getFrameByName(String name) {
         return tree.getInTreeByName(name).map(FrameTree::getOrekitFrame);
     }
+
+    public OptionalInt getIDByFrameName(String name) {
+        Optional<FrameTree> f = tree.getInTreeByName(name);
+        return f.map(frameTree -> OptionalInt.of(frameTree.getId())).orElseGet(OptionalInt::empty);
+    }
+
     @NotNull
     public Optional<Frame> getFrameByID(int id) {
         return tree.getInTreeByID(id).map(FrameTree::getOrekitFrame);

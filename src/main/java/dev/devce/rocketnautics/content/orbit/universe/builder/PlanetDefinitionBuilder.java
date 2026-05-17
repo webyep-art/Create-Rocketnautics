@@ -5,6 +5,7 @@ import dev.devce.rocketnautics.api.orbit.DeepSpaceHelper;
 import dev.devce.rocketnautics.api.orbit.FrameTree;
 import dev.devce.rocketnautics.content.orbit.*;
 import dev.devce.rocketnautics.content.orbit.universe.CubePlanet;
+import dev.devce.rocketnautics.content.orbit.universe.PlanetDimensionData;
 import dev.devce.rocketnautics.content.orbit.universe.PointGravitySource;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -25,6 +26,7 @@ import java.util.function.IntFunction;
 public class PlanetDefinitionBuilder {
     private final UniverseDefinitionBuilder parent;
     private @Nullable ResourceKey<Level> linkedDimension;
+    private int transferHeight = 20_000;
     private @Nullable IntFunction<byte[]> renderDataOverride;
     private boolean clouds = false;
 
@@ -104,11 +106,21 @@ public class PlanetDefinitionBuilder {
             };
         }
         parent.gravitySource(new PointGravitySource(ourFrame, mu, roi));
-        parent.cubePlanet(new CubePlanet(ourFrame, radius, angularCoordinates, linkedDimension, renderDataOverride, clouds));
+        parent.cubePlanet(new CubePlanet(ourFrame, radius, angularCoordinates, constructDimensionData(), renderDataOverride, clouds));
+    }
+
+    protected PlanetDimensionData constructDimensionData() {
+        if (linkedDimension == null) return null;
+        return new PlanetDimensionData(linkedDimension, transferHeight);
     }
 
     public PlanetDefinitionBuilder setLinkedDimension(@Nullable ResourceKey<Level> linkedDimension) {
         this.linkedDimension = linkedDimension;
+        return this;
+    }
+
+    public PlanetDefinitionBuilder setDimensionTransferHeight(int transferHeight) {
+        this.transferHeight = transferHeight;
         return this;
     }
 

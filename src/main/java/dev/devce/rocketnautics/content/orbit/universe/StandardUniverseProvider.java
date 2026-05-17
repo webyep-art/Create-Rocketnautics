@@ -31,45 +31,46 @@ public final class StandardUniverseProvider {
         double moonRadius = (moonDistance - overworldRadius) * 3 / 40; // roughly based on the angular size of the moon in the overworld
 
         return UniverseDefinition.builder()
-            .cubePlanet(p -> p
-                .setFrameName("sol")
-                .setMu(solMu)
-                .setRenderDataOverride(i -> {
-                    byte[] data = new byte[PlanetColors.ARRAY_SIZE];
-                    for (int j = 0; j < 256; j++) {
-                        for (int k = 0; k < 256; k++) {
-                            data[j + 256 * k] = PlanetColors.SUN_1;
-                        }
-                    }
-                    return data;
-                })
-                .setRadius(solRadius)
-                .setRotationAxis(up)
-                .setTicksPerRevolution(overworldDaynightCycleLengthTicks * 32)
-                .setFixedPosition("root", Vector3D.ZERO))
                 .cubePlanet(p -> p
-                    .setFrameName("overworld")
-                    .setMu(earthMu)
-                    .setClouds(true)
-                    .setLinkedDimension(Level.OVERWORLD)
-                    .setRadius(overworldRadius)
-                    .setCircularOrbit("sol", Vector3D.PLUS_I.scalarMultiply(overworldDistance), Vector3D.PLUS_J)
-                    .setRotationAxis(up)
-                    .setTicksPerRevolution(overworldDaynightCycleLengthTicks))
-                .cubePlanet(p -> p
-                    .setFrameName("moon")
-                    .setAccelerationAtSurface(2)
-                    .setRenderDataOverride(i -> {
-                        byte[] data = new byte[PlanetColors.ARRAY_SIZE];
-                        for (int j = 0; j < 256; j++) {
-                            for (int k = 0; k < 256; k++) {
-                                data[j + 256 * k] = PlanetColors.MOON_1;
+                        .setFrameName("sol")
+                        .setMu(solMu)
+                        .setRenderDataOverride(i -> {
+                            byte[] data = new byte[PlanetColors.ARRAY_SIZE];
+                            for (int j = 0; j < 256; j++) {
+                                for (int k = 0; k < 256; k++) {
+                                    data[j + 256 * k] = PlanetColors.SUN_1;
+                                }
                             }
-                        }
-                        return data;
-                    })
-                    .setRadius(moonRadius)
-                    .setCircularOrbit("overworld", Vector3D.PLUS_I.scalarMultiply(moonDistance), Vector3D.PLUS_J)
-                    .setTidalLocked());
+                            return data;
+                        })
+                        .setRadius(solRadius)
+                        .setRotationAxis(up)
+                        .setTicksPerRevolution(overworldDaynightCycleLengthTicks * 32)
+                        .setFixedPosition("root", Vector3D.ZERO))
+                .cubePlanet(p -> p
+                        .setFrameName("overworld")
+                        .setMu(earthMu)
+                        .setClouds(true)
+                        .setLinkedDimension(Level.OVERWORLD)
+                        .setDimensionTransferHeight(20000)
+                        .setRadius(overworldRadius)
+                        .setCircularOrbit("sol", Vector3D.PLUS_I.scalarMultiply(overworldDistance), Vector3D.PLUS_J)
+                        .setRotationAxis(up)
+                        .setTicksPerRevolution(overworldDaynightCycleLengthTicks))
+                .cubePlanet(p -> p
+                        .setFrameName("moon")
+                        .setAccelerationAtSurface(2)
+                        .setRenderDataOverride(i -> {
+                            byte[] data = new byte[PlanetColors.ARRAY_SIZE];
+                            for (int j = 0; j < 256; j++) {
+                                for (int k = 0; k < 256; k++) {
+                                    data[j + 256 * k] = PlanetColors.MOON_1;
+                                }
+                            }
+                            return data;
+                        })
+                        .setRadius(moonRadius)
+                        .setCircularOrbit("overworld", Vector3D.PLUS_I.scalarMultiply(moonDistance), Vector3D.PLUS_J)
+                        .setTidalLocked());
     }
 }

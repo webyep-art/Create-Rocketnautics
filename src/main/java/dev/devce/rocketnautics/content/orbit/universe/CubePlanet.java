@@ -18,7 +18,7 @@ import java.util.function.IntFunction;
 
 // note -- render data supplier is never synced to client
 public record CubePlanet(@NotNull FrameTree frame, double radius, TimeStampedAngularCoordinates rotationDescription,
-                         @Nullable ResourceKey<Level> linkedDimension, @Nullable IntFunction<byte[]> renderDataSupplier, boolean clouds) implements FrameTreeOwner {
+                         @Nullable PlanetDimensionData linkedDimension, @Nullable IntFunction<byte[]> renderDataSupplier, boolean clouds) implements FrameTreeOwner {
 
     public byte[] getRenderData(int powerScaleClamp) {
         if (renderDataSupplier == null) return PlanetColors.BLANK;
@@ -36,7 +36,7 @@ public record CubePlanet(@NotNull FrameTree frame, double radius, TimeStampedAng
         buf.writeBoolean(clouds);
         buf.writeBoolean(linkedDimension != null);
         if (linkedDimension != null) {
-            buf.writeResourceKey(linkedDimension);
+            linkedDimension.write(buf);
         }
     }
 
@@ -45,10 +45,10 @@ public record CubePlanet(@NotNull FrameTree frame, double radius, TimeStampedAng
         double radius = buf.readDouble();
         TimeStampedAngularCoordinates coords = DeepSpaceHelper.STAMPED_ANGULARCOORDS_CODEC_S.decode(buf);
         boolean clouds = buf.readBoolean();
-        ResourceKey<Level> localSpaceDimension = null;
+        PlanetDimensionData linkedDimension = null;
         if (buf.readBoolean()) {
-            localSpaceDimension = buf.readResourceKey(Registries.DIMENSION);
+            linkedDimension = PlanetDimensionData.read(buf);
         }
-        return new CubePlanet(frameSource.getInTreeByID(id).get(), radius, coords, localSpaceDimension, null, clouds);
+        return new CubePlanet(frameSource.getInTreeByID(id).get(), radius, coords, linkedDimension, null, clouds);
     }
 }

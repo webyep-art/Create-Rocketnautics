@@ -32,10 +32,6 @@ public class SkyDataHandler {
     
     public static final Map<ResourceKey<Level>, DoubleObjectPair<ResourceKey<Level>>> OVERRIDES = new HashMap<>();
 
-    static {
-        OVERRIDES.put(SpaceTransitionHandler.SPACE_DIM, DoubleObjectPair.of(SpaceTransitionHandler.OVERWORLD_SPACE_Y, Level.OVERWORLD));
-    }
-
     public final ServerLevel level;
     protected final RecursiveDataSquare root;
 
